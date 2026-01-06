@@ -1,0 +1,201 @@
+
+import { GoogleGenAI, Type } from "@google/genai";
+import { SOPStep } from "../types";
+
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+export const analyzeSOPFrames = async (
+  frames: string[], 
+  title: string, 
+  additionalContext: string = "",
+  vitTags: string[] = []
+): Promise<{ 
+  title: string; 
+  description: string; 
+  steps: SOPStep[];
+  ppeRequirements: string[];
+  materialsRequired: string[];
+}> => {
+  
+  if (!frames || frames.length === 0) {
+    throw new Error("No frames provided for analysis.");
+  }
+
+  const validImageParts = frames
+    .filter(f => f && (f.includes('base64,') || f.startsWith('http')))
+    .map(f => {
+      if (f.includes('base64,')) {
+        const parts = f.split('base64,');
+        return {
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: parts[1]
+          }
+        };
+      }
+      return null;
+    })
+    .filter(p => p !== null);
+
+  if (validImageParts.length === 0) {
+    throw new Error("No valid image data found for analysis.");
+  }
+
+  // Inject ViT tags into the prompt as ground truth visual evidence
+  const vitContext = vitTags.length > 0 
+    ? `PRECISION VISION TAGS (Detected via ViT): ${vitTags.join(", ")}. These items are positively identified in the video.` 
+    : "";
+
+  const prompt = `
+    You are an expert technical writer creating a Standard Operating Procedure (SOP).
+
+    IMPORTANT: You are given exactly ${validImageParts.length} frames in chronological order from a procedure video titled: "${title}".
+
+    ${additionalContext ? `Context: ${additionalContext}` : ''}
+
+    YOUR TASK:
+    Generate EXACTLY ${validImageParts.length} steps - one step for each frame, in the same order.
+
+    - Step 1 describes what is happening in Frame 1
+    - Step 2 describes what is happening in Frame 2
+    - Step 3 describes what is happening in Frame 3
+    ... and so on for all ${validImageParts.length} frames.
+
+    For each step:
+    - Write a clear, actionable title (e.g., "Tighten the mounting bolt")
+    - Write a detailed description of what the frame shows and what action to take
+    - Use imperative language ("Position", "Insert", "Tighten", "Verify")
+    - Include specific details visible in that frame (tools, hand positions, components)
+    - Add safety warnings if the step involves risk
+
+    You MUST return exactly ${validImageParts.length} steps. No more, no less.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: {
+        parts: [
+          ...validImageParts as any,
+          { text: prompt }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            ppeRequirements: { 
+              type: Type.ARRAY, 
+              items: { type: Type.STRING }
+            },
+            materialsRequired: { 
+              type: Type.ARRAY, 
+              items: { type: Type.STRING }
+            },
+            steps: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  timestamp: { type: Type.STRING },
+                  title: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  safetyWarnings: { 
+                    type: Type.ARRAY, 
+                    items: { type: Type.STRING } 
+                  },
+                  toolsRequired: { 
+                    type: Type.ARRAY, 
+                    items: { type: Type.STRING } 
+                  }
+                },
+                required: ["id", "title", "description", "timestamp"]
+              }
+            }
+          },
+          required: ["title", "description", "steps", "ppeRequirements", "materialsRequired"]
+        }
+      }
+    });
+
+    const text = response.text;
+    if (!text) throw new Error("Empty response from Gemini Pro.");
+    return JSON.parse(text.trim());
+  } catch (error: any) {
+    console.error("Gemini Pro Analysis Error:", error);
+    throw error;
+  }
+};
+
+export const transcribeAudio = async (textInput: string): Promise<string> => {
+  const response = await ai.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: `Transform this raw technical transcript into a high-quality, structured summary: ${textInput}`
+  });
+  return response.text || "Transcription unavailable.";
+};
+
+// Transcribe audio file using Gemini (for iOS Safari fallback - used by LiveSOPGenerator)
+export const transcribeAudioFile = async (audioBlob: Blob): Promise<string> => {
+  try {
+    // Convert blob to base64 robustly
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+
+    // Determine mime type
+    let mimeType = audioBlob.type || 'audio/webm';
+    // Gemini supports: audio/wav, audio/mp3, audio/aiff, audio/aac, audio/ogg, audio/flac
+    // Map common types
+    if (mimeType.includes('webm')) {
+      mimeType = 'audio/webm';
+    } else if (mimeType.includes('mp4')) {
+      mimeType = 'audio/mp4';
+    }
+
+    console.log(`Transcribing audio: ${(audioBlob.size / 1024).toFixed(1)}KB, type: ${mimeType}`);
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: base64
+            }
+          },
+          {
+            text: `Transcribe this audio recording accurately. The speaker is explaining a technical procedure or demonstration.
+
+Rules:
+- Output ONLY the transcription text, no timestamps or speaker labels
+- Keep the original language (don't translate)
+- Include all spoken words, even filler words if they help context
+- If audio is unclear, do your best to interpret
+- If there is no speech, return an empty string.
+
+Output the transcription:`
+          }
+        ]
+      }
+    });
+
+    const transcription = response.text?.trim() || '';
+    console.log('Transcription result:', transcription.substring(0, 100) + '...');
+    return transcription;
+  } catch (error: any) {
+    console.error('Audio transcription failed:', error);
+    // Return empty string instead of throwing - allow SOP generation to continue without transcript
+    return '';
+  }
+};

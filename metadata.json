@@ -1,0 +1,8 @@
+{
+  "name": "FrameOps",
+  "description": "AI-powered video to SOP generator. Turn any video into professional Standard Operating Procedures with real-time Live SOP recording.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
