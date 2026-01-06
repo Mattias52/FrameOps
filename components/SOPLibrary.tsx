@@ -1,19 +1,30 @@
 
-import React, { useState } from 'react';
-import { SOP } from '../types';
-import { deleteSOP, isSupabaseConfigured } from '../services/supabaseService';
+import React, { useState, useRef } from 'react';
+import { SOP, SOPStep } from '../types';
+import { deleteSOP, updateSOP, isSupabaseConfigured } from '../services/supabaseService';
+import StepEditor from './StepEditor';
 
 interface SOPLibraryProps {
   sops: SOP[];
   onDelete?: (sopId: string) => void;
+  onUpdate?: (sop: SOP) => void;
 }
 
-const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete }) => {
+const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate }) => {
   const [selectedSop, setSelectedSop] = useState<SOP | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Edit mode states
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedSop, setEditedSop] = useState<SOP | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [newPPE, setNewPPE] = useState('');
+  const [newMaterial, setNewMaterial] = useState('');
+  const refDocInputRef = useRef<HTMLInputElement>(null);
+  const [referenceDoc, setReferenceDoc] = useState<string | null>(null);
 
   // Handle delete SOP
   const handleDelete = async (sop: SOP) => {
@@ -39,6 +50,158 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete }) => {
       alert('Failed to delete SOP. Please try again.');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // Enter edit mode
+  const enterEditMode = () => {
+    if (selectedSop) {
+      setEditedSop(JSON.parse(JSON.stringify(selectedSop))); // Deep clone
+      setIsEditMode(true);
+    }
+  };
+
+  // Cancel edit mode
+  const cancelEditMode = () => {
+    setEditedSop(null);
+    setIsEditMode(false);
+    setReferenceDoc(null);
+  };
+
+  // Save edited SOP
+  const saveEditedSOP = async () => {
+    if (!editedSop) return;
+    
+    setIsSaving(true);
+    try {
+      if (isSupabaseConfigured()) {
+        const result = await updateSOP(editedSop);
+        if (!result.success) {
+          alert('Failed to save changes. Please try again.');
+          setIsSaving(false);
+          return;
+        }
+      }
+      
+      // Update local state
+      if (onUpdate) {
+        onUpdate(editedSop);
+      }
+      
+      setSelectedSop(editedSop);
+      setIsEditMode(false);
+      setEditedSop(null);
+      setReferenceDoc(null);
+    } catch (err) {
+      console.error('Save error:', err);
+      alert('Failed to save changes. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Update step in edited SOP
+  const updateStep = (index: number, updatedStep: SOPStep) => {
+    if (!editedSop) return;
+    const newSteps = [...editedSop.steps];
+    newSteps[index] = updatedStep;
+    setEditedSop({ ...editedSop, steps: newSteps });
+  };
+
+  // Delete step
+  const deleteStep = (index: number) => {
+    if (!editedSop) return;
+    const newSteps = editedSop.steps.filter((_, i) => i !== index);
+    setEditedSop({ ...editedSop, steps: newSteps });
+  };
+
+  // Move step up
+  const moveStepUp = (index: number) => {
+    if (!editedSop || index === 0) return;
+    const newSteps = [...editedSop.steps];
+    [newSteps[index - 1], newSteps[index]] = [newSteps[index], newSteps[index - 1]];
+    setEditedSop({ ...editedSop, steps: newSteps });
+  };
+
+  // Move step down
+  const moveStepDown = (index: number) => {
+    if (!editedSop || index === editedSop.steps.length - 1) return;
+    const newSteps = [...editedSop.steps];
+    [newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]];
+    setEditedSop({ ...editedSop, steps: newSteps });
+  };
+
+  // Add new step
+  const addNewStep = () => {
+    if (!editedSop) return;
+    const newStep: SOPStep = {
+      id: `step_${Date.now()}`,
+      timestamp: '',
+      title: 'New Step',
+      description: 'Enter step description here...',
+      safetyWarnings: [],
+      toolsRequired: [],
+    };
+    setEditedSop({ ...editedSop, steps: [...editedSop.steps, newStep] });
+  };
+
+  // Update image for step
+  const updateStepImage = (index: number, newImageUrl: string) => {
+    if (!editedSop) return;
+    const newSteps = [...editedSop.steps];
+    newSteps[index] = { ...newSteps[index], thumbnail: newImageUrl, image_url: newImageUrl };
+    setEditedSop({ ...editedSop, steps: newSteps });
+  };
+
+  // Add PPE
+  const addPPE = () => {
+    if (!editedSop || !newPPE.trim()) return;
+    const ppes = [...(editedSop.ppeRequirements || []), newPPE.trim()];
+    setEditedSop({ ...editedSop, ppeRequirements: ppes });
+    setNewPPE('');
+  };
+
+  // Remove PPE
+  const removePPE = (index: number) => {
+    if (!editedSop) return;
+    const ppes = [...(editedSop.ppeRequirements || [])];
+    ppes.splice(index, 1);
+    setEditedSop({ ...editedSop, ppeRequirements: ppes });
+  };
+
+  // Add Material
+  const addMaterial = () => {
+    if (!editedSop || !newMaterial.trim()) return;
+    const materials = [...(editedSop.materialsRequired || []), newMaterial.trim()];
+    setEditedSop({ ...editedSop, materialsRequired: materials });
+    setNewMaterial('');
+  };
+
+  // Remove Material
+  const removeMaterial = (index: number) => {
+    if (!editedSop) return;
+    const materials = [...(editedSop.materialsRequired || [])];
+    materials.splice(index, 1);
+    setEditedSop({ ...editedSop, materialsRequired: materials });
+  };
+
+  // Handle reference document upload
+  const handleRefDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type === 'application/pdf') {
+      // For PDFs, just store the filename as a reference
+      setReferenceDoc(`📄 ${file.name}`);
+      alert('PDF uploaded as reference. You can now manually update steps based on this document.');
+    } else if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setReferenceDoc(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      alert('Please upload a PDF or image file.');
     }
   };
 
@@ -179,6 +342,226 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete }) => {
   };
 
   if (selectedSop) {
+    const currentSop = isEditMode && editedSop ? editedSop : selectedSop;
+    
+    // Edit Mode View
+    if (isEditMode && editedSop) {
+      return (
+        <div className="animate-in fade-in slide-in-from-right-4 duration-500 space-y-6 pb-20">
+          {/* Edit Mode Header */}
+          <div className="flex items-center justify-between">
+            <button 
+              onClick={cancelEditMode}
+              className="flex items-center gap-2 text-slate-600 font-semibold hover:text-slate-900 transition-all"
+            >
+              <i className="fas fa-times"></i>
+              Cancel Editing
+            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={saveEditedSOP}
+                disabled={isSaving}
+                className="px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                <i className={`fas ${isSaving ? 'fa-spinner fa-spin' : 'fa-save'}`}></i>
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+
+          {/* Edit Mode Banner */}
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+              <i className="fas fa-edit text-amber-600 text-xl"></i>
+            </div>
+            <div>
+              <h3 className="font-bold text-amber-900">Edit Mode Active</h3>
+              <p className="text-sm text-amber-700">Make changes to your SOP. Don't forget to save when done!</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden p-8 space-y-8">
+            {/* Title & Description Edit */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                  SOP Title
+                </label>
+                <input
+                  type="text"
+                  value={editedSop.title}
+                  onChange={(e) => setEditedSop({ ...editedSop, title: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-2xl font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={editedSop.description}
+                  onChange={(e) => setEditedSop({ ...editedSop, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                />
+              </div>
+            </div>
+
+            {/* PPE & Materials Edit */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* PPE */}
+              <div className="bg-slate-50 p-6 rounded-2xl">
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">
+                  <i className="fas fa-user-shield text-indigo-500 mr-2"></i>
+                  Required PPE
+                </label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {(editedSop.ppeRequirements || []).map((ppe, i) => (
+                    <span key={i} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
+                      {ppe}
+                      <button onClick={() => removePPE(i)} className="hover:text-indigo-900">
+                        <i className="fas fa-times text-xs"></i>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newPPE}
+                    onChange={(e) => setNewPPE(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addPPE()}
+                    placeholder="Add PPE item..."
+                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"
+                  />
+                  <button onClick={addPPE} className="px-3 py-2 bg-indigo-600 text-white rounded-lg">
+                    <i className="fas fa-plus"></i>
+                  </button>
+                </div>
+              </div>
+
+              {/* Materials */}
+              <div className="bg-slate-50 p-6 rounded-2xl">
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">
+                  <i className="fas fa-box-open text-indigo-500 mr-2"></i>
+                  Materials Required
+                </label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {(editedSop.materialsRequired || []).map((mat, i) => (
+                    <span key={i} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                      {mat}
+                      <button onClick={() => removeMaterial(i)} className="hover:text-emerald-900">
+                        <i className="fas fa-times text-xs"></i>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newMaterial}
+                    onChange={(e) => setNewMaterial(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addMaterial()}
+                    placeholder="Add material..."
+                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"
+                  />
+                  <button onClick={addMaterial} className="px-3 py-2 bg-emerald-600 text-white rounded-lg">
+                    <i className="fas fa-plus"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Reference Documentation Upload */}
+            <div className="bg-blue-50 border-2 border-blue-200 border-dashed rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <i className="fas fa-file-alt text-blue-600"></i>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-blue-900">Reference Documentation</h4>
+                    <p className="text-xs text-blue-700">Upload PDF or image to guide your edits</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => refDocInputRef.current?.click()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700"
+                >
+                  <i className="fas fa-upload mr-2"></i>
+                  Upload Reference
+                </button>
+                <input
+                  ref={refDocInputRef}
+                  type="file"
+                  accept=".pdf,image/*"
+                  onChange={handleRefDocUpload}
+                  className="hidden"
+                />
+              </div>
+              {referenceDoc && (
+                <div className="mt-4 p-4 bg-white rounded-xl border border-blue-200">
+                  {referenceDoc.startsWith('📄') ? (
+                    <div className="flex items-center gap-3">
+                      <i className="fas fa-file-pdf text-rose-500 text-2xl"></i>
+                      <span className="font-medium text-slate-700">{referenceDoc}</span>
+                      <button onClick={() => setReferenceDoc(null)} className="ml-auto text-slate-400 hover:text-rose-500">
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <img src={referenceDoc} alt="Reference" className="max-h-64 rounded-lg mx-auto" />
+                      <button 
+                        onClick={() => setReferenceDoc(null)} 
+                        className="absolute top-2 right-2 w-8 h-8 bg-slate-900/80 text-white rounded-full hover:bg-rose-600"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Steps Editor */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+                  <i className="fas fa-list-ol text-indigo-500 mr-3"></i>
+                  Edit Steps ({editedSop.steps.length})
+                </h3>
+                <button
+                  onClick={addNewStep}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"
+                >
+                  <i className="fas fa-plus mr-2"></i>
+                  Add Step
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                {editedSop.steps.map((step, idx) => (
+                  <StepEditor
+                    key={step.id}
+                    step={step}
+                    stepIndex={idx}
+                    totalSteps={editedSop.steps.length}
+                    onUpdate={(updated) => updateStep(idx, updated)}
+                    onDelete={() => deleteStep(idx)}
+                    onMoveUp={() => moveStepUp(idx)}
+                    onMoveDown={() => moveStepDown(idx)}
+                    onImageReplace={(url) => updateStepImage(idx, url)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    // Normal View Mode
     return (
       <div className="animate-in fade-in slide-in-from-right-4 duration-500 space-y-6 pb-20">
         <button 
@@ -353,10 +736,19 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete }) => {
               <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white space-y-8 sticky top-24 shadow-2xl shadow-slate-900/40">
                 <div>
                   <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Actions</h4>
-                  <p className="text-xs text-slate-400">Export and distribute this technical procedure.</p>
+                  <p className="text-xs text-slate-400">Edit, export and distribute this procedure.</p>
                 </div>
                 
                 <div className="space-y-3">
+                  {/* EDIT BUTTON - Primary Action */}
+                  <button
+                    onClick={enterEditMode}
+                    className="w-full py-4 bg-amber-500 text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-amber-400 transition-all flex items-center justify-center gap-3 shadow-lg shadow-amber-500/30"
+                  >
+                    <i className="fas fa-edit text-base"></i>
+                    Edit SOP
+                  </button>
+                  
                   <button
                     onClick={() => exportToPDF(selectedSop)}
                     disabled={isExporting}

@@ -120,6 +120,7 @@ const App: React.FC = () => {
           <SOPLibrary
             sops={sops}
             onDelete={(sopId) => setSops(prev => prev.filter(s => s.id !== sopId))}
+            onUpdate={(updatedSop) => setSops(prev => prev.map(s => s.id === updatedSop.id ? updatedSop : s))}
           />
         );
       case AppView.SUBSCRIPTION:

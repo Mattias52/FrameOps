@@ -276,6 +276,78 @@ export const saveSOP = async (sop: SOP): Promise<{ success: boolean; id?: string
   }
 };
 
+// Update an existing SOP
+export const updateSOP = async (sop: SOP): Promise<{ success: boolean }> => {
+  if (!isSupabaseConfigured() || !supabase) return { success: false };
+
+  try {
+    // Update SOP metadata
+    const { error: sopError } = await supabase
+      .from('sops')
+      .update({
+        title: sop.title,
+        description: sop.description || null,
+        ppe_requirements: sop.ppeRequirements || null,
+        materials_required: sop.materialsRequired || null,
+        num_steps: sop.steps.length,
+        thumbnail_url: sop.thumbnail_url || (sop.steps.length > 0 ? sop.steps[0].thumbnail || sop.steps[0].image_url : null),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', sop.id);
+
+    if (sopError) {
+      console.error('Error updating SOP:', sopError);
+      return { success: false };
+    }
+
+    // Delete existing steps
+    await supabase.from('sop_sections').delete().eq('sop_id', sop.id);
+
+    // Upload thumbnails and insert updated steps
+    const stepsToInsert = await Promise.all(
+      sop.steps.map(async (step, index) => {
+        let thumbnailUrl: string | null = null;
+
+        // Upload thumbnail if it's a base64 image (new upload)
+        if (step.thumbnail?.startsWith('data:image')) {
+          thumbnailUrl = await uploadThumbnail(sop.id, step.id, step.thumbnail);
+        } else if (step.image_url?.startsWith('data:image')) {
+          thumbnailUrl = await uploadThumbnail(sop.id, step.id, step.image_url);
+        } else if (step.thumbnail || step.image_url) {
+          thumbnailUrl = step.thumbnail || step.image_url || null;
+        }
+
+        return {
+          sop_id: sop.id,
+          step_number: index + 1,
+          step_order: index,
+          timestamp: step.timestamp || null,
+          heading: step.title,
+          content: step.description,
+          title: step.title,
+          description: step.description,
+          image_path: thumbnailUrl,
+          thumbnail_url: thumbnailUrl,
+          safety_warnings: step.safetyWarnings || null,
+          tools_required: step.toolsRequired || null,
+        };
+      })
+    );
+
+    const { error: stepsError } = await supabase.from('sop_sections').insert(stepsToInsert);
+
+    if (stepsError) {
+      console.error('Error updating steps:', stepsError);
+      return { success: false };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error updating SOP:', err);
+    return { success: false };
+  }
+};
+
 // Delete a SOP
 export const deleteSOP = async (sopId: string): Promise<boolean> => {
   if (!isSupabaseConfigured() || !supabase) return false;
