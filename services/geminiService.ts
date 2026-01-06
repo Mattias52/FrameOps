@@ -94,7 +94,6 @@ export const analyzeSOPFrames = async (
         ]
       },
       config: {
-        thinkingConfig: { thinkingBudget: 4000 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -148,8 +147,7 @@ export const analyzeSOPFrames = async (
 export const transcribeAudio = async (textInput: string): Promise<string> => {
   const response = await getAI().models.generateContent({
     model: "gemini-2.0-flash",
-    contents: `Transform this raw technical transcript into a high-quality, structured summary: ${textInput}`,
-    config: { thinkingConfig: { thinkingBudget: 2000 } }
+    contents: `Transform this raw technical transcript into a high-quality, structured summary: ${textInput}`
   });
   return response.text || "Transcription unavailable.";
 };

@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
         },
         proxy: {
           '/api-youtube': {
-            target: 'https://youtube-frame-extractor-production-b14f.up.railway.app',
+            target: 'https://frameops-production.up.railway.app',
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api-youtube/, ''),
             secure: false

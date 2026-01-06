@@ -22,7 +22,7 @@
   "rewrites": [
     {
       "source": "/api-youtube/:path*",
-      "destination": "https://youtube-frame-extractor-production-b14f.up.railway.app/:path*"
+      "destination": "https://frameops-production.up.railway.app/:path*"
     }
   ]
 }

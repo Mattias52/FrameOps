@@ -3,7 +3,7 @@
  * Uses Railway backend for FFmpeg scene detection + HuggingFace VIT frame matching
  */
 
-const RAILWAY_URL = import.meta.env.VITE_RAILWAY_URL || 'https://youtube-frame-extractor-production-b14f.up.railway.app';
+const RAILWAY_URL = import.meta.env.VITE_RAILWAY_URL || 'https://frameops-production.up.railway.app';
 
 // Check if Railway is reachable
 export const checkRailwayHealth = async (): Promise<boolean> => {
