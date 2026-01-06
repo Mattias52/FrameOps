@@ -58,38 +58,45 @@ export const analyzeSOPFrames = async (
     ? `PRECISION VISION TAGS (Detected via ViT): ${vitTags.join(", ")}. These items are positively identified in the video.` 
     : "";
 
-  const prompt = `
-    You are an expert technical writer creating a Standard Operating Procedure (SOP).
+  const prompt = `You are an expert technical writer creating a Standard Operating Procedure (SOP) document.
 
-    IMPORTANT: You are given exactly ${validImageParts.length} frames in chronological order from a procedure video titled: "${title}".
+CRITICAL INSTRUCTIONS - READ CAREFULLY:
+1. I am providing you with ${validImageParts.length} images (frames from a video)
+2. The video/procedure is titled: "${title}"
+3. You MUST analyze EACH image and create ONE step per image
+4. Return EXACTLY ${validImageParts.length} steps - no more, no less
 
-    ${additionalContext ? `Context: ${additionalContext}` : ''}
+${additionalContext ? `ADDITIONAL CONTEXT: ${additionalContext}` : ''}
+${vitContext}
 
-    YOUR TASK:
-    Generate EXACTLY ${validImageParts.length} steps - one step for each frame, in the same order.
+FOR EACH IMAGE/STEP:
+- Look at what is physically shown in the image
+- Write an actionable title starting with a verb (e.g., "Connect the power cable", "Tighten the bolt", "Verify the alignment")
+- Write a detailed description explaining:
+  * What action is being performed
+  * What tools or hands are visible
+  * What components or parts are involved
+  * Any safety concerns visible
+- If you see safety hazards, add them to safetyWarnings
+- If you see tools being used, add them to toolsRequired
 
-    - Step 1 describes what is happening in Frame 1
-    - Step 2 describes what is happening in Frame 2
-    - Step 3 describes what is happening in Frame 3
-    ... and so on for all ${validImageParts.length} frames.
+ALSO PROVIDE:
+- An overall title for this procedure
+- A brief description summarizing the entire procedure
+- A list of PPE (Personal Protective Equipment) requirements based on what you observe
+- A list of materials/tools required for the entire procedure
 
-    For each step:
-    - Write a clear, actionable title (e.g., "Tighten the mounting bolt")
-    - Write a detailed description of what the frame shows and what action to take
-    - Use imperative language ("Position", "Insert", "Tighten", "Verify")
-    - Include specific details visible in that frame (tools, hand positions, components)
-    - Add safety warnings if the step involves risk
+Remember: Analyze the actual visual content of each image. Do not make up steps that aren't shown.`;
 
-    You MUST return exactly ${validImageParts.length} steps. No more, no less.
-  `;
 
   try {
+    // IMPORTANT: Put text prompt FIRST, then images - this helps Gemini follow instructions better
     const response = await getAI().models.generateContent({
       model: "gemini-2.0-flash",
       contents: {
         parts: [
-          ...validImageParts as any,
-          { text: prompt }
+          { text: prompt },
+          ...validImageParts as any
         ]
       },
       config: {
