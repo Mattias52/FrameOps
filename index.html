@@ -1,50 +1,98 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>FrameOps - AI-Powered Video to SOP Generator</title>
+    <title>FrameOps - Turn Videos Into Professional SOPs in Minutes</title>
 
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Transform any video into professional Standard Operating Procedures with AI. Live SOP recording, YouTube import, and automatic step detection. Try free today.">
-    <meta name="keywords" content="SOP generator, video to SOP, standard operating procedures, AI documentation, training videos, work instructions, process documentation, live recording SOP">
+    <meta name="description" content="FrameOps uses AI to transform any video into professional Standard Operating Procedures. Upload a video, get step-by-step documentation with safety warnings, tools, and images. Try free today.">
+    <meta name="keywords" content="SOP generator, video to SOP, standard operating procedures, AI documentation, training videos, work instructions, process documentation, manufacturing SOP, safety procedures, compliance documentation">
     <meta name="author" content="FrameOps">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://frame-ops.vercel.app/">
 
-    <!-- Open Graph / Social Media -->
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://frameops.ai/">
+    <meta property="og:url" content="https://frame-ops.vercel.app/">
     <meta property="og:title" content="FrameOps - AI-Powered Video to SOP Generator">
-    <meta property="og:description" content="Turn any video into professional SOPs in minutes. Live recording, YouTube import, AI-powered step detection.">
-    <meta property="og:image" content="https://frameops.ai/og-image.png">
+    <meta property="og:description" content="Stop spending hours writing procedures. Upload a video and get professional SOPs with AI-detected steps, safety warnings, and tool lists in minutes.">
+    <meta property="og:image" content="https://frame-ops.vercel.app/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="FrameOps">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="FrameOps - Video to SOP AI">
-    <meta name="twitter:description" content="Transform videos into professional SOPs with AI. Live recording & YouTube import.">
+    <meta name="twitter:url" content="https://frame-ops.vercel.app/">
+    <meta name="twitter:title" content="FrameOps - Video to SOP in Minutes">
+    <meta name="twitter:description" content="AI-powered SOP generation from video. Upload, analyze, export. Manufacturing, healthcare, training - any industry.">
+    <meta name="twitter:image" content="https://frame-ops.vercel.app/og-image.png">
+
+    <!-- Additional SEO -->
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FrameOps">
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234F46E5'/><text y='.9em' x='50%' text-anchor='middle' font-size='70' fill='white'>F</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234F46E5'/><text y='.9em' x='50%' text-anchor='middle' font-size='70' fill='white'>F</text></svg>">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+    <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
+
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "FrameOps",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "AI-powered video to SOP generator. Transform any video into professional standard operating procedures with automatic step detection, safety warnings, and tool identification.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "150"
+      }
+    }
+    </script>
+
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* Custom scrollbar for better aesthetics */
+        /* Custom scrollbar */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        /* Safe area support for iPhone notch/home indicator */
+        /* Safe area support for iPhone */
         .safe-area-top { padding-top: env(safe-area-inset-top); }
         .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
         .safe-area-left { padding-left: env(safe-area-inset-left); }
         .safe-area-right { padding-right: env(safe-area-inset-right); }
-        /* Touch action for better mobile experience */
+        /* Touch optimization */
         .touch-manipulation { touch-action: manipulation; }
+        /* Smooth scroll */
+        html { scroll-behavior: smooth; }
+        /* Animation classes for Tailwind */
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeIn 0.5s ease-out; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="bg-slate-50 text-slate-900 antialiased">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>

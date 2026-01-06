@@ -10,10 +10,13 @@ import SOPLibrary from './components/SOPLibrary';
 import SubscriptionPlans from './components/SubscriptionPlans';
 import Transcripts from './components/Transcripts';
 import ErrorBoundary from './components/ErrorBoundary';
+import LandingPage from './components/LandingPage';
 import { fetchSOPs, saveSOP, isSupabaseConfigured } from './services/supabaseService';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
+  // Check if user has entered the app before
+  const hasVisited = typeof window !== 'undefined' && window.localStorage.getItem('frameops_visited');
+  const [currentView, setCurrentView] = useState<AppView>(hasVisited ? AppView.DASHBOARD : AppView.LANDING);
   const [sops, setSops] = useState<SOP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -90,8 +93,17 @@ const App: React.FC = () => {
     }
   };
 
+  const handleEnterApp = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('frameops_visited', 'true');
+    }
+    setCurrentView(AppView.DASHBOARD);
+  };
+
   const renderView = () => {
     switch (currentView) {
+      case AppView.LANDING:
+        return <LandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
       case AppView.DASHBOARD:
         return <Dashboard sops={sops} onNavigate={setCurrentView} />;
       case AppView.GENERATOR:
@@ -131,6 +143,11 @@ const App: React.FC = () => {
         return <Dashboard sops={sops} onNavigate={setCurrentView} />;
     }
   };
+
+  // Landing page - show without app chrome
+  if (currentView === AppView.LANDING) {
+    return <LandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
+  }
 
   // Loading screen
   if (isLoading) {

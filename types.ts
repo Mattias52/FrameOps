@@ -1,5 +1,6 @@
 
 export enum AppView {
+  LANDING = 'landing',
   DASHBOARD = 'dashboard',
   GENERATOR = 'generator',
   LIVE_GENERATOR = 'live_generator',

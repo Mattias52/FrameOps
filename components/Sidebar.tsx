@@ -79,14 +79,18 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
           </nav>
 
           <div className="p-4 border-t border-slate-800">
-            <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-800/50">
-              <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden">
-                <img src="https://picsum.photos/32/32" alt="Avatar" crossOrigin="anonymous" />
+            <div className="p-3 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/30">
+              <div className="flex items-center gap-2 mb-2">
+                <i className="fas fa-gift text-indigo-400"></i>
+                <span className="text-xs font-semibold text-indigo-300">Free Plan</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Alex Johnson</p>
-                <p className="text-xs text-slate-500 truncate">Pro Plan</p>
-              </div>
+              <p className="text-xs text-slate-400 mb-3">3 SOPs remaining this month</p>
+              <button
+                onClick={() => onViewChange(AppView.SUBSCRIPTION)}
+                className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                Upgrade to Pro
+              </button>
             </div>
           </div>
         </aside>
@@ -125,17 +129,29 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
       </nav>
 
       <div className="p-4 border-t border-slate-800">
-        <div className={`flex items-center gap-3 p-2 rounded-xl bg-slate-800/50 ${!isOpen && 'justify-center'}`}>
-          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden">
-            <img src="https://picsum.photos/32/32" alt="Avatar" crossOrigin="anonymous" />
-          </div>
-          {isOpen && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">Alex Johnson</p>
-              <p className="text-xs text-slate-500 truncate">Pro Plan</p>
+        {isOpen ? (
+          <div className="p-3 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/30">
+            <div className="flex items-center gap-2 mb-2">
+              <i className="fas fa-gift text-indigo-400"></i>
+              <span className="text-xs font-semibold text-indigo-300">Free Plan</span>
             </div>
-          )}
-        </div>
+            <p className="text-xs text-slate-400 mb-3">3 SOPs remaining this month</p>
+            <button
+              onClick={() => onViewChange(AppView.SUBSCRIPTION)}
+              className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              Upgrade to Pro
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => onViewChange(AppView.SUBSCRIPTION)}
+            className="w-full p-2 bg-indigo-600/20 hover:bg-indigo-600/30 rounded-lg transition-colors"
+            title="Upgrade to Pro"
+          >
+            <i className="fas fa-crown text-indigo-400"></i>
+          </button>
+        )}
       </div>
     </aside>
   );
