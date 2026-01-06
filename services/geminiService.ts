@@ -58,6 +58,9 @@ export const analyzeSOPFrames = async (
     ? `PRECISION VISION TAGS (Detected via ViT): ${vitTags.join(", ")}. These items are positively identified in the video.` 
     : "";
 
+  // Check if transcript is included in context
+  const hasTranscript = additionalContext.includes('VIDEO TRANSCRIPT:');
+
   const prompt = `You are an expert technical writer creating a Standard Operating Procedure (SOP) document.
 
 CRITICAL INSTRUCTIONS - READ CAREFULLY:
@@ -66,17 +69,25 @@ CRITICAL INSTRUCTIONS - READ CAREFULLY:
 3. You MUST analyze EACH image and create ONE step per image
 4. Return EXACTLY ${validImageParts.length} steps - no more, no less
 
-${additionalContext ? `ADDITIONAL CONTEXT: ${additionalContext}` : ''}
+${additionalContext ? `CONTEXT AND TRANSCRIPT:\n${additionalContext}` : ''}
 ${vitContext}
+
+${hasTranscript ? `IMPORTANT: A video transcript is provided above. Use it to understand:
+- What the narrator/speaker is explaining about each step
+- Technical terminology and specific instructions mentioned
+- Context that may not be visible in the images alone
+Combine the visual information from each frame WITH the spoken context to create accurate, detailed steps.` : ''}
 
 FOR EACH IMAGE/STEP:
 - Look at what is physically shown in the image
+${hasTranscript ? '- Match the visual content with the relevant part of the transcript' : ''}
 - Write an actionable title starting with a verb (e.g., "Connect the power cable", "Tighten the bolt", "Verify the alignment")
 - Write a detailed description explaining:
   * What action is being performed
   * What tools or hands are visible
   * What components or parts are involved
   * Any safety concerns visible
+  ${hasTranscript ? '* Include relevant details from what the narrator explains' : ''}
 - If you see safety hazards, add them to safetyWarnings
 - If you see tools being used, add them to toolsRequired
 
@@ -86,7 +97,7 @@ ALSO PROVIDE:
 - A list of PPE (Personal Protective Equipment) requirements based on what you observe
 - A list of materials/tools required for the entire procedure
 
-Remember: Analyze the actual visual content of each image. Do not make up steps that aren't shown.`;
+Remember: Analyze the actual visual content of each image${hasTranscript ? ' combined with the transcript context' : ''}. Do not make up steps that aren't shown.`;
 
 
   try {
@@ -142,10 +153,10 @@ Remember: Analyze the actual visual content of each image. Do not make up steps 
     });
 
     const text = response.text;
-    if (!text) throw new Error("Empty response from Gemini Pro.");
+    if (!text) throw new Error("Empty response from Gemini 2.0 Flash.");
     return JSON.parse(text.trim());
   } catch (error: any) {
-    console.error("Gemini Pro Analysis Error:", error);
+    console.error("Gemini 2.0 Flash Analysis Error:", error);
     throw error;
   }
 };

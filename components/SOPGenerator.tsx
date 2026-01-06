@@ -232,7 +232,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
       setDetectedTags(tags);
       setProgress(60);
 
-      addLog("Gemini 3 Pro: Generating SOP steps...");
+      addLog("Gemini 2.0 Flash: Generating SOP steps...");
       const fullContext = transcript
         ? `${context}\n\nVIDEO TRANSCRIPT:\n${transcript.substring(0, 4000)}`
         : context;
