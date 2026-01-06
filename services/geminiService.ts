@@ -2,7 +2,19 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SOPStep } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+
+// Lazy initialization to avoid crash on missing key
+let _ai: GoogleGenAI | null = null;
+const getAI = () => {
+  if (!_ai) {
+    if (!apiKey) {
+      throw new Error("Gemini API key not configured. Set VITE_GEMINI_API_KEY in environment.");
+    }
+    _ai = new GoogleGenAI({ apiKey });
+  }
+  return _ai;
+};
 
 export const analyzeSOPFrames = async (
   frames: string[], 
@@ -72,7 +84,7 @@ export const analyzeSOPFrames = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: "gemini-2.0-flash",
       contents: {
         parts: [
@@ -132,7 +144,7 @@ export const analyzeSOPFrames = async (
 };
 
 export const transcribeAudio = async (textInput: string): Promise<string> => {
-  const response = await ai.models.generateContent({
+  const response = await getAI().models.generateContent({
     model: "gemini-2.0-flash",
     contents: `Transform this raw technical transcript into a high-quality, structured summary: ${textInput}`
   });
@@ -164,7 +176,7 @@ export const transcribeAudioFile = async (audioBlob: Blob): Promise<string> => {
 
     console.log(`Transcribing audio: ${(audioBlob.size / 1024).toFixed(1)}KB, type: ${mimeType}`);
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: "gemini-2.0-flash",
       contents: {
         parts: [
