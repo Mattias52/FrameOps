@@ -16,6 +16,10 @@ Required for Railway deployment:
 
 ```env
 PORT=3000
+```
+
+Optional (only if using VIT frame matching):
+```env
 HF_API_TOKEN=your_huggingface_api_token
 ```
 
