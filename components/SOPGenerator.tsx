@@ -18,7 +18,16 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
   const [ytMetadata, setYtMetadata] = useState<{ title: string; author: string } | null>(null);
   const [title, setTitle] = useState('');
   const [context, setContext] = useState('');
-  const [sceneThreshold, setSceneThreshold] = useState(0.3);
+  const [detailLevel, setDetailLevel] = useState<'quick' | 'normal' | 'detailed'>('normal');
+
+  // Detail level presets based on OpenAI recommendations
+  const detailPresets = {
+    quick: { threshold: 0.45, minFrames: 6, maxFrames: 12, label: 'Snabb', desc: '6-12 steg' },
+    normal: { threshold: 0.30, minFrames: 12, maxFrames: 25, label: 'Normal', desc: '12-25 steg' },
+    detailed: { threshold: 0.20, minFrames: 20, maxFrames: 50, label: 'Detaljerad', desc: '20-50 steg' }
+  };
+
+  const currentPreset = detailPresets[detailLevel];
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [log, setLog] = useState<string[]>([]);
@@ -150,7 +159,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
 
     setIsProcessing(true);
     setProgress(5);
-    setLog(["Initializing AI Vision Pipeline..."]);
+    addLog(`Using ${currentPreset.label} mode (${currentPreset.minFrames}-${currentPreset.maxFrames} frames, threshold ${currentPreset.threshold})`);
 
     try {
       let frames: string[] = [];
@@ -166,9 +175,9 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
             videoFile,
             addLog,
             {
-              sceneThreshold: sceneThreshold,
-              maxFrames: 60,
-              minFrames: 10,
+              sceneThreshold: currentPreset.threshold,
+              maxFrames: currentPreset.maxFrames,
+              minFrames: currentPreset.minFrames,
             }
           );
 
@@ -194,9 +203,9 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
             youtubeUrl,
             addLog,
             {
-              sceneThreshold: sceneThreshold,
-              maxFrames: 60,
-              minFrames: 10,
+              sceneThreshold: currentPreset.threshold,
+              maxFrames: currentPreset.maxFrames,
+              minFrames: currentPreset.minFrames,
             }
           );
 
@@ -449,26 +458,35 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
                 <input type="text" placeholder="Procedure Title" value={title} onChange={(e) => setTitle((e.target as any).value)} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-sm mb-4" />
                 <textarea rows={3} placeholder="Add equipment manuals or specific safety instructions..." value={context} onChange={(e) => setContext((e.target as any).value)} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all resize-none font-medium text-sm"></textarea>
               </div>
-              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-200 space-y-6">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-black text-slate-900 uppercase tracking-widest">Scene Sensitivity</label>
-                  <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{sceneThreshold.toFixed(1)}</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="0.1" 
-                  max="0.9" 
-                  step="0.1" 
-                  value={sceneThreshold} 
-                  onChange={(e) => setSceneThreshold(parseFloat((e.target as any).value))}
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-                <div className="flex justify-between text-[8px] font-black text-slate-400 uppercase">
-                  <span>Micro Changes</span>
-                  <span>Major Shifts</span>
+              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-200 space-y-5">
+                <label className="text-xs font-black text-slate-900 uppercase tracking-widest block">Detaljnivå</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['quick', 'normal', 'detailed'] as const).map((level) => {
+                    const preset = detailPresets[level];
+                    const isSelected = detailLevel === level;
+                    return (
+                      <button
+                        key={level}
+                        type="button"
+                        onClick={() => setDetailLevel(level)}
+                        className={`p-3 rounded-xl text-center transition-all ${
+                          isSelected
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-300'
+                        }`}
+                      >
+                        <div className="text-xs font-black uppercase">{preset.label}</div>
+                        <div className={`text-[9px] mt-1 ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
+                          {preset.desc}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
                 <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
-                  Lower values detect subtle visual changes (more steps). Higher values only capture distinct scene shifts.
+                  {detailLevel === 'quick' && 'Snabb genomgång - perfekt för enkla processer'}
+                  {detailLevel === 'normal' && 'Balanserad nivå - rekommenderad för de flesta videor'}
+                  {detailLevel === 'detailed' && 'Omfattande dokumentation - fångar varje detalj'}
                 </p>
               </div>
             </div>
