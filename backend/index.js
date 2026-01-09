@@ -1120,7 +1120,8 @@ app.post('/analyze-sop', async (req, res) => {
     console.log(`[${jobId}] Valid image parts: ${validImageParts.length}`);
 
     // Check if additionalContext contains a transcript
-    const hasTranscript = additionalContext.includes('VIDEO TRANSCRIPT:');
+    const hasTranscript = additionalContext.includes('VIDEO TRANSCRIPT:') &&
+      additionalContext.split('VIDEO TRANSCRIPT:')[1]?.trim().length > 50;
 
     const transcriptInstructions = hasTranscript ? `
       CRITICAL - VIDEO TRANSCRIPT AVAILABLE:
@@ -1133,7 +1134,29 @@ app.post('/analyze-sop', async (req, res) => {
       - The frames show you HOW it looks visually
 
       Combine both sources: transcript for context/explanation + frames for visual details.
-    ` : '';
+    ` : `
+      CRITICAL - NO AUDIO/TRANSCRIPT AVAILABLE (Visual-only video):
+      This video has no speech or narration. You must analyze the frames VISUALLY and write as the INSTRUCTOR.
+
+      IMPORTANT WRITING STYLE:
+      - Write as if YOU are the expert teaching this procedure
+      - Use direct, imperative instructions: "Position the tool", "Apply pressure", "Insert the component"
+      - NEVER write from an observer perspective like:
+        ❌ "The video shows..."
+        ❌ "We can see that..."
+        ❌ "The person is doing..."
+        ❌ "In this frame..."
+        ❌ "It appears that..."
+
+      - ALWAYS write as the instructor:
+        ✅ "Position the bracket against the mounting surface"
+        ✅ "Apply firm pressure while turning clockwise"
+        ✅ "Ensure the component is fully seated before proceeding"
+
+      - Deduce the actions from visual cues: hand positions, tool angles, component states
+      - If you see hands holding a screwdriver at an angle, write: "Insert the screwdriver at a 45-degree angle"
+      - If you see a component being aligned, write: "Align the edges carefully before pressing down"
+    `;
 
     const vitContext = vitTags.length > 0
       ? `PRECISION VISION TAGS (Detected via ViT): ${vitTags.join(", ")}. These items are positively identified in the video.`
@@ -1141,6 +1164,7 @@ app.post('/analyze-sop', async (req, res) => {
 
     const prompt = `
       You are an expert technical writer creating a Standard Operating Procedure (SOP).
+      You write as THE INSTRUCTOR - as if you are the expert teaching someone how to perform this task.
 
       IMPORTANT: You are given exactly ${validImageParts.length} frames in chronological order from a procedure video titled: "${title}".
       ${transcriptInstructions}
@@ -1150,18 +1174,24 @@ app.post('/analyze-sop', async (req, res) => {
       YOUR TASK:
       Generate EXACTLY ${validImageParts.length} steps - one step for each frame, in the same order.
 
-      - Step 1 describes what is happening in Frame 1
-      - Step 2 describes what is happening in Frame 2
-      - Step 3 describes what is happening in Frame 3
+      - Step 1 describes what to DO based on Frame 1
+      - Step 2 describes what to DO based on Frame 2
+      - Step 3 describes what to DO based on Frame 3
       ... and so on for all ${validImageParts.length} frames.
+
+      WRITING RULES (CRITICAL):
+      - Write in IMPERATIVE form - direct instructions to the reader
+      - You ARE the instructor teaching this procedure
+      - NEVER describe what "the video shows" or what "the person does"
+      - ALWAYS write what the READER should do: "Grip the handle firmly", "Rotate 90 degrees clockwise"
 
       For each step:
       - Write a clear, actionable title (e.g., "Tighten the mounting bolt")
-      - Write a detailed description combining what you SEE in the frame with what was SAID in the transcript
+      - Write a detailed description of WHAT TO DO and HOW to do it
       - Use imperative language ("Position", "Insert", "Tighten", "Verify")
-      - Include specific details: measurements, settings, tool names mentioned in the transcript
-      - Include specific visual details from the frame (hand positions, components visible)
-      - Add safety warnings if mentioned in transcript OR visible in frame
+      - Include specific details: measurements, settings, tool names
+      - Include specific visual details (hand positions, component alignment)
+      - Add safety warnings where appropriate
 
       You MUST return exactly ${validImageParts.length} steps. No more, no less.
     `;
