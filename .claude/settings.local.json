@@ -5,7 +5,9 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nFix Gemini API initialization for browser environment\n\n- Use import.meta.env.VITE_GEMINI_API_KEY instead of process.env.API_KEY\n- Lazy initialize GoogleGenAI to prevent crash on page load\n- Error only thrown when API is actually used without key configured\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push:*)",
       "Bash(git commit:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm install)"
     ]
   }
 }

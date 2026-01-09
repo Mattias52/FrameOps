@@ -1,161 +1,54 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
 import { SOPStep } from "../types";
 
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-
-// Lazy initialization to avoid crash on missing key
-let _ai: GoogleGenAI | null = null;
-const getAI = () => {
-  if (!_ai) {
-    if (!apiKey) {
-      throw new Error("Gemini API key not configured. Set VITE_GEMINI_API_KEY in environment.");
-    }
-    _ai = new GoogleGenAI({ apiKey });
-  }
-  return _ai;
-};
+const RAILWAY_URL = import.meta.env.VITE_RAILWAY_URL || 'https://frameops-production.up.railway.app';
 
 export const analyzeSOPFrames = async (
-  frames: string[], 
-  title: string, 
+  frames: string[],
+  title: string,
   additionalContext: string = "",
   vitTags: string[] = []
-): Promise<{ 
-  title: string; 
-  description: string; 
+): Promise<{
+  title: string;
+  description: string;
   steps: SOPStep[];
   ppeRequirements: string[];
   materialsRequired: string[];
 }> => {
-  
+
   if (!frames || frames.length === 0) {
     throw new Error("No frames provided for analysis.");
   }
 
-  const validImageParts = frames
-    .filter(f => f && (f.includes('base64,') || f.startsWith('http')))
-    .map(f => {
-      if (f.includes('base64,')) {
-        const parts = f.split('base64,');
-        return {
-          inlineData: {
-            mimeType: "image/jpeg",
-            data: parts[1]
-          }
-        };
-      }
-      return null;
-    })
-    .filter(p => p !== null);
-
-  if (validImageParts.length === 0) {
-    throw new Error("No valid image data found for analysis.");
-  }
-
-  // Inject ViT tags into the prompt as ground truth visual evidence
-  const vitContext = vitTags.length > 0
-    ? `PRECISION VISION TAGS (Detected via ViT): ${vitTags.join(", ")}. These items are positively identified in the video.`
-    : "";
-
-  // Check if additionalContext contains a transcript
-  const hasTranscript = additionalContext.includes('VIDEO TRANSCRIPT:');
-
-  const transcriptInstructions = hasTranscript ? `
-    CRITICAL - VIDEO TRANSCRIPT AVAILABLE:
-    You have been provided with the audio transcript from this video. USE IT ACTIVELY:
-    - The transcript contains what the presenter/narrator is SAYING while performing each step
-    - Match the spoken explanations to what you see in each frame
-    - Use the presenter's own words and terminology in your step descriptions
-    - If the presenter mentions specific measurements, settings, or warnings - include them
-    - The transcript is your PRIMARY source for understanding WHAT is being done and WHY
-    - The frames show you HOW it looks visually
-
-    Combine both sources: transcript for context/explanation + frames for visual details.
-  ` : '';
-
-  const prompt = `
-    You are an expert technical writer creating a Standard Operating Procedure (SOP).
-
-    IMPORTANT: You are given exactly ${validImageParts.length} frames in chronological order from a procedure video titled: "${title}".
-    ${transcriptInstructions}
-    ${additionalContext ? `\nCONTEXT AND TRANSCRIPT:\n${additionalContext}` : ''}
-    ${vitContext}
-
-    YOUR TASK:
-    Generate EXACTLY ${validImageParts.length} steps - one step for each frame, in the same order.
-
-    - Step 1 describes what is happening in Frame 1
-    - Step 2 describes what is happening in Frame 2
-    - Step 3 describes what is happening in Frame 3
-    ... and so on for all ${validImageParts.length} frames.
-
-    For each step:
-    - Write a clear, actionable title (e.g., "Tighten the mounting bolt")
-    - Write a detailed description combining what you SEE in the frame with what was SAID in the transcript
-    - Use imperative language ("Position", "Insert", "Tighten", "Verify")
-    - Include specific details: measurements, settings, tool names mentioned in the transcript
-    - Include specific visual details from the frame (hand positions, components visible)
-    - Add safety warnings if mentioned in transcript OR visible in frame
-
-    You MUST return exactly ${validImageParts.length} steps. No more, no less.
-  `;
-
+  console.log(`Sending ${frames.length} frames to Railway for Gemini analysis...`);
 
   try {
-    const response = await getAI().models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: {
-        parts: [
-          ...validImageParts as any,
-          { text: prompt }
-        ]
+    const response = await fetch(`${RAILWAY_URL}/analyze-sop`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            ppeRequirements: { 
-              type: Type.ARRAY, 
-              items: { type: Type.STRING }
-            },
-            materialsRequired: { 
-              type: Type.ARRAY, 
-              items: { type: Type.STRING }
-            },
-            steps: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.STRING },
-                  timestamp: { type: Type.STRING },
-                  title: { type: Type.STRING },
-                  description: { type: Type.STRING },
-                  safetyWarnings: { 
-                    type: Type.ARRAY, 
-                    items: { type: Type.STRING } 
-                  },
-                  toolsRequired: { 
-                    type: Type.ARRAY, 
-                    items: { type: Type.STRING } 
-                  }
-                },
-                required: ["id", "title", "description", "timestamp"]
-              }
-            }
-          },
-          required: ["title", "description", "steps", "ppeRequirements", "materialsRequired"]
-        }
-      }
+      body: JSON.stringify({
+        frames,
+        title,
+        additionalContext,
+        vitTags
+      }),
     });
 
-    const text = response.text;
-    if (!text) throw new Error("Empty response from Gemini Pro.");
-    return JSON.parse(text.trim());
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Railway Gemini analysis failed: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Gemini analysis failed');
+    }
+
+    console.log(`Gemini returned ${result.steps?.length || 0} steps`);
+    return result;
+
   } catch (error: any) {
     console.error("Gemini Pro Analysis Error:", error);
     throw error;
@@ -163,14 +56,12 @@ export const analyzeSOPFrames = async (
 };
 
 export const transcribeAudio = async (textInput: string): Promise<string> => {
-  const response = await getAI().models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: `Transform this raw technical transcript into a high-quality, structured summary: ${textInput}`
-  });
-  return response.text || "Transcription unavailable.";
+  // This function is used for cleaning up transcripts - just return the input for now
+  // Could be moved to backend if needed
+  return textInput;
 };
 
-// Transcribe audio file using Gemini (for iOS Safari fallback - used by LiveSOPGenerator)
+// Transcribe audio file using Railway backend (for iOS Safari fallback - used by LiveSOPGenerator)
 export const transcribeAudioFile = async (audioBlob: Blob): Promise<string> => {
   try {
     // Convert blob to base64 robustly
@@ -185,45 +76,40 @@ export const transcribeAudioFile = async (audioBlob: Blob): Promise<string> => {
 
     // Determine mime type
     let mimeType = audioBlob.type || 'audio/webm';
-    // Gemini supports: audio/wav, audio/mp3, audio/aiff, audio/aac, audio/ogg, audio/flac
-    // Map common types
     if (mimeType.includes('webm')) {
       mimeType = 'audio/webm';
     } else if (mimeType.includes('mp4')) {
       mimeType = 'audio/mp4';
     }
 
-    console.log(`Transcribing audio: ${(audioBlob.size / 1024).toFixed(1)}KB, type: ${mimeType}`);
+    console.log(`Sending audio to Railway for transcription: ${(audioBlob.size / 1024).toFixed(1)}KB, type: ${mimeType}`);
 
-    const response = await getAI().models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              mimeType: mimeType,
-              data: base64
-            }
-          },
-          {
-            text: `Transcribe this audio recording accurately. The speaker is explaining a technical procedure or demonstration.
-
-Rules:
-- Output ONLY the transcription text, no timestamps or speaker labels
-- Keep the original language (don't translate)
-- Include all spoken words, even filler words if they help context
-- If audio is unclear, do your best to interpret
-- If there is no speech, return an empty string.
-
-Output the transcription:`
-          }
-        ]
-      }
+    const response = await fetch(`${RAILWAY_URL}/transcribe-audio`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        audioBase64: base64,
+        mimeType
+      }),
     });
 
-    const transcription = response.text?.trim() || '';
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Railway transcription failed: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Transcription failed');
+    }
+
+    const transcription = result.transcription || '';
     console.log('Transcription result:', transcription.substring(0, 100) + '...');
     return transcription;
+
   } catch (error: any) {
     console.error('Audio transcription failed:', error);
     // Return empty string instead of throwing - allow SOP generation to continue without transcript

@@ -6,6 +6,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const fileUpload = require('express-fileupload');
+const { GoogleGenAI, Type } = require('@google/genai');
 
 const app = express();
 app.use(cors());
@@ -977,9 +978,224 @@ function cleanup(dir) {
   }
 }
 
+// ============================================
+// GEMINI SOP ANALYSIS ENDPOINT
+// Moved from frontend to keep API key server-side
+// ============================================
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
+
+let _genai = null;
+function getGenAI() {
+  if (!_genai) {
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY not configured in environment');
+    }
+    _genai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+  }
+  return _genai;
+}
+
+app.post('/analyze-sop', async (req, res) => {
+  const { frames, title, additionalContext = '', vitTags = [] } = req.body;
+
+  if (!frames || !Array.isArray(frames) || frames.length === 0) {
+    return res.status(400).json({ error: 'Missing or empty frames array' });
+  }
+
+  const jobId = crypto.randomBytes(8).toString('hex');
+  console.log(`[${jobId}] Analyzing ${frames.length} frames for SOP: "${title}"`);
+
+  try {
+    const validImageParts = frames
+      .filter(f => f && (f.includes('base64,') || f.startsWith('http')))
+      .map(f => {
+        if (f.includes('base64,')) {
+          const parts = f.split('base64,');
+          return {
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: parts[1]
+            }
+          };
+        }
+        return null;
+      })
+      .filter(p => p !== null);
+
+    if (validImageParts.length === 0) {
+      return res.status(400).json({ error: 'No valid image data found in frames' });
+    }
+
+    console.log(`[${jobId}] Valid image parts: ${validImageParts.length}`);
+
+    // Check if additionalContext contains a transcript
+    const hasTranscript = additionalContext.includes('VIDEO TRANSCRIPT:');
+
+    const transcriptInstructions = hasTranscript ? `
+      CRITICAL - VIDEO TRANSCRIPT AVAILABLE:
+      You have been provided with the audio transcript from this video. USE IT ACTIVELY:
+      - The transcript contains what the presenter/narrator is SAYING while performing each step
+      - Match the spoken explanations to what you see in each frame
+      - Use the presenter's own words and terminology in your step descriptions
+      - If the presenter mentions specific measurements, settings, or warnings - include them
+      - The transcript is your PRIMARY source for understanding WHAT is being done and WHY
+      - The frames show you HOW it looks visually
+
+      Combine both sources: transcript for context/explanation + frames for visual details.
+    ` : '';
+
+    const vitContext = vitTags.length > 0
+      ? `PRECISION VISION TAGS (Detected via ViT): ${vitTags.join(", ")}. These items are positively identified in the video.`
+      : "";
+
+    const prompt = `
+      You are an expert technical writer creating a Standard Operating Procedure (SOP).
+
+      IMPORTANT: You are given exactly ${validImageParts.length} frames in chronological order from a procedure video titled: "${title}".
+      ${transcriptInstructions}
+      ${additionalContext ? `\nCONTEXT AND TRANSCRIPT:\n${additionalContext}` : ''}
+      ${vitContext}
+
+      YOUR TASK:
+      Generate EXACTLY ${validImageParts.length} steps - one step for each frame, in the same order.
+
+      - Step 1 describes what is happening in Frame 1
+      - Step 2 describes what is happening in Frame 2
+      - Step 3 describes what is happening in Frame 3
+      ... and so on for all ${validImageParts.length} frames.
+
+      For each step:
+      - Write a clear, actionable title (e.g., "Tighten the mounting bolt")
+      - Write a detailed description combining what you SEE in the frame with what was SAID in the transcript
+      - Use imperative language ("Position", "Insert", "Tighten", "Verify")
+      - Include specific details: measurements, settings, tool names mentioned in the transcript
+      - Include specific visual details from the frame (hand positions, components visible)
+      - Add safety warnings if mentioned in transcript OR visible in frame
+
+      You MUST return exactly ${validImageParts.length} steps. No more, no less.
+    `;
+
+    console.log(`[${jobId}] Calling Gemini 2.0 Flash...`);
+
+    const response = await getGenAI().models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: {
+        parts: [
+          ...validImageParts,
+          { text: prompt }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            ppeRequirements: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            materialsRequired: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            steps: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  timestamp: { type: Type.STRING },
+                  title: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  safetyWarnings: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  },
+                  toolsRequired: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  }
+                },
+                required: ["id", "title", "description", "timestamp"]
+              }
+            }
+          },
+          required: ["title", "description", "steps", "ppeRequirements", "materialsRequired"]
+        }
+      }
+    });
+
+    const text = response.text;
+    if (!text) {
+      throw new Error('Empty response from Gemini');
+    }
+
+    const result = JSON.parse(text.trim());
+    console.log(`[${jobId}] Gemini returned ${result.steps?.length || 0} steps`);
+
+    res.json({ success: true, ...result });
+
+  } catch (error) {
+    console.error(`[${jobId}] Gemini analysis error:`, error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Transcribe audio file using Gemini
+app.post('/transcribe-audio', async (req, res) => {
+  const { audioBase64, mimeType = 'audio/webm' } = req.body;
+
+  if (!audioBase64) {
+    return res.status(400).json({ error: 'Missing audioBase64' });
+  }
+
+  const jobId = crypto.randomBytes(8).toString('hex');
+  console.log(`[${jobId}] Transcribing audio: ${(audioBase64.length / 1024).toFixed(1)}KB`);
+
+  try {
+    const response = await getGenAI().models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: audioBase64
+            }
+          },
+          {
+            text: `Transcribe this audio recording accurately. The speaker is explaining a technical procedure or demonstration.
+
+Rules:
+- Output ONLY the transcription text, no timestamps or speaker labels
+- Keep the original language (don't translate)
+- Include all spoken words, even filler words if they help context
+- If audio is unclear, do your best to interpret
+- If there is no speech, return an empty string.
+
+Output the transcription:`
+          }
+        ]
+      }
+    });
+
+    const transcription = response.text?.trim() || '';
+    console.log(`[${jobId}] Transcription: ${transcription.substring(0, 100)}...`);
+
+    res.json({ success: true, transcription });
+
+  } catch (error) {
+    console.error(`[${jobId}] Transcription error:`, error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`FrameOps Backend running on port ${PORT}`);
-  console.log('=== VERSION 12: FIXED VIDEO DOWNLOAD + SCENE DETECTION ===');
+  console.log('=== VERSION 13: GEMINI API MOVED TO BACKEND ===');
+  console.log(`Gemini API Key: ${GEMINI_API_KEY ? 'configured' : 'MISSING!'}`);
 });
 
 // If running standalone, log UI URL
