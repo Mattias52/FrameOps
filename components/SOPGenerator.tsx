@@ -219,11 +219,13 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
         try {
           const transcriptResult = await getYoutubeTranscript(youtubeUrl, addLog);
           transcript = transcriptResult.transcript;
-          if (transcript) {
-            addLog(`Transcript loaded: ${transcript.length} chars`);
+          if (transcript && transcript.length > 0) {
+            addLog(`Transcript loaded: ${transcript.length} chars (${transcriptResult.source})`);
+          } else {
+            addLog("No transcript available - video may lack subtitles");
           }
         } catch (e) {
-          addLog("Transcript not available, continuing with visual analysis");
+          addLog("Transcript fetch failed - continuing with visual analysis only");
         }
       }
       setProgress(50);
@@ -232,9 +234,10 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
       setDetectedTags(tags);
       setProgress(60);
 
-      addLog("Gemini 2.0 Flash: Generating SOP steps...");
+      addLog(transcript ? "Gemini 2.0 Flash: Analyzing frames + transcript..." : "Gemini 2.0 Flash: Analyzing frames (no transcript)...");
+      // Increased transcript limit from 4000 to 15000 chars for better context
       const fullContext = transcript
-        ? `${context}\n\nVIDEO TRANSCRIPT:\n${transcript.substring(0, 4000)}`
+        ? `${context}\n\nVIDEO TRANSCRIPT:\n${transcript.substring(0, 15000)}`
         : context;
       const result = await analyzeSOPFrames(frames, title || "New Procedure", fullContext, tags);
 

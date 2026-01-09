@@ -58,12 +58,29 @@ export const analyzeSOPFrames = async (
     ? `PRECISION VISION TAGS (Detected via ViT): ${vitTags.join(", ")}. These items are positively identified in the video.`
     : "";
 
+  // Check if additionalContext contains a transcript
+  const hasTranscript = additionalContext.includes('VIDEO TRANSCRIPT:');
+
+  const transcriptInstructions = hasTranscript ? `
+    CRITICAL - VIDEO TRANSCRIPT AVAILABLE:
+    You have been provided with the audio transcript from this video. USE IT ACTIVELY:
+    - The transcript contains what the presenter/narrator is SAYING while performing each step
+    - Match the spoken explanations to what you see in each frame
+    - Use the presenter's own words and terminology in your step descriptions
+    - If the presenter mentions specific measurements, settings, or warnings - include them
+    - The transcript is your PRIMARY source for understanding WHAT is being done and WHY
+    - The frames show you HOW it looks visually
+
+    Combine both sources: transcript for context/explanation + frames for visual details.
+  ` : '';
+
   const prompt = `
     You are an expert technical writer creating a Standard Operating Procedure (SOP).
 
     IMPORTANT: You are given exactly ${validImageParts.length} frames in chronological order from a procedure video titled: "${title}".
-
-    ${additionalContext ? `Context: ${additionalContext}` : ''}
+    ${transcriptInstructions}
+    ${additionalContext ? `\nCONTEXT AND TRANSCRIPT:\n${additionalContext}` : ''}
+    ${vitContext}
 
     YOUR TASK:
     Generate EXACTLY ${validImageParts.length} steps - one step for each frame, in the same order.
@@ -75,10 +92,11 @@ export const analyzeSOPFrames = async (
 
     For each step:
     - Write a clear, actionable title (e.g., "Tighten the mounting bolt")
-    - Write a detailed description of what the frame shows and what action to take
+    - Write a detailed description combining what you SEE in the frame with what was SAID in the transcript
     - Use imperative language ("Position", "Insert", "Tighten", "Verify")
-    - Include specific details visible in that frame (tools, hand positions, components)
-    - Add safety warnings if the step involves risk
+    - Include specific details: measurements, settings, tool names mentioned in the transcript
+    - Include specific visual details from the frame (hand positions, components visible)
+    - Add safety warnings if mentioned in transcript OR visible in frame
 
     You MUST return exactly ${validImageParts.length} steps. No more, no less.
   `;

@@ -137,8 +137,10 @@ app.post('/get-transcript', async (req, res) => {
     const tempFile = path.join(TEMP_DIR, `subs_${jobId}`);
 
     try {
+      // Support all common languages - prioritize English, Swedish, then any available
+      // Using "all" would download ALL subs which is slow, so we list common ones
       execSync(
-        `yt-dlp --skip-download --write-auto-subs --write-subs --sub-format "vtt/srt/best" --sub-langs "en.*,sv.*" -o "${tempFile}" "${youtubeUrl}"`,
+        `yt-dlp --skip-download --write-auto-subs --write-subs --sub-format "vtt/srt/best" --sub-langs "en.*,sv.*,de.*,fr.*,es.*,it.*,pt.*,nl.*,pl.*,ru.*,ja.*,ko.*,zh.*,no.*,da.*,fi.*" -o "${tempFile}" "${youtubeUrl}"`,
         { timeout: 30000 }
       );
     } catch (e) {
@@ -149,11 +151,21 @@ app.post('/get-transcript', async (req, res) => {
     const files = fs.readdirSync(TEMP_DIR).filter(f => f.startsWith(`subs_${jobId}`) && (f.endsWith('.vtt') || f.endsWith('.srt')));
 
     if (files.length === 0) {
-      console.log(`[${jobId}] No subtitles found via yt-dlp, returning empty`);
+      console.log(`[${jobId}] No subtitles found - video may not have captions enabled`);
       return res.json({ success: true, transcript: "", source: "none" });
     }
 
-    const subFile = path.join(TEMP_DIR, files[0]);
+    console.log(`[${jobId}] Found subtitle files: ${files.join(', ')}`);
+
+    // Prefer English subtitles if available, otherwise take the first one
+    let selectedFile = files[0];
+    const englishFile = files.find(f => f.includes('.en.') || f.includes('.en-'));
+    if (englishFile) {
+      selectedFile = englishFile;
+      console.log(`[${jobId}] Using English subtitle: ${selectedFile}`);
+    }
+
+    const subFile = path.join(TEMP_DIR, selectedFile);
     const content = fs.readFileSync(subFile, 'utf8');
 
     // Basic cleanup of VTT/SRT to plain text
@@ -170,10 +182,14 @@ app.post('/get-transcript', async (req, res) => {
     // Cleanup temp files
     files.forEach(f => fs.unlinkSync(path.join(TEMP_DIR, f)));
 
+    const finalTranscript = plainText.substring(0, 20000);
+    const source = selectedFile.includes('auto') ? 'auto-generated' : 'manual';
+    console.log(`[${jobId}] Returning transcript: ${finalTranscript.length} chars (${source})`);
+
     res.json({
       success: true,
-      transcript: plainText.substring(0, 20000), // Cap at 20k chars for Gemini
-      source: files[0].includes('auto') ? 'auto-generated' : 'manual'
+      transcript: finalTranscript,
+      source: source
     });
 
   } catch (error) {
