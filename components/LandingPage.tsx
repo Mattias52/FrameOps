@@ -347,6 +347,64 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
         </div>
       </section>
 
+      {/* AI Philosophy Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-slate-50">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold mb-6">
+              <i className="fas fa-shield-check"></i>
+              Our AI Philosophy
+            </div>
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">
+              AI That Enhances Reality, <br />
+              <span className="text-indigo-600">Not Fabricates It</span>
+            </h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+              We use AI to extract, organize, and present what's already in your video -
+              making it clearer and more professional, never making things up.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-video text-2xl text-indigo-600"></i>
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Extract</h3>
+              <p className="text-slate-600">
+                AI analyzes your video frame-by-frame, transcribes audio, and identifies every action, tool, and detail.
+              </p>
+            </div>
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-wand-magic-sparkles text-2xl text-emerald-600"></i>
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Enhance</h3>
+              <p className="text-slate-600">
+                Transform raw content into clear, professional instructions - better organized, easier to follow.
+              </p>
+            </div>
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-rose-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-ban text-2xl text-rose-600"></i>
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Never Fake</h3>
+              <p className="text-slate-600">
+                We don't invent steps or add content that wasn't there. Your expertise, your knowledge - just presented better.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-12 p-6 bg-slate-900 rounded-2xl text-center">
+            <p className="text-white text-lg font-medium">
+              <i className="fas fa-quote-left text-indigo-400 mr-2"></i>
+              Your video is the source of truth. AI is just the translator.
+              <i className="fas fa-quote-right text-indigo-400 ml-2"></i>
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section id="features" className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
