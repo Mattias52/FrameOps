@@ -121,7 +121,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', version: '12.0.0' });
 });
 
-// Get transcript from YouTube video
+// Get transcript from YouTube video - tries subtitles first, then audio transcription
 app.post('/get-transcript', async (req, res) => {
   const { youtubeUrl } = req.body;
 
@@ -130,71 +130,139 @@ app.post('/get-transcript', async (req, res) => {
   }
 
   const jobId = crypto.randomBytes(8).toString('hex');
+  const jobDir = path.join(TEMP_DIR, `transcript_${jobId}`);
   console.log(`[${jobId}] Fetching transcript for ${youtubeUrl}`);
 
   try {
-    // Try to get auto-generated or manual subtitles using yt-dlp
-    // We use --skip-download and --write-auto-subs --write-subs
-    const tempFile = path.join(TEMP_DIR, `subs_${jobId}`);
+    fs.mkdirSync(jobDir, { recursive: true });
+
+    // STEP 1: Try to get existing subtitles from YouTube
+    const tempFile = path.join(jobDir, 'subs');
+    let subtitleTranscript = '';
 
     try {
-      // Support all common languages - prioritize English, Swedish, then any available
-      // Using "all" would download ALL subs which is slow, so we list common ones
       execSync(
         `yt-dlp --skip-download --write-auto-subs --write-subs --sub-format "vtt/srt/best" --sub-langs "en.*,sv.*,de.*,fr.*,es.*,it.*,pt.*,nl.*,pl.*,ru.*,ja.*,ko.*,zh.*,no.*,da.*,fi.*" -o "${tempFile}" "${youtubeUrl}"`,
-        { timeout: 30000 }
+        { timeout: 30000, stdio: 'pipe' }
       );
     } catch (e) {
-      console.error(`[${jobId}] yt-dlp transcript fetch failed:`, e.message);
+      console.log(`[${jobId}] No subtitles available from YouTube`);
     }
 
-    // Find the generated subtitle file
-    const files = fs.readdirSync(TEMP_DIR).filter(f => f.startsWith(`subs_${jobId}`) && (f.endsWith('.vtt') || f.endsWith('.srt')));
+    // Check for subtitle files
+    const subFiles = fs.readdirSync(jobDir).filter(f => f.endsWith('.vtt') || f.endsWith('.srt'));
 
-    if (files.length === 0) {
-      console.log(`[${jobId}] No subtitles found - video may not have captions enabled`);
-      return res.json({ success: true, transcript: "", source: "none" });
+    if (subFiles.length > 0) {
+      console.log(`[${jobId}] Found subtitle files: ${subFiles.join(', ')}`);
+      let selectedFile = subFiles[0];
+      const englishFile = subFiles.find(f => f.includes('.en.') || f.includes('.en-'));
+      if (englishFile) selectedFile = englishFile;
+
+      const content = fs.readFileSync(path.join(jobDir, selectedFile), 'utf8');
+      subtitleTranscript = content
+        .replace(/WEBVTT/g, '')
+        .replace(/\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}/g, '')
+        .replace(/<[^>]*>/g, '')
+        .replace(/^\d+$/gm, '')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join(' ')
+        .substring(0, 20000);
+
+      console.log(`[${jobId}] Subtitle transcript: ${subtitleTranscript.length} chars`);
+      cleanup(jobDir);
+      return res.json({ success: true, transcript: subtitleTranscript, source: 'youtube-subtitles' });
     }
 
-    console.log(`[${jobId}] Found subtitle files: ${files.join(', ')}`);
+    // STEP 2: No subtitles - extract audio and transcribe with Gemini
+    console.log(`[${jobId}] No subtitles found - extracting audio for AI transcription...`);
 
-    // Prefer English subtitles if available, otherwise take the first one
-    let selectedFile = files[0];
-    const englishFile = files.find(f => f.includes('.en.') || f.includes('.en-'));
-    if (englishFile) {
-      selectedFile = englishFile;
-      console.log(`[${jobId}] Using English subtitle: ${selectedFile}`);
+    const audioPath = path.join(jobDir, 'audio.mp3');
+
+    try {
+      // Download audio only (faster than full video)
+      execSync(
+        `yt-dlp -f "ba[ext=m4a]/ba/b" --extract-audio --audio-format mp3 --audio-quality 5 -o "${audioPath}" "${youtubeUrl}"`,
+        { timeout: 120000, stdio: 'pipe' }
+      );
+    } catch (dlErr) {
+      console.error(`[${jobId}] Audio download failed:`, dlErr.message);
+      cleanup(jobDir);
+      return res.json({ success: true, transcript: '', source: 'none' });
     }
 
-    const subFile = path.join(TEMP_DIR, selectedFile);
-    const content = fs.readFileSync(subFile, 'utf8');
+    // Check if audio file exists and has content
+    if (!fs.existsSync(audioPath) || fs.statSync(audioPath).size < 1000) {
+      console.log(`[${jobId}] Audio file too small or missing`);
+      cleanup(jobDir);
+      return res.json({ success: true, transcript: '', source: 'none' });
+    }
 
-    // Basic cleanup of VTT/SRT to plain text
-    const plainText = content
-      .replace(/WEBVTT/g, '')
-      .replace(/\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}/g, '')
-      .replace(/<[^>]*>/g, '')
-      .replace(/^\d+$/gm, '')
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0)
-      .join(' ');
+    const audioSize = fs.statSync(audioPath).size;
+    console.log(`[${jobId}] Audio extracted: ${(audioSize / 1024 / 1024).toFixed(2)} MB`);
 
-    // Cleanup temp files
-    files.forEach(f => fs.unlinkSync(path.join(TEMP_DIR, f)));
+    // Limit audio size for Gemini (max ~20MB for inline data)
+    if (audioSize > 20 * 1024 * 1024) {
+      console.log(`[${jobId}] Audio too large for transcription, trimming to first 5 minutes`);
+      const trimmedPath = path.join(jobDir, 'audio_trimmed.mp3');
+      execSync(`${FFMPEG_BIN} -i "${audioPath}" -t 300 -y "${trimmedPath}"`, { stdio: 'pipe' });
+      fs.unlinkSync(audioPath);
+      fs.renameSync(trimmedPath, audioPath);
+    }
 
-    const finalTranscript = plainText.substring(0, 20000);
-    const source = selectedFile.includes('auto') ? 'auto-generated' : 'manual';
-    console.log(`[${jobId}] Returning transcript: ${finalTranscript.length} chars (${source})`);
+    // Read audio as base64 and send to Gemini
+    const audioBuffer = fs.readFileSync(audioPath);
+    const audioBase64 = audioBuffer.toString('base64');
 
-    res.json({
-      success: true,
-      transcript: finalTranscript,
-      source: source
-    });
+    console.log(`[${jobId}] Sending audio to Gemini for transcription...`);
+
+    try {
+      const response = await getGenAI().models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                mimeType: 'audio/mp3',
+                data: audioBase64
+              }
+            },
+            {
+              text: `Transcribe this audio recording accurately. This is from a tutorial or instructional video.
+
+Rules:
+- Output ONLY the transcription text
+- No timestamps or speaker labels
+- Keep the original language
+- Include all spoken content
+- If no speech is detected, return empty string
+
+Transcription:`
+            }
+          ]
+        }
+      });
+
+      const transcription = response.text?.trim() || '';
+      console.log(`[${jobId}] Gemini transcription: ${transcription.length} chars`);
+
+      cleanup(jobDir);
+      return res.json({
+        success: true,
+        transcript: transcription.substring(0, 20000),
+        source: 'gemini-audio'
+      });
+
+    } catch (geminiErr) {
+      console.error(`[${jobId}] Gemini transcription failed:`, geminiErr.message);
+      cleanup(jobDir);
+      return res.json({ success: true, transcript: '', source: 'none' });
+    }
 
   } catch (error) {
     console.error(`[${jobId}] Transcript error:`, error.message);
+    cleanup(jobDir);
     res.status(500).json({ success: false, error: error.message });
   }
 });

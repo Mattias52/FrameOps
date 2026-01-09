@@ -38,7 +38,10 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const addLog = (msg: string) => setLog(prev => [msg, ...prev].slice(0, 5));
+  const addLog = (msg: string) => {
+    console.log('[FrameOps]', msg);
+    setLog(prev => [msg, ...prev].slice(0, 5));
+  };
 
   useEffect(() => {
     const id = extractYoutubeId(youtubeUrl);
@@ -214,19 +217,26 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
 
       // Fetch YouTube transcript for better context
       let transcript = '';
+      console.log('[FrameOps] ytId check:', ytId, 'videoFile:', !!videoFile);
+
       if (ytId) {
+        console.log('[FrameOps] Fetching transcript for YouTube video...');
         addLog("Fetching YouTube transcript...");
         try {
           const transcriptResult = await getYoutubeTranscript(youtubeUrl, addLog);
           transcript = transcriptResult.transcript;
+          console.log('[FrameOps] Transcript result:', transcript ? `${transcript.length} chars` : 'empty');
           if (transcript && transcript.length > 0) {
             addLog(`Transcript loaded: ${transcript.length} chars (${transcriptResult.source})`);
           } else {
             addLog("No transcript available - video may lack subtitles");
           }
-        } catch (e) {
+        } catch (e: any) {
+          console.error('[FrameOps] Transcript error:', e);
           addLog("Transcript fetch failed - continuing with visual analysis only");
         }
+      } else {
+        console.log('[FrameOps] No ytId - skipping transcript fetch');
       }
       setProgress(50);
 
@@ -234,11 +244,15 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
       setDetectedTags(tags);
       setProgress(60);
 
-      addLog(transcript ? "Gemini 2.0 Flash: Analyzing frames + transcript..." : "Gemini 2.0 Flash: Analyzing frames (no transcript)...");
+      console.log('[FrameOps] Transcript length:', transcript.length, 'Will use:', transcript.length > 0);
+      addLog(transcript ? "Analyzing with transcript..." : "Analyzing frames only (no transcript)...");
+
       // Increased transcript limit from 4000 to 15000 chars for better context
       const fullContext = transcript
         ? `${context}\n\nVIDEO TRANSCRIPT:\n${transcript.substring(0, 15000)}`
         : context;
+
+      console.log('[FrameOps] Full context length:', fullContext.length);
       const result = await analyzeSOPFrames(frames, title || "New Procedure", fullContext, tags);
 
       setProgress(90);
@@ -468,71 +482,55 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
 
       {step === 2 && (
         <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-100">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
-            <div className="aspect-video bg-slate-900 rounded-[2rem] overflow-hidden relative shadow-2xl">
+          <div className="max-w-2xl mx-auto">
+            {/* Video Preview */}
+            <div className="aspect-video bg-slate-900 rounded-[2rem] overflow-hidden relative shadow-2xl mb-8">
               {videoUrl ? <video ref={videoRef} src={videoUrl} className="w-full h-full object-contain" /> : (
                 <div className="w-full h-full relative">
-                   <img src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`} className="w-full h-full object-cover opacity-30 blur-sm" />
-                   <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                     <i className="fab fa-youtube text-5xl text-rose-500 mb-4"></i>
-                     <p className="text-xs font-black tracking-widest uppercase">YouTube Analysis Core</p>
-                   </div>
+                   <img src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`} className="w-full h-full object-cover" />
+                   {isProcessing && (
+                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                       <div className="text-center text-white">
+                         <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+                         <p className="text-sm font-bold">Analyzing video...</p>
+                       </div>
+                     </div>
+                   )}
                 </div>
               )}
               <canvas ref={canvasRef} className="hidden" />
             </div>
 
-            <div className="flex flex-col h-full bg-slate-50 rounded-[2rem] p-8 border border-slate-200">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">AI Vision Dashboard</h3>
-                <div className={`w-3 h-3 rounded-full ${isProcessing ? 'bg-indigo-500 animate-pulse' : 'bg-slate-300'}`}></div>
+            {/* Progress Section */}
+            {isProcessing ? (
+              <div className="text-center space-y-6">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-medium text-slate-600">Creating your SOP...</span>
+                    <span className="font-bold text-indigo-600">{progress}%</span>
+                  </div>
+                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700 rounded-full" style={{ width: `${progress}%` }}></div>
+                  </div>
+                </div>
+                <p className="text-slate-400 text-sm">This usually takes 30-60 seconds</p>
               </div>
-
-              {isProcessing ? (
-                <div className="space-y-6 flex-1 flex flex-col">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-end">
-                      <p className="text-[10px] font-black text-indigo-600 uppercase">Processing Pipeline</p>
-                      <span className="text-xs font-black text-slate-900">{progress}%</span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-indigo-600 transition-all duration-700" style={{ width: `${progress}%` }}></div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 py-2">
-                    {detectedTags.map((tag, i) => (
-                      <span key={i} className="px-3 py-1 bg-white text-indigo-600 rounded-full text-[9px] font-black uppercase tracking-tighter border border-indigo-100 animate-in zoom-in-95">
-                        <i className="fas fa-tag mr-1 opacity-50"></i> {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="bg-slate-900 p-4 rounded-2xl flex-1 overflow-y-auto font-mono scrollbar-hide border border-slate-800">
-                    {log.map((entry, i) => (
-                      <div key={i} className="text-[9px] text-slate-400 mb-2 flex gap-2">
-                        <span className="text-indigo-500">[{i}]</span> {entry}
-                      </div>
-                    ))}
-                  </div>
+            ) : (
+              <div className="text-center space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">Ready to analyze</h3>
+                  <p className="text-slate-500">We'll extract key frames and generate step-by-step instructions</p>
                 </div>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg">
-                    <i className="fas fa-bolt text-indigo-600 text-2xl"></i>
-                  </div>
-                  <p className="text-sm font-black text-slate-900">Pipeline Standby</p>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">FFmpeg + ViT + Gemini 3 Pro</p>
+                <div className="flex gap-4 justify-center">
+                  <button onClick={() => setStep(1)} className="px-6 py-3 border border-slate-200 rounded-xl font-medium text-slate-500 hover:bg-slate-50 transition-colors">
+                    Back
+                  </button>
+                  <button onClick={handleGenerate} className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-600/30 transition-all">
+                    Generate SOP
+                  </button>
                 </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex gap-4">
-            <button disabled={isProcessing} onClick={() => setStep(1)} className="px-8 py-4 border border-slate-200 rounded-xl font-black uppercase tracking-widest text-[10px] text-slate-500 hover:bg-slate-50">Cancel</button>
-            <button disabled={isProcessing} onClick={handleGenerate} className="flex-1 py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-indigo-700 shadow-xl shadow-indigo-600/30">
-              {isProcessing ? 'Processing...' : 'Run Analysis Pipeline'}
-            </button>
+              </div>
+            )}
           </div>
         </div>
       )}
