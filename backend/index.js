@@ -178,44 +178,63 @@ app.post('/get-transcript', async (req, res) => {
     // STEP 2: No subtitles - extract audio and transcribe with Gemini
     console.log(`[${jobId}] No subtitles found - extracting audio for AI transcription...`);
 
-    const audioPath = path.join(jobDir, 'audio.mp3');
-
     try {
-      // Download audio only (faster than full video)
+      // Download audio only - let yt-dlp handle the filename
+      const audioTemplate = path.join(jobDir, 'audio.%(ext)s');
       execSync(
-        `yt-dlp -f "ba[ext=m4a]/ba/b" --extract-audio --audio-format mp3 --audio-quality 5 -o "${audioPath}" "${youtubeUrl}"`,
-        { timeout: 120000, stdio: 'pipe' }
+        `yt-dlp -x --audio-format mp3 --audio-quality 5 -o "${audioTemplate}" "${youtubeUrl}"`,
+        { timeout: 120000 }
       );
+      console.log(`[${jobId}] yt-dlp audio extraction completed`);
     } catch (dlErr) {
       console.error(`[${jobId}] Audio download failed:`, dlErr.message);
       cleanup(jobDir);
-      return res.json({ success: true, transcript: '', source: 'none' });
+      return res.json({ success: true, transcript: '', source: 'audio-download-failed' });
     }
 
-    // Check if audio file exists and has content
-    if (!fs.existsSync(audioPath) || fs.statSync(audioPath).size < 1000) {
-      console.log(`[${jobId}] Audio file too small or missing`);
+    // Find the audio file (yt-dlp might create .mp3, .m4a, etc)
+    const audioFiles = fs.readdirSync(jobDir).filter(f =>
+      f.startsWith('audio.') && (f.endsWith('.mp3') || f.endsWith('.m4a') || f.endsWith('.wav') || f.endsWith('.webm'))
+    );
+    console.log(`[${jobId}] Audio files found: ${audioFiles.join(', ') || 'none'}`);
+
+    if (audioFiles.length === 0) {
+      console.log(`[${jobId}] No audio file created`);
       cleanup(jobDir);
-      return res.json({ success: true, transcript: '', source: 'none' });
+      return res.json({ success: true, transcript: '', source: 'no-audio-file' });
     }
 
+    const audioPath = path.join(jobDir, audioFiles[0]);
     const audioSize = fs.statSync(audioPath).size;
-    console.log(`[${jobId}] Audio extracted: ${(audioSize / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`[${jobId}] Audio file: ${audioFiles[0]}, size: ${(audioSize / 1024 / 1024).toFixed(2)} MB`);
 
-    // Limit audio size for Gemini (max ~20MB for inline data)
-    if (audioSize > 20 * 1024 * 1024) {
-      console.log(`[${jobId}] Audio too large for transcription, trimming to first 5 minutes`);
-      const trimmedPath = path.join(jobDir, 'audio_trimmed.mp3');
-      execSync(`${FFMPEG_BIN} -i "${audioPath}" -t 300 -y "${trimmedPath}"`, { stdio: 'pipe' });
-      fs.unlinkSync(audioPath);
-      fs.renameSync(trimmedPath, audioPath);
+    if (audioSize < 1000) {
+      console.log(`[${jobId}] Audio file too small`);
+      cleanup(jobDir);
+      return res.json({ success: true, transcript: '', source: 'audio-too-small' });
     }
 
-    // Read audio as base64 and send to Gemini
-    const audioBuffer = fs.readFileSync(audioPath);
-    const audioBase64 = audioBuffer.toString('base64');
+    // Convert to mp3 and trim if needed (Gemini works best with mp3)
+    const mp3Path = path.join(jobDir, 'final.mp3');
+    const maxDuration = audioSize > 15 * 1024 * 1024 ? 180 : 300; // 3 or 5 minutes max
 
-    console.log(`[${jobId}] Sending audio to Gemini for transcription...`);
+    try {
+      execSync(
+        `${FFMPEG_BIN} -i "${audioPath}" -t ${maxDuration} -ar 16000 -ac 1 -b:a 64k "${mp3Path}" -y`,
+        { timeout: 60000 }
+      );
+      console.log(`[${jobId}] Audio converted to mp3, trimmed to ${maxDuration}s`);
+    } catch (ffmpegErr) {
+      console.error(`[${jobId}] FFmpeg conversion failed:`, ffmpegErr.message);
+      cleanup(jobDir);
+      return res.json({ success: true, transcript: '', source: 'ffmpeg-failed' });
+    }
+
+    // Read audio as base64
+    const audioBuffer = fs.readFileSync(mp3Path);
+    const audioBase64 = audioBuffer.toString('base64');
+    const finalSize = audioBuffer.length;
+    console.log(`[${jobId}] Final audio: ${(finalSize / 1024).toFixed(0)} KB, sending to Gemini...`);
 
     try {
       const response = await getGenAI().models.generateContent({
@@ -224,28 +243,32 @@ app.post('/get-transcript', async (req, res) => {
           parts: [
             {
               inlineData: {
-                mimeType: 'audio/mp3',
+                mimeType: 'audio/mpeg',
                 data: audioBase64
               }
             },
             {
-              text: `Transcribe this audio recording accurately. This is from a tutorial or instructional video.
+              text: `Listen to this audio and transcribe ALL spoken words accurately.
 
-Rules:
-- Output ONLY the transcription text
-- No timestamps or speaker labels
-- Keep the original language
-- Include all spoken content
-- If no speech is detected, return empty string
+IMPORTANT:
+- This is from an instructional/tutorial video
+- Transcribe EVERYTHING that is spoken
+- Keep the original language (do not translate)
+- Output ONLY the transcription, nothing else
+- If there is background music, ignore it and focus on speech
+- If you hear speech, you MUST transcribe it
 
-Transcription:`
+Begin transcription:`
             }
           ]
         }
       });
 
       const transcription = response.text?.trim() || '';
-      console.log(`[${jobId}] Gemini transcription: ${transcription.length} chars`);
+      console.log(`[${jobId}] Gemini transcription result: ${transcription.length} chars`);
+      if (transcription.length > 0) {
+        console.log(`[${jobId}] First 200 chars: ${transcription.substring(0, 200)}`);
+      }
 
       cleanup(jobDir);
       return res.json({
@@ -255,9 +278,9 @@ Transcription:`
       });
 
     } catch (geminiErr) {
-      console.error(`[${jobId}] Gemini transcription failed:`, geminiErr.message);
+      console.error(`[${jobId}] Gemini transcription error:`, geminiErr.message);
       cleanup(jobDir);
-      return res.json({ success: true, transcript: '', source: 'none' });
+      return res.json({ success: true, transcript: '', source: 'gemini-error: ' + geminiErr.message });
     }
 
   } catch (error) {
