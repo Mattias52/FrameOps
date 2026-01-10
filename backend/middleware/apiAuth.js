@@ -49,7 +49,7 @@ const validateApiKey = async (req, res, next) => {
       // Validate against Supabase
       const { data, error } = await supabase
         .from('api_keys')
-        .select('*, users(email, plan)')
+        .select('*')
         .eq('key', apiKey)
         .eq('is_active', true)
         .single();
@@ -64,8 +64,8 @@ const validateApiKey = async (req, res, next) => {
       keyData = {
         keyId: data.id,
         userId: data.user_id,
-        plan: data.users?.plan || 'free',
-        rateLimit: data.rate_limit || 10,
+        plan: 'pro', // Default to pro for beta
+        rateLimit: data.rate_limit || 60,
         name: data.name
       };
 
