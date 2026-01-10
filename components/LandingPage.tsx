@@ -148,6 +148,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
               <a href="#features" className="text-slate-600 hover:text-slate-900 font-medium">Features</a>
               <a href="#use-cases" className="text-slate-600 hover:text-slate-900 font-medium">Use Cases</a>
               <a href="#pricing" className="text-slate-600 hover:text-slate-900 font-medium">Pricing</a>
+              <button
+                onClick={() => onNavigate(AppView.CREATOR_LANDING)}
+                className="text-amber-600 hover:text-amber-700 font-semibold flex items-center gap-1"
+              >
+                <i className="fab fa-youtube text-sm"></i>
+                For Creators
+              </button>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -160,6 +167,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
           </div>
         </div>
       </nav>
+
+      {/* Beta Banner */}
+      <div className="fixed top-16 left-0 right-0 bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-2.5 px-4 text-center z-40">
+        <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 text-sm">
+          <i className="fas fa-flask"></i>
+          <span className="font-medium">
+            🚀 We're in beta! Get <strong>free access</strong> and help shape the future of SOP creation.
+          </span>
+          <button
+            onClick={onGetStarted}
+            className="ml-2 px-4 py-1 bg-white/20 hover:bg-white/30 rounded-full font-semibold transition-colors"
+          >
+            Join Beta
+          </button>
+        </div>
+      </div>
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white">

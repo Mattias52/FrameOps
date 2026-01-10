@@ -11,6 +11,7 @@ import SubscriptionPlans from './components/SubscriptionPlans';
 import Transcripts from './components/Transcripts';
 import ErrorBoundary from './components/ErrorBoundary';
 import LandingPage from './components/LandingPage';
+import CreatorLandingPage from './components/CreatorLandingPage';
 import { fetchSOPs, saveSOP, isSupabaseConfigured } from './services/supabaseService';
 
 const App: React.FC = () => {
@@ -147,6 +148,11 @@ const App: React.FC = () => {
   // Landing page - show without app chrome
   if (currentView === AppView.LANDING) {
     return <LandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
+  }
+
+  // Creator landing page - show without app chrome
+  if (currentView === AppView.CREATOR_LANDING) {
+    return <CreatorLandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
   }
 
   // Loading screen

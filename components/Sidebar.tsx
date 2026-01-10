@@ -81,15 +81,15 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
           <div className="p-4 border-t border-slate-800">
             <div className="p-3 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/30">
               <div className="flex items-center gap-2 mb-2">
-                <i className="fas fa-gift text-indigo-400"></i>
-                <span className="text-xs font-semibold text-indigo-300">Free Plan</span>
+                <i className="fas fa-flask text-emerald-400"></i>
+                <span className="text-xs font-semibold text-emerald-300">Beta Access</span>
               </div>
-              <p className="text-xs text-slate-400 mb-3">3 SOPs remaining this month</p>
+              <p className="text-xs text-slate-400 mb-3">Free during beta period</p>
               <button
                 onClick={() => onViewChange(AppView.SUBSCRIPTION)}
-                className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors"
+                className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-colors"
               >
-                Upgrade to Pro
+                Give Feedback
               </button>
             </div>
           </div>
