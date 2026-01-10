@@ -8,7 +8,8 @@ export enum AppView {
   LIBRARY = 'library',
   TRANSCRIPTS = 'transcripts',
   SETTINGS = 'settings',
-  SUBSCRIPTION = 'subscription'
+  SUBSCRIPTION = 'subscription',
+  API_KEYS = 'api_keys'
 }
 
 export interface SOPStep {

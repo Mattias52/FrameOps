@@ -24,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
     { id: AppView.GENERATOR, label: 'Create SOP', icon: 'fa-plus-circle' },
     { id: AppView.LIBRARY, label: 'SOP Library', icon: 'fa-book' },
     { id: AppView.TRANSCRIPTS, label: 'Transcripts', icon: 'fa-microphone' },
+    { id: AppView.API_KEYS, label: 'API Access', icon: 'fa-code' },
     { id: AppView.SUBSCRIPTION, label: 'Subscription', icon: 'fa-credit-card' },
   ];
 

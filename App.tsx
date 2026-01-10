@@ -12,6 +12,7 @@ import Transcripts from './components/Transcripts';
 import ErrorBoundary from './components/ErrorBoundary';
 import LandingPage from './components/LandingPage';
 import CreatorLandingPage from './components/CreatorLandingPage';
+import APIKeysPage from './components/APIKeysPage';
 import { fetchSOPs, saveSOP, isSupabaseConfigured } from './services/supabaseService';
 
 const App: React.FC = () => {
@@ -140,6 +141,8 @@ const App: React.FC = () => {
         return <SubscriptionPlans />;
       case AppView.TRANSCRIPTS:
         return <Transcripts />;
+      case AppView.API_KEYS:
+        return <APIKeysPage />;
       default:
         return <Dashboard sops={sops} onNavigate={setCurrentView} />;
     }

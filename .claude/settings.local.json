@@ -15,7 +15,19 @@
       "Bash(taskkill:*)",
       "Bash(netstat:*)",
       "Bash(xargs:*)",
-      "Bash(powershell -Command \"Stop-Process -Id 47528 -Force\")"
+      "Bash(powershell -Command \"Stop-Process -Id 47528 -Force\")",
+      "Bash(railway link:*)",
+      "Bash(vercel:*)",
+      "Bash(supabase --version:*)",
+      "Bash(supabase status:*)",
+      "Bash(supabase projects:*)",
+      "Bash(supabase link:*)",
+      "Bash(supabase db push:*)",
+      "Bash(supabase db pull:*)",
+      "Bash(supabase db execute:*)",
+      "Bash(supabase migration repair:*)",
+      "Bash(supabase db dump:*)",
+      "Bash(supabase migration:*)"
     ]
   }
 }
