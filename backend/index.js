@@ -1135,6 +1135,13 @@ app.post('/analyze-sop', async (req, res) => {
   const jobId = crypto.randomBytes(8).toString('hex');
   console.log(`[${jobId}] Analyzing ${frames.length} frames for SOP: "${title}"`);
 
+  // Log if transcript was provided
+  const hasTranscript = additionalContext && additionalContext.length > 50;
+  console.log(`[${jobId}] Context provided: ${additionalContext?.length || 0} chars, has transcript: ${hasTranscript}`);
+  if (hasTranscript) {
+    console.log(`[${jobId}] Transcript preview: "${additionalContext.substring(0, 200)}..."`);
+  }
+
   try {
     const validImageParts = frames
       .filter(f => f && (f.includes('base64,') || f.startsWith('http')))
@@ -1353,7 +1360,8 @@ Output the transcription:`
     });
 
     const transcription = response.text?.trim() || '';
-    console.log(`[${jobId}] Transcription: ${transcription.substring(0, 100)}...`);
+    console.log(`[${jobId}] Transcription result (${transcription.length} chars):`);
+    console.log(`[${jobId}] >>> "${transcription.substring(0, 300)}${transcription.length > 300 ? '...' : ''}"`);
 
     res.json({ success: true, transcription });
 
