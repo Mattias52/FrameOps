@@ -97,10 +97,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
     {
       name: 'Free',
       price: '0',
-      period: '/month',
-      description: 'Try FrameOps with basic features',
-      features: ['3 SOPs per month', 'Standard quality frames', 'PDF export with watermark', 'Community support'],
-      cta: 'Start Free',
+      period: '/forever',
+      description: 'Preview any video before you buy',
+      features: ['Unlimited previews', 'See first 3 steps of any SOP', 'Test with your own videos', 'No credit card required'],
+      cta: 'Try Free Preview',
       highlighted: false
     },
     {
@@ -239,7 +239,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
               No credit card required
               <span className="mx-3 text-slate-300">|</span>
               <i className="fas fa-check-circle text-emerald-500 mr-1"></i>
-              3 free {audience === 'business' ? 'SOPs' : 'guides'} per month
+              Unlimited free previews
             </p>
           </div>
 
@@ -550,7 +550,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
             Get Started Free
           </button>
           <p className="mt-6 text-slate-500 text-sm">
-            No credit card required. 3 {audience === 'business' ? 'SOPs' : 'guides'} free every month.
+            No credit card required. Preview any video instantly.
           </p>
         </div>
       </section>

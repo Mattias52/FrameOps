@@ -4,13 +4,17 @@ import { SOP, SOPStep } from '../types';
 import { deleteSOP, updateSOP, isSupabaseConfigured } from '../services/supabaseService';
 import StepEditor from './StepEditor';
 
+// Preview mode: Free users see only first N steps
+const PREVIEW_STEP_LIMIT = 3;
+
 interface SOPLibraryProps {
   sops: SOP[];
   onDelete?: (sopId: string) => void;
   onUpdate?: (sop: SOP) => void;
+  isPro?: boolean; // TODO: Connect to actual subscription state
 }
 
-const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate }) => {
+const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro = false }) => {
   const [selectedSop, setSelectedSop] = useState<SOP | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
@@ -668,65 +672,112 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate }) => 
                 
                 <div className="space-y-24 relative">
                   <div className="absolute left-[20px] top-4 bottom-4 w-px bg-slate-100"></div>
-                  
-                  {selectedSop.steps.map((step, idx) => (
-                    <div key={step.id} className="relative pl-16">
-                      <div className="absolute left-0 top-0 w-10 h-10 bg-white border-2 border-slate-200 rounded-full flex items-center justify-center text-xs font-black text-slate-400 z-10">
-                        {idx + 1}
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                        <div className="space-y-6">
-                          <div className="space-y-2">
-                            <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Phase {idx + 1} • {step.timestamp}</span>
-                            <h3 className="text-3xl font-black text-slate-900 leading-tight">{step.title}</h3>
-                          </div>
-                          <p className="text-lg text-slate-600 leading-relaxed">
-                            {step.description}
-                          </p>
-                          
-                          {/* Step Safety */}
-                          {step.safetyWarnings && step.safetyWarnings.length > 0 && (
-                            <div className="p-6 bg-rose-50 border-l-4 border-rose-500 rounded-r-2xl">
-                              <div className="flex items-center gap-2 mb-3 text-rose-700">
-                                <i className="fas fa-triangle-exclamation"></i>
-                                <span className="text-xs font-black uppercase tracking-widest">Safety Critical</span>
-                              </div>
-                              <ul className="space-y-2">
-                                {step.safetyWarnings.map((w, i) => (
-                                  <li key={i} className="text-sm font-bold text-rose-900">{w}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
 
-                          {/* Step Tools */}
-                          {step.toolsRequired && step.toolsRequired.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {step.toolsRequired.map((t, i) => (
-                                <span key={i} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black uppercase tracking-tighter border border-indigo-100">
-                                  {t}
-                                </span>
-                              ))}
+                  {selectedSop.steps.map((step, idx) => {
+                    const isLocked = !isPro && idx >= PREVIEW_STEP_LIMIT;
+
+                    return (
+                      <div key={step.id} className={`relative pl-16 ${isLocked ? 'select-none' : ''}`}>
+                        <div className={`absolute left-0 top-0 w-10 h-10 bg-white border-2 rounded-full flex items-center justify-center text-xs font-black z-10 ${
+                          isLocked ? 'border-slate-300 text-slate-300' : 'border-slate-200 text-slate-400'
+                        }`}>
+                          {isLocked ? <i className="fas fa-lock text-xs"></i> : idx + 1}
+                        </div>
+
+                        {isLocked ? (
+                          /* Locked Step Preview */
+                          <div className="relative">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 blur-sm opacity-50">
+                              <div className="space-y-6">
+                                <div className="space-y-2">
+                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phase {idx + 1}</span>
+                                  <h3 className="text-3xl font-black text-slate-400 leading-tight">{step.title}</h3>
+                                </div>
+                                <div className="h-20 bg-slate-200 rounded-xl"></div>
+                              </div>
+                              <div className="aspect-video bg-slate-200 rounded-[2rem]"></div>
                             </div>
-                          )}
-                        </div>
-                        
-                        {/* Visual Asset */}
-                        <div className="group relative aspect-video bg-slate-100 rounded-[2rem] overflow-hidden border border-slate-200 shadow-inner">
-                          <img 
-                            src={step.image_url || step.thumbnail || `https://picsum.photos/seed/${step.id}/600/350`} 
-                            className="w-full h-auto rounded-lg shadow-md mb-4 object-cover group-hover:scale-105 transition-transform duration-700" 
-                            alt={step.title} 
-                            crossOrigin="anonymous"
-                          />
-                          <div className="absolute top-4 right-4 p-3 bg-white/80 backdrop-blur rounded-full text-slate-900 text-xs shadow-lg">
-                            <i className="fas fa-expand"></i>
+
+                            {/* Show upgrade CTA only on first locked step */}
+                            {idx === PREVIEW_STEP_LIMIT && (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="bg-white rounded-3xl shadow-2xl p-8 text-center max-w-md border border-slate-200">
+                                  <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <i className="fas fa-lock text-indigo-600 text-2xl"></i>
+                                  </div>
+                                  <h4 className="text-xl font-black text-slate-900 mb-2">
+                                    +{selectedSop.steps.length - PREVIEW_STEP_LIMIT} more steps
+                                  </h4>
+                                  <p className="text-slate-500 text-sm mb-6">
+                                    Upgrade to Pro to unlock all steps, PDF export, and editing.
+                                  </p>
+                                  <button className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">
+                                    <i className="fas fa-crown mr-2"></i>
+                                    Upgrade to Pro
+                                  </button>
+                                  <p className="text-xs text-slate-400 mt-3">
+                                    Starting at $19/month
+                                  </p>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
+                        ) : (
+                          /* Unlocked Step */
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                            <div className="space-y-6">
+                              <div className="space-y-2">
+                                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Phase {idx + 1} • {step.timestamp}</span>
+                                <h3 className="text-3xl font-black text-slate-900 leading-tight">{step.title}</h3>
+                              </div>
+                              <p className="text-lg text-slate-600 leading-relaxed">
+                                {step.description}
+                              </p>
+
+                              {/* Step Safety */}
+                              {step.safetyWarnings && step.safetyWarnings.length > 0 && (
+                                <div className="p-6 bg-rose-50 border-l-4 border-rose-500 rounded-r-2xl">
+                                  <div className="flex items-center gap-2 mb-3 text-rose-700">
+                                    <i className="fas fa-triangle-exclamation"></i>
+                                    <span className="text-xs font-black uppercase tracking-widest">Safety Critical</span>
+                                  </div>
+                                  <ul className="space-y-2">
+                                    {step.safetyWarnings.map((w, i) => (
+                                      <li key={i} className="text-sm font-bold text-rose-900">{w}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* Step Tools */}
+                              {step.toolsRequired && step.toolsRequired.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {step.toolsRequired.map((t, i) => (
+                                    <span key={i} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black uppercase tracking-tighter border border-indigo-100">
+                                      {t}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Visual Asset */}
+                            <div className="group relative aspect-video bg-slate-100 rounded-[2rem] overflow-hidden border border-slate-200 shadow-inner">
+                              <img
+                                src={step.image_url || step.thumbnail || `https://picsum.photos/seed/${step.id}/600/350`}
+                                className="w-full h-auto rounded-lg shadow-md mb-4 object-cover group-hover:scale-105 transition-transform duration-700"
+                                alt={step.title}
+                                crossOrigin="anonymous"
+                              />
+                              <div className="absolute top-4 right-4 p-3 bg-white/80 backdrop-blur rounded-full text-slate-900 text-xs shadow-lg">
+                                <i className="fas fa-expand"></i>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             </div>
@@ -740,30 +791,56 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate }) => 
                 </div>
                 
                 <div className="space-y-3">
-                  {/* EDIT BUTTON - Primary Action */}
+                  {/* Preview Mode Banner for Free Users */}
+                  {!isPro && (
+                    <div className="p-4 bg-amber-500/20 rounded-2xl border border-amber-500/30 mb-2">
+                      <div className="flex items-center gap-2 text-amber-300 mb-1">
+                        <i className="fas fa-eye"></i>
+                        <span className="text-xs font-bold uppercase">Preview Mode</span>
+                      </div>
+                      <p className="text-[10px] text-amber-200/80">
+                        Viewing {Math.min(PREVIEW_STEP_LIMIT, selectedSop.steps.length)} of {selectedSop.steps.length} steps
+                      </p>
+                    </div>
+                  )}
+
+                  {/* EDIT BUTTON - Pro only */}
                   <button
-                    onClick={enterEditMode}
-                    className="w-full py-4 bg-amber-500 text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-amber-400 transition-all flex items-center justify-center gap-3 shadow-lg shadow-amber-500/30"
+                    onClick={isPro ? enterEditMode : undefined}
+                    className={`w-full py-4 font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all flex items-center justify-center gap-3 ${
+                      isPro
+                        ? 'bg-amber-500 text-slate-900 hover:bg-amber-400 shadow-lg shadow-amber-500/30'
+                        : 'bg-white/5 text-slate-500 cursor-not-allowed'
+                    }`}
                   >
-                    <i className="fas fa-edit text-base"></i>
-                    Edit SOP
+                    <i className={`fas ${isPro ? 'fa-edit' : 'fa-lock'} text-base`}></i>
+                    {isPro ? 'Edit SOP' : 'Edit (Pro)'}
                   </button>
-                  
+
+                  {/* EXPORT PDF - Pro only */}
                   <button
-                    onClick={() => exportToPDF(selectedSop)}
-                    disabled={isExporting}
-                    className="w-full py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 shadow-lg shadow-indigo-600/30 disabled:opacity-50"
+                    onClick={isPro ? () => exportToPDF(selectedSop) : undefined}
+                    disabled={isExporting || !isPro}
+                    className={`w-full py-4 font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all flex items-center justify-center gap-3 ${
+                      isPro
+                        ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/30'
+                        : 'bg-white/5 text-slate-500 cursor-not-allowed'
+                    } disabled:opacity-50`}
                   >
-                    <i className={`fas ${isExporting ? 'fa-spinner fa-spin' : 'fa-file-pdf'} text-base`}></i>
-                    {isExporting ? 'Generating...' : 'Export PDF'}
+                    <i className={`fas ${isExporting ? 'fa-spinner fa-spin' : isPro ? 'fa-file-pdf' : 'fa-lock'} text-base`}></i>
+                    {isExporting ? 'Generating...' : isPro ? 'Export PDF' : 'Export (Pro)'}
                   </button>
-                  <button
-                    onClick={() => exportToPDF(selectedSop)}
-                    className="w-full py-4 bg-white/10 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-white/20 transition-all flex items-center justify-center gap-3 backdrop-blur-md"
-                  >
-                    <i className="fas fa-file-word text-blue-400 text-base"></i>
-                    Export Word
-                  </button>
+
+                  {/* Upgrade CTA for Free Users */}
+                  {!isPro && (
+                    <button
+                      className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:from-indigo-500 hover:to-purple-500 transition-all flex items-center justify-center gap-3 shadow-lg"
+                    >
+                      <i className="fas fa-crown text-amber-300 text-base"></i>
+                      Upgrade to Pro
+                    </button>
+                  )}
+
                   <button
                     onClick={() => copyShareLink(selectedSop)}
                     className="w-full py-4 bg-white/10 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-white/20 transition-all flex items-center justify-center gap-3 backdrop-blur-md"
