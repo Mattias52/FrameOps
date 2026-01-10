@@ -189,24 +189,40 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
     setEditedSop({ ...editedSop, materialsRequired: materials });
   };
 
-  // Handle reference document upload
+  // Handle reference document upload - images only (can be used for step images)
   const handleRefDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.type === 'application/pdf') {
-      // For PDFs, just store the filename as a reference
-      setReferenceDoc(`📄 ${file.name}`);
-      alert('PDF uploaded as reference. You can now manually update steps based on this document.');
-    } else if (file.type.startsWith('image/')) {
+    if (file.type.startsWith('image/')) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Bilden måste vara mindre än 5MB');
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (event) => {
         setReferenceDoc(event.target?.result as string);
       };
       reader.readAsDataURL(file);
     } else {
-      alert('Please upload a PDF or image file.');
+      alert('Ladda upp en bild (JPG, PNG, WebP). PDF-stöd kommer snart.');
     }
+  };
+
+  // Apply reference image to a specific step
+  const applyRefImageToStep = (stepIndex: number) => {
+    if (!editedSop || !referenceDoc || referenceDoc.startsWith('📄')) return;
+
+    const newSteps = [...editedSop.steps];
+    newSteps[stepIndex] = {
+      ...newSteps[stepIndex],
+      thumbnail: referenceDoc,
+      image_url: referenceDoc
+    };
+    setEditedSop({ ...editedSop, steps: newSteps });
+    setReferenceDoc(null); // Clear after applying
   };
 
   // Filter SOPs based on search and type
@@ -476,16 +492,16 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
               </div>
             </div>
 
-            {/* Reference Documentation Upload */}
+            {/* Reference Image Upload - for replacing step images */}
             <div className="bg-blue-50 border-2 border-blue-200 border-dashed rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <i className="fas fa-file-alt text-blue-600"></i>
+                    <i className="fas fa-image text-blue-600"></i>
                   </div>
                   <div>
-                    <h4 className="font-bold text-blue-900">Reference Documentation</h4>
-                    <p className="text-xs text-blue-700">Upload PDF or image to guide your edits</p>
+                    <h4 className="font-bold text-blue-900">Lägg till bild</h4>
+                    <p className="text-xs text-blue-700">Ladda upp en bild och applicera på valfritt steg</p>
                   </div>
                 </div>
                 <button
@@ -493,37 +509,41 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                   className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700"
                 >
                   <i className="fas fa-upload mr-2"></i>
-                  Upload Reference
+                  Välj bild
                 </button>
                 <input
                   ref={refDocInputRef}
                   type="file"
-                  accept=".pdf,image/*"
+                  accept="image/*"
                   onChange={handleRefDocUpload}
                   className="hidden"
                 />
               </div>
-              {referenceDoc && (
-                <div className="mt-4 p-4 bg-white rounded-xl border border-blue-200">
-                  {referenceDoc.startsWith('📄') ? (
-                    <div className="flex items-center gap-3">
-                      <i className="fas fa-file-pdf text-rose-500 text-2xl"></i>
-                      <span className="font-medium text-slate-700">{referenceDoc}</span>
-                      <button onClick={() => setReferenceDoc(null)} className="ml-auto text-slate-400 hover:text-rose-500">
-                        <i className="fas fa-times"></i>
-                      </button>
+              {referenceDoc && !referenceDoc.startsWith('📄') && (
+                <div className="mt-4 space-y-4">
+                  <div className="relative bg-white p-4 rounded-xl border border-blue-200">
+                    <img src={referenceDoc} alt="Uppladdad bild" className="max-h-48 rounded-lg mx-auto" />
+                    <button
+                      onClick={() => setReferenceDoc(null)}
+                      className="absolute top-2 right-2 w-8 h-8 bg-slate-900/80 text-white rounded-full hover:bg-rose-600"
+                    >
+                      <i className="fas fa-times"></i>
+                    </button>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-blue-200">
+                    <p className="text-sm font-bold text-slate-700 mb-3">Applicera på steg:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {editedSop.steps.map((step, idx) => (
+                        <button
+                          key={step.id}
+                          onClick={() => applyRefImageToStep(idx)}
+                          className="px-3 py-2 bg-blue-100 hover:bg-blue-600 hover:text-white text-blue-700 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          Steg {idx + 1}
+                        </button>
+                      ))}
                     </div>
-                  ) : (
-                    <div className="relative">
-                      <img src={referenceDoc} alt="Reference" className="max-h-64 rounded-lg mx-auto" />
-                      <button 
-                        onClick={() => setReferenceDoc(null)} 
-                        className="absolute top-2 right-2 w-8 h-8 bg-slate-900/80 text-white rounded-full hover:bg-rose-600"
-                      >
-                        <i className="fas fa-times"></i>
-                      </button>
-                    </div>
-                  )}
+                  </div>
                 </div>
               )}
             </div>
