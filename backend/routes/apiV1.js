@@ -24,7 +24,28 @@ const dynamicLimiter = (req, res, next) => {
   return freeLimiter(req, res, next);
 };
 
-// Apply middleware to all routes
+/**
+ * @swagger
+ * /api/v1/health:
+ *   get:
+ *     summary: API health check
+ *     description: Check if the API is operational (no auth required)
+ *     tags: [System]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: API is healthy
+ */
+// Health check - NO AUTH REQUIRED (must be before middleware)
+router.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Apply middleware to all OTHER routes
 router.use(validateApiKey);
 router.use(logApiUsage);
 router.use(checkUsageLimit);
@@ -227,35 +248,6 @@ router.get('/usage', async (req, res) => {
     plan: req.apiKey.plan,
     requests_limit: limits[req.apiKey.plan] || 100,
     reset_date: new Date(new Date().setMonth(new Date().getMonth() + 1, 1)).toISOString()
-  });
-});
-
-/**
- * @swagger
- * /api/v1/health:
- *   get:
- *     summary: API health check
- *     description: Check if the API is operational (no auth required)
- *     tags: [System]
- *     security: []
- *     responses:
- *       200:
- *         description: API is healthy
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status: { type: string, example: 'ok' }
- *                 version: { type: string, example: '1.0.0' }
- *                 timestamp: { type: string, format: date-time }
- */
-// Health check doesn't need auth
-router.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    version: '1.0.0',
-    timestamp: new Date().toISOString()
   });
 });
 

@@ -9,7 +9,13 @@
       "Bash(npm run dev:*)",
       "Bash(npm install)",
       "Bash(wc:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(node --check:*)",
+      "Bash(timeout 8 node:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(xargs:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 47528 -Force\")"
     ]
   }
 }
