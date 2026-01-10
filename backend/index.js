@@ -1352,10 +1352,94 @@ Output the transcription:`
   }
 });
 
+// === API Helper Functions (for /api/v1 routes) ===
+
+/**
+ * Process YouTube video and generate SOP
+ * Used by: POST /api/v1/generate-sop
+ */
+app.locals.processYouTubeVideo = async ({ videoId, title, detailLevel, includeImages }) => {
+  // Extract frames using scene detection
+  const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+  // Map detail level to frame count
+  const frameTargets = { quick: 8, normal: 15, detailed: 30 };
+  const targetFrames = frameTargets[detailLevel] || 15;
+
+  // TODO: Call existing extract-frames-scene-detect logic
+  // For now, return a placeholder
+  return {
+    id: `sop_${crypto.randomBytes(8).toString('hex')}`,
+    title: title || `SOP from YouTube ${videoId}`,
+    description: 'Generated from YouTube video',
+    steps: [],
+    ppe_requirements: [],
+    materials_required: [],
+    created_at: new Date().toISOString()
+  };
+};
+
+/**
+ * Analyze frames and generate SOP
+ * Used by: POST /api/v1/analyze-frames
+ */
+app.locals.analyzeFrames = async ({ frames, title, additionalContext }) => {
+  // This calls the existing analyze-sop logic
+  const genai = getGenAI();
+
+  // Reuse the prompt and logic from /analyze-sop endpoint
+  const validImageParts = frames
+    .filter(f => f && (f.includes('base64,') || f.startsWith('http')))
+    .map(f => {
+      if (f.includes('base64,')) {
+        const parts = f.split('base64,');
+        return {
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: parts[1]
+          }
+        };
+      }
+      return null;
+    })
+    .filter(p => p !== null);
+
+  if (validImageParts.length === 0) {
+    throw new Error('No valid image data found in frames');
+  }
+
+  const prompt = `
+    You are an expert technical writer creating a Standard Operating Procedure (SOP).
+    Analyze these ${validImageParts.length} frames and generate a step-by-step procedure.
+    Title: "${title}"
+    ${additionalContext ? `Context: ${additionalContext}` : ''}
+
+    Return JSON with: title, description, steps (array with title, description), ppe_requirements, materials_required
+  `;
+
+  const response = await genai.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: {
+      parts: [...validImageParts, { text: prompt }]
+    },
+    config: {
+      responseMimeType: "application/json"
+    }
+  });
+
+  const result = JSON.parse(response.text);
+  return {
+    id: `sop_${crypto.randomBytes(8).toString('hex')}`,
+    ...result,
+    created_at: new Date().toISOString()
+  };
+};
+
 app.listen(PORT, () => {
   console.log(`FrameOps Backend running on port ${PORT}`);
-  console.log('=== VERSION 13: GEMINI API MOVED TO BACKEND ===');
+  console.log('=== VERSION 14: PUBLIC API ADDED ===');
   console.log(`Gemini API Key: ${GEMINI_API_KEY ? 'configured' : 'MISSING!'}`);
+  console.log(`API Docs: http://localhost:${PORT}/api/docs`);
 });
 
 // If running standalone, log UI URL

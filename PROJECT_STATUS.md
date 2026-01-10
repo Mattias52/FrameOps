@@ -52,8 +52,12 @@
 
 ## 🔄 PÅGÅENDE / EJ TESTAT
 
-### API Integration
-- [ ] Testa att backend startar med nya routes
+### API Integration ✅ TESTAT LOKALT
+- [x] Backend startar med nya routes
+- [x] Health endpoint fungerar (public, no auth)
+- [x] API key auth fungerar (demo-key-12345, test-key-67890)
+- [x] Rate limiting konfigurerat
+- [x] Swagger docs fungerar (/api/docs)
 - [ ] Koppla `app.locals.processYouTubeVideo` till befintlig logik
 - [ ] Koppla `app.locals.analyzeFrames` till befintlig logik
 - [ ] Deploya till Railway
