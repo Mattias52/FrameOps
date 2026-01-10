@@ -79,13 +79,13 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
   const audioBlobRef = useRef<Blob | null>(null);
 
   // Scene detection settings
-  const FRAME_INTERVAL_MS = 2000; // Capture frame every 2 seconds for better coverage
+  const FRAME_INTERVAL_MS = 1500; // Check for scene change every 1.5 seconds
   // Convert sensitivity (0-100) to threshold: high sensitivity = low threshold
-  // sensitivity 0 = threshold 0.15 (very few frames)
-  // sensitivity 50 = threshold 0.05 (balanced)
-  // sensitivity 100 = threshold 0.01 (many frames)
-  const SCENE_THRESHOLD = 0.15 - (sceneSensitivity / 100) * 0.14;
-  const MAX_FRAMES = 30; // Max frames to capture
+  // sensitivity 0 = threshold 0.25 (very few frames - only major changes)
+  // sensitivity 50 = threshold 0.10 (balanced)
+  // sensitivity 100 = threshold 0.02 (many frames - capture small changes)
+  const SCENE_THRESHOLD = 0.25 - (sceneSensitivity / 100) * 0.23;
+  const MAX_FRAMES = 50; // Max frames to capture
 
   // Start camera with video + audio
   // NOTE: On iOS Safari, this MUST be called from a user gesture (button click)
@@ -374,6 +374,10 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
   };
 
   // Capture and analyze frame - uses refs to avoid stale closure
+  // Store threshold in ref so callback always has current value
+  const sceneThresholdRef = useRef(SCENE_THRESHOLD);
+  sceneThresholdRef.current = SCENE_THRESHOLD;
+
   const captureAndAnalyze = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -419,15 +423,16 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
     // 3. Skip if too blurry (unless it's the first frame)
     
     const isFirstFrame = allFramesRef.current.length === 0;
-    const isSignificantChange = diff > SCENE_THRESHOLD;
+    const currentThreshold = sceneThresholdRef.current;
+    const isSignificantChange = diff > currentThreshold;
     const maxFrames = MAX_FRAMES;
 
     if (!isFirstFrame) {
       // Always capture if we have very few frames (ensure minimum coverage)
-      const forceCapture = allFramesRef.current.length < 3 && diff > 0.01;
-      
+      const forceCapture = allFramesRef.current.length < 3 && diff > 0.02;
+
       if (!isSignificantChange && !forceCapture) {
-        console.log(`Scene change ${diff.toFixed(3)} below threshold ${SCENE_THRESHOLD.toFixed(3)}, skipping`);
+        console.log(`Scene change ${diff.toFixed(3)} below threshold ${currentThreshold.toFixed(3)}, skipping`);
         return;
       }
       // Only skip blurry if we already have enough frames
