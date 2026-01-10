@@ -735,6 +735,13 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
           : step.timestamp
       }));
 
+      // Use Gemini-selected best thumbnail, fallback to ~33% into video
+      const bestThumbnailIdx = typeof result.bestThumbnailIndex === 'number'
+        ? result.bestThumbnailIndex
+        : Math.floor(frames.length / 3);
+      const thumbnailUrl = frames[bestThumbnailIdx] || frames[Math.floor(frames.length / 3)] || frames[0];
+      console.log(`Using frame ${bestThumbnailIdx} as cover image (Gemini selected)`);
+
       // Create final SOP
       const sop: SOP = {
         id: Math.random().toString(36).substr(2, 9),
@@ -745,6 +752,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
         createdAt: new Date().toISOString(),
         sourceType: 'live',
         status: 'completed',
+        thumbnail_url: thumbnailUrl,
         steps: finalSteps
       };
 

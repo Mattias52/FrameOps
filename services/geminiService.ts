@@ -13,6 +13,7 @@ export const analyzeSOPFrames = async (
   steps: SOPStep[];
   ppeRequirements: string[];
   materialsRequired: string[];
+  bestThumbnailIndex?: number;
 }> => {
 
   if (!frames || frames.length === 0) {

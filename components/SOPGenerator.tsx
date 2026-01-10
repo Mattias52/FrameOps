@@ -281,6 +281,14 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
       addLog(`Mapped ${finalSteps.length} steps with thumbnails`);
 
       setProgress(95);
+
+      // Use Gemini-selected best thumbnail, fallback to ~33% into video
+      const bestThumbnailIdx = typeof result.bestThumbnailIndex === 'number'
+        ? result.bestThumbnailIndex
+        : Math.floor(frames.length / 3);
+      const thumbnailUrl = frames[bestThumbnailIdx] || frames[Math.floor(frames.length / 3)] || frames[0];
+      addLog(`Using frame ${bestThumbnailIdx} as cover image (Gemini selected)`);
+
       const newSOP: SOP = {
         id: Math.random().toString(36).substr(2, 9),
         title: result.title,
@@ -291,6 +299,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
         sourceType: videoFile ? 'upload' : 'youtube',
         sourceUrl: youtubeUrl || undefined,
         status: 'completed',
+        thumbnail_url: thumbnailUrl,
         steps: finalSteps
       };
 

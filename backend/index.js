@@ -1233,6 +1233,16 @@ app.post('/analyze-sop', async (req, res) => {
       - Add safety warnings where appropriate
 
       You MUST return exactly ${validImageParts.length} steps. No more, no less.
+
+      THUMBNAIL SELECTION:
+      Also select the BEST frame to use as the cover image/thumbnail for this SOP.
+      Choose a frame (by index, 0-based) that:
+      - Shows the main action or most representative moment
+      - Is visually clear and not blurry
+      - Gives a good preview of what this procedure is about
+      - Avoids intro/setup frames or end frames
+      - Preferably shows hands doing the work or the key result
+      Return this as "bestThumbnailIndex" (integer 0 to ${validImageParts.length - 1})
     `;
 
     console.log(`[${jobId}] Calling Gemini 2.0 Flash...`);
@@ -1280,9 +1290,10 @@ app.post('/analyze-sop', async (req, res) => {
                 },
                 required: ["id", "title", "description", "timestamp"]
               }
-            }
+            },
+            bestThumbnailIndex: { type: Type.INTEGER }
           },
-          required: ["title", "description", "steps", "ppeRequirements", "materialsRequired"]
+          required: ["title", "description", "steps", "ppeRequirements", "materialsRequired", "bestThumbnailIndex"]
         }
       }
     });
