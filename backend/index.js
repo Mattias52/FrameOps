@@ -1346,14 +1346,15 @@ app.post('/transcribe-audio', async (req, res) => {
           {
             text: `Transcribe this audio recording accurately. The speaker is explaining a technical procedure or demonstration.
 
-Rules:
+CRITICAL RULES:
 - Output ONLY the transcription text, no timestamps or speaker labels
-- Keep the original language (don't translate)
+- KEEP THE ORIGINAL LANGUAGE - if the speaker is speaking Swedish, output Swedish text. If English, output English. DO NOT TRANSLATE.
+- This audio may be in Swedish (svenska), English, or other languages - transcribe in whatever language is spoken
 - Include all spoken words, even filler words if they help context
 - If audio is unclear, do your best to interpret
-- If there is no speech, return an empty string.
+- If there is no speech at all, return an empty string
 
-Output the transcription:`
+Listen carefully and transcribe exactly what is said:`
           }
         ]
       }

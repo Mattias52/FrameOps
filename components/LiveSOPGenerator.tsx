@@ -707,15 +707,27 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
       });
 
       if (hasAudioBlob) {
-        console.log('Transcribing audio with Gemini:', audioBlobRef.current?.size, 'bytes');
+        const blobSize = audioBlobRef.current?.size || 0;
+        console.log('=== AUDIO TRANSCRIPTION START ===');
+        console.log('Audio blob size:', blobSize, 'bytes (', (blobSize / 1024).toFixed(1), 'KB)');
+        console.log('Audio blob type:', audioBlobRef.current?.type);
+
+        if (blobSize < 5000) {
+          console.warn('WARNING: Audio blob very small - may not contain speech');
+        }
+
         try {
           audioTranscript = await transcribeAudioFile(audioBlobRef.current!);
-          console.log('Audio transcription complete:', audioTranscript ? audioTranscript.substring(0, 200) : '(empty)');
+          console.log('=== AUDIO TRANSCRIPTION RESULT ===');
+          console.log('Transcript length:', audioTranscript?.length || 0, 'chars');
+          console.log('Transcript content:', audioTranscript || '(EMPTY - no speech detected)');
+          console.log('=================================');
         } catch (err) {
-          console.error('Audio transcription failed:', err);
+          console.error('Audio transcription FAILED:', err);
         }
       } else {
-        console.warn('No audio blob captured - voice will not be used');
+        console.warn('=== NO AUDIO BLOB - voice will not be used ===');
+        console.warn('audioBlobRef.current:', audioBlobRef.current);
       }
 
       // Combine Web Speech API transcript with audio fallback transcript
