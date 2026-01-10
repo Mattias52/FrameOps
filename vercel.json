@@ -23,6 +23,10 @@
     {
       "source": "/api-youtube/:path*",
       "destination": "https://frameops-production.up.railway.app/:path*"
+    },
+    {
+      "source": "/((?!assets/).*)",
+      "destination": "/index.html"
     }
   ]
 }
