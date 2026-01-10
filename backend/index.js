@@ -8,6 +8,13 @@ const crypto = require('crypto');
 const fileUpload = require('express-fileupload');
 const { GoogleGenAI, Type } = require('@google/genai');
 
+// API documentation
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
+
+// API routes
+const apiV1Routes = require('./routes/apiV1');
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -21,6 +28,38 @@ app.use(fileUpload({
 
 // Serve simple web UI
 app.use(express.static(path.join(__dirname, 'public')));
+
+// API Documentation (Swagger UI)
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'FrameOps API Documentation'
+}));
+
+// Serve OpenAPI spec as JSON
+app.get('/api/openapi.json', (req, res) => {
+  res.json(swaggerSpec);
+});
+
+// Mount versioned API routes
+app.use('/api/v1', apiV1Routes);
+
+// API landing page
+app.get('/api', (req, res) => {
+  res.json({
+    name: 'FrameOps API',
+    version: '1.0.0',
+    documentation: '/api/docs',
+    openapi_spec: '/api/openapi.json',
+    endpoints: {
+      'POST /api/v1/generate-sop': 'Generate SOP from YouTube video',
+      'POST /api/v1/analyze-frames': 'Generate SOP from uploaded images',
+      'GET /api/v1/usage': 'Get your API usage statistics',
+      'GET /api/v1/health': 'Health check (no auth required)'
+    },
+    authentication: 'Include X-API-Key header with your API key',
+    get_api_key: 'https://frameops.com/dashboard'
+  });
+});
 
 const PORT = process.env.PORT || 3000;
 const TEMP_DIR = process.env.TEMP_DIR || path.join(os.tmpdir(), 'frames');
