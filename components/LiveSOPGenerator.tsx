@@ -81,14 +81,14 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
   // Scene detection settings
   const FRAME_INTERVAL_MS = 1000; // Check for scene change every 1 second
   // Convert sensitivity (0-100) to threshold: high sensitivity = low threshold
-  // sensitivity 0 = threshold 0.30 (very few frames - only major changes)
-  // sensitivity 50 = threshold 0.12 (balanced)
-  // sensitivity 100 = threshold 0.03 (many frames - capture small changes)
-  const SCENE_THRESHOLD = 0.30 - (sceneSensitivity / 100) * 0.27;
+  // sensitivity 0 = threshold 0.20 (very few frames - only major changes)
+  // sensitivity 50 = threshold 0.08 (balanced - captures more)
+  // sensitivity 100 = threshold 0.02 (many frames - capture small changes)
+  const SCENE_THRESHOLD = 0.20 - (sceneSensitivity / 100) * 0.18;
   // Minimum seconds between captures (even if scene changes)
-  // sensitivity 0 = 10 sec, sensitivity 50 = 5 sec, sensitivity 100 = 2 sec
-  const MIN_CAPTURE_INTERVAL = Math.max(2, 10 - (sceneSensitivity / 100) * 8);
-  const MAX_FRAMES = 50; // Max frames to capture
+  // sensitivity 0 = 8 sec, sensitivity 50 = 4 sec, sensitivity 100 = 1.5 sec
+  const MIN_CAPTURE_INTERVAL = Math.max(1.5, 8 - (sceneSensitivity / 100) * 6.5);
+  const MAX_FRAMES = 60; // Max frames to capture (increased)
 
   // Start camera with video + audio
   // NOTE: On iOS Safari, this MUST be called from a user gesture (button click)
@@ -579,8 +579,9 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
   // Start audio recording for Gemini transcription (works on ALL platforms)
   const startSpeechRecognition = async () => {
     console.log('Starting audio recording for Gemini transcription');
-    setSpeechSupported(false); // Not using browser speech API
+    setSpeechSupported(true); // Audio recording is supported
     setSpeechError(null);
+    setIsListening(true); // Show that we're recording audio
     await startAudioRecordingFallback();
   };
 
@@ -659,6 +660,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
       speechRecognitionRef.current.stop();
       speechRecognitionRef.current = null;
     }
+    setIsListening(false); // Stop showing listening indicator
 
     // Stop audio fallback recording
     console.log('Stopping audio recording...');
@@ -697,14 +699,23 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
       // Check if we have audio fallback to process - transcribe with Gemini
       let audioTranscript = '';
       const hasAudioBlob = audioBlobRef.current && audioBlobRef.current.size > 0;
-      if (hasAudioBlob && !spokenContext) {
+      console.log('Audio blob check:', {
+        hasBlob: !!audioBlobRef.current,
+        blobSize: audioBlobRef.current?.size || 0,
+        hasSpokenContext: !!spokenContext,
+        spokenContextLength: spokenContext?.length || 0
+      });
+
+      if (hasAudioBlob) {
         console.log('Transcribing audio with Gemini:', audioBlobRef.current?.size, 'bytes');
         try {
           audioTranscript = await transcribeAudioFile(audioBlobRef.current!);
-          console.log('Audio transcription complete:', audioTranscript.substring(0, 100));
+          console.log('Audio transcription complete:', audioTranscript ? audioTranscript.substring(0, 200) : '(empty)');
         } catch (err) {
           console.error('Audio transcription failed:', err);
         }
+      } else {
+        console.warn('No audio blob captured - voice will not be used');
       }
 
       // Combine Web Speech API transcript with audio fallback transcript
