@@ -1,18 +1,25 @@
 # FrameOps Project Status
 
-**Datum:** 2025-01-10
+**Datum:** 2026-01-10
 
 ---
 
 ## ✅ KLART
 
-### Production Readiness
+### Production Deployment
+- [x] **Frontend live:** https://frameops.vercel.app
+- [x] **Backend live:** https://frameops-production.up.railway.app
+- [x] **API Docs live:** https://frameops-production.up.railway.app/api/docs
+- [x] GitHub auto-deploy till Vercel (main branch)
+- [x] Railway deployment med alla env vars
+
+### Core Features
 - [x] Testat alla core flows (Live, Upload, YouTube)
 - [x] Preview mode för free users (3 steg synliga, resten blurrade)
 - [x] Edit/Export låst för free users
 - [x] Mobile responsiveness fungerar
 - [x] Error handling med ErrorBoundary
-- [x] Build: 94KB JS gzipped
+- [x] Build: ~98KB JS gzipped
 
 ### Creator/Influencer Strategi
 - [x] **Creator Landing Page** (`/components/CreatorLandingPage.tsx`)
@@ -22,67 +29,74 @@
   - Beta perks section
 - [x] **"For Creators" länk** i main navigation
 - [x] **Influencer Outreach Templates** (`/INFLUENCER_OUTREACH.md`)
-  - YouTube comment template
-  - Instagram/Twitter DM template
-  - Email template
-  - Follow-up template
-  - Tracking spreadsheet
 
 ### UI Updates
 - [x] Sidebar: "Beta Access" istället för "3 SOPs remaining"
 - [x] Beta banner på landing page
 - [x] Select-and-expand pattern för video source
+- [x] **API Access** länk i sidebar
 
-### API (Grundstruktur)
+### Public API - FULLY DEPLOYED
 - [x] API middleware (`/backend/middleware/apiAuth.js`)
-  - API key validation
+  - API key validation mot Supabase
   - Usage logging
-  - Rate limit checking
+  - Rate limit checking (10/min free, 60/min pro)
 - [x] Swagger config (`/backend/config/swagger.js`)
 - [x] API v1 routes (`/backend/routes/apiV1.js`)
   - POST /api/v1/generate-sop
   - POST /api/v1/analyze-frames
   - GET /api/v1/usage
-  - GET /api/v1/health
-- [x] Supabase migration (`/backend/migrations/001_api_keys.sql`)
+  - GET /api/v1/health (public, no auth)
 - [x] API dokumentation (`/backend/API_README.md`)
-- [x] Package.json uppdaterad med dependencies
+
+### API Keys Management UI
+- [x] **APIKeysPage.tsx** - full management UI
+  - Skapa nya API-nycklar
+  - Lista befintliga nycklar
+  - Kopiera nyckel till clipboard
+  - Ta bort nycklar
+  - Visa rate limits info
+  - Quick start curl exempel
+  - Länk till API docs
+
+### Supabase Integration
+- [x] Migration körd för `api_keys` tabell
+- [x] Migration körd för `api_usage` tabell
+- [x] RLS policies för public access (beta)
+- [x] `SUPABASE_URL` i Railway
+- [x] `SUPABASE_SERVICE_KEY` i Railway
+- [x] `VITE_SUPABASE_URL` i Vercel
+- [x] `VITE_SUPABASE_ANON_KEY` i Vercel
 
 ---
 
-## 🔄 PÅGÅENDE / EJ TESTAT
+## 🔄 PÅGÅENDE / INTE FULLT IMPLEMENTERAT
 
-### API Integration ✅ TESTAT LOKALT
-- [x] Backend startar med nya routes
-- [x] Health endpoint fungerar (public, no auth)
-- [x] API key auth fungerar (demo-key-12345, test-key-67890)
-- [x] Rate limiting konfigurerat
-- [x] Swagger docs fungerar (/api/docs)
-- [ ] Koppla `app.locals.processYouTubeVideo` till befintlig logik
-- [ ] Koppla `app.locals.analyzeFrames` till befintlig logik
-- [ ] Deploya till Railway
-- [ ] Testa API endpoints live
+### API Video Processing
+- [ ] Koppla `app.locals.processYouTubeVideo` till befintlig video-logik
+- [ ] Koppla `app.locals.analyzeFrames` till Gemini AI
+- [ ] Returnera riktiga SOP-steg istället för placeholder
 
-### Supabase
-- [ ] Kör migration för api_keys tabell
-- [ ] Kör migration för api_usage tabell
-- [ ] Lägg till SUPABASE_SERVICE_KEY i Railway env vars
+### User Authentication
+- [ ] Implementera login/signup
+- [ ] Koppla API-nycklar till användare
+- [ ] Ta bort public RLS policies
 
 ---
 
 ## 📋 TODO
 
-### Prioritet 1: Skeppa Beta
-1. Deploya frontend (Vercel/Netlify)
-2. Deploya backend (Railway)
-3. Testa hela flödet live
+### Prioritet 1: Börja Använda
+1. ~~Deploya frontend~~ ✅
+2. ~~Deploya backend~~ ✅
+3. ~~API Key management UI~~ ✅
 4. Börja influencer outreach
+5. Testa Creator landing page live
 
-### Prioritet 2: API Public Launch
-1. Testa API endpoints
-2. Skapa API key management UI i dashboard
-3. Lägg till /api länk i navigation
-4. Skriv mer dokumentation/examples
+### Prioritet 2: API Fullständig
+1. Koppla generate-sop till riktig video-processing
+2. Returnera faktiska SOP-steg med bilder
+3. Testa med riktiga YouTube-videos
 
 ### Prioritet 3: Monetization
 1. Stripe integration för Pro-plan
@@ -91,40 +105,66 @@
 
 ---
 
-## 📁 NYA FILER DENNA SESSION
+## 📁 FILER DENNA SESSION
 
 ```
 components/
+  APIKeysPage.tsx           # API key management UI (NEW)
   CreatorLandingPage.tsx    # Influencer landing page
 
 backend/
   middleware/
-    apiAuth.js              # API authentication
+    apiAuth.js              # API authentication (UPDATED - removed users join)
   config/
     swagger.js              # OpenAPI spec
   routes/
     apiV1.js                # Versioned API endpoints
   migrations/
     001_api_keys.sql        # Supabase tables
-  API_README.md             # API documentation
 
-INFLUENCER_OUTREACH.md      # Outreach templates
-PROJECT_STATUS.md           # This file
+supabase/
+  migrations/
+    20260110000000_api_keys.sql  # Applied migration
+
+types.ts                    # Added API_KEYS view
+App.tsx                     # Added APIKeysPage route
+Sidebar.tsx                 # Added "API Access" menu item
+vercel.json                 # Added SPA routing fallback
 ```
 
 ---
 
-## 🔧 ÄNDRADE FILER
+## 🌐 LIVE URLs
 
-```
-types.ts                    # Added CREATOR_LANDING view
-App.tsx                     # Added CreatorLandingPage route
-components/
-  LandingPage.tsx           # Added "For Creators" nav link, beta banner
-  Sidebar.tsx               # Changed to "Beta Access" messaging
-backend/
-  package.json              # Added API dependencies
-  index.js                  # Added Swagger UI, API routes
+| Service | URL |
+|---------|-----|
+| Frontend | https://frameops.vercel.app |
+| Creator Page | https://frameops.vercel.app (For Creators link) |
+| API Base | https://frameops-production.up.railway.app/api/v1 |
+| API Docs | https://frameops-production.up.railway.app/api/docs |
+| Health Check | https://frameops-production.up.railway.app/api/v1/health |
+
+---
+
+## 🔑 API Endpoints
+
+```bash
+# Health check (no auth)
+GET /api/v1/health
+
+# Generate SOP from YouTube (requires API key)
+POST /api/v1/generate-sop
+Header: X-API-Key: your_key
+Body: {"youtube_url": "https://youtube.com/watch?v=..."}
+
+# Analyze uploaded frames (requires API key)
+POST /api/v1/analyze-frames
+Header: X-API-Key: your_key
+Body: {"frames": ["base64..."], "title": "My SOP"}
+
+# Get usage stats (requires API key)
+GET /api/v1/usage
+Header: X-API-Key: your_key
 ```
 
 ---
@@ -138,28 +178,21 @@ backend/
 
 ### Pricing Model
 - **Free**: Unlimited previews, 3 steg synliga
-- **Pro**: Full access, PDF export, edit
-- **API**: Usage-based (per SOP generated)
-
-### Varför API först kan funka
-- Influencers har tekniska assistenter/VAs
-- Kan integreras med Zapier, Notion, etc
-- "Ny YouTube-video → auto-skapa SOP → posta till Patreon"
-- Developers hittar APIs via directories, word of mouth
+- **Pro**: Full access, PDF export, edit (10,000 API calls/month)
+- **Enterprise**: Unlimited API calls
 
 ---
 
-## 🚀 NÄSTA SESSION
+## 🚀 NÄSTA STEG
 
-1. Verifiera backend startar utan fel
-2. Deploya allt
-3. Testa Creator landing page live
-4. Börja skicka outreach till 5-10 influencers
-5. Sätt upp basic analytics (hur många besöker /creators)
+1. Börja skicka outreach till 5-10 influencers
+2. Sätt upp basic analytics (hur många besöker /creators)
+3. Koppla API till riktig video-processing
+4. Lägg till user authentication
 
 ---
 
-## 📞 KONTAKT NÄSTA STEG
+## 📞 INFLUENCER OUTREACH
 
 Hitta 10 YouTubers i dessa nichar:
 - DIY/Woodworking (50-200k subs)
@@ -167,4 +200,4 @@ Hitta 10 YouTubers i dessa nichar:
 - Cooking/meal prep
 - Tech setup guides
 
-Använd templates i INFLUENCER_OUTREACH.md
+Använd templates i `INFLUENCER_OUTREACH.md`
