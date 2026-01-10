@@ -79,12 +79,15 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
   const audioBlobRef = useRef<Blob | null>(null);
 
   // Scene detection settings
-  const FRAME_INTERVAL_MS = 1500; // Check for scene change every 1.5 seconds
+  const FRAME_INTERVAL_MS = 1000; // Check for scene change every 1 second
   // Convert sensitivity (0-100) to threshold: high sensitivity = low threshold
-  // sensitivity 0 = threshold 0.25 (very few frames - only major changes)
-  // sensitivity 50 = threshold 0.10 (balanced)
-  // sensitivity 100 = threshold 0.02 (many frames - capture small changes)
-  const SCENE_THRESHOLD = 0.25 - (sceneSensitivity / 100) * 0.23;
+  // sensitivity 0 = threshold 0.30 (very few frames - only major changes)
+  // sensitivity 50 = threshold 0.12 (balanced)
+  // sensitivity 100 = threshold 0.03 (many frames - capture small changes)
+  const SCENE_THRESHOLD = 0.30 - (sceneSensitivity / 100) * 0.27;
+  // Minimum seconds between captures (even if scene changes)
+  // sensitivity 0 = 10 sec, sensitivity 50 = 5 sec, sensitivity 100 = 2 sec
+  const MIN_CAPTURE_INTERVAL = Math.max(2, 10 - (sceneSensitivity / 100) * 8);
   const MAX_FRAMES = 50; // Max frames to capture
 
   // Start camera with video + audio
@@ -377,6 +380,9 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
   // Store threshold in ref so callback always has current value
   const sceneThresholdRef = useRef(SCENE_THRESHOLD);
   sceneThresholdRef.current = SCENE_THRESHOLD;
+  const minCaptureIntervalRef = useRef(MIN_CAPTURE_INTERVAL);
+  minCaptureIntervalRef.current = MIN_CAPTURE_INTERVAL;
+  const lastCaptureTimeRef = useRef(0);
 
   const captureAndAnalyze = useCallback(() => {
     const video = videoRef.current;
@@ -424,14 +430,20 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
     
     const isFirstFrame = allFramesRef.current.length === 0;
     const currentThreshold = sceneThresholdRef.current;
+    const minInterval = minCaptureIntervalRef.current;
+    const timeSinceLastCapture = recordingTimeRef.current - lastCaptureTimeRef.current;
     const isSignificantChange = diff > currentThreshold;
     const maxFrames = MAX_FRAMES;
 
     if (!isFirstFrame) {
-      // Always capture if we have very few frames (ensure minimum coverage)
-      const forceCapture = allFramesRef.current.length < 3 && diff > 0.02;
+      // Enforce minimum time between captures
+      if (timeSinceLastCapture < minInterval) {
+        console.log(`Only ${timeSinceLastCapture.toFixed(1)}s since last capture, need ${minInterval}s, skipping`);
+        return;
+      }
 
-      if (!isSignificantChange && !forceCapture) {
+      // Check if scene changed enough
+      if (!isSignificantChange) {
         console.log(`Scene change ${diff.toFixed(3)} below threshold ${currentThreshold.toFixed(3)}, skipping`);
         return;
       }
@@ -452,8 +464,9 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
     const frame = canvas.toDataURL('image/jpeg', 0.85); // Slightly higher quality after sharpening
     lastFrameRef.current = frame;
     const timestamp = recordingTimeRef.current;
-    
-    console.log(`Captured frame #${allFramesRef.current.length + 1} at ${timestamp}s (diff: ${diff.toFixed(3)}, sharpened: true)`);
+    lastCaptureTimeRef.current = timestamp; // Track when we captured
+
+    console.log(`Captured frame #${allFramesRef.current.length + 1} at ${timestamp}s (diff: ${diff.toFixed(3)}, minInterval: ${minInterval}s)`);
 
     // Store frame for later batch analysis
     allFramesRef.current.push({ timestamp, image: frame });
