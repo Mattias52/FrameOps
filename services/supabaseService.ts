@@ -203,6 +203,20 @@ export const fetchSOPs = async (): Promise<SOP[]> => {
   }
 };
 
+// Pick best thumbnail from steps (not first step which is often intro/setup)
+const pickBestThumbnail = (steps: SOP['steps']): string | null => {
+  if (steps.length === 0) return null;
+  // For short SOPs, use first step
+  if (steps.length <= 2) {
+    return steps[0].thumbnail || steps[0].image_url || null;
+  }
+  // For longer SOPs, pick a step from early-middle (around 25-33%)
+  // This usually shows actual action, not intro setup
+  const bestIndex = Math.min(Math.floor(steps.length / 3), steps.length - 1);
+  const bestStep = steps[bestIndex];
+  return bestStep.thumbnail || bestStep.image_url || steps[0].thumbnail || steps[0].image_url || null;
+};
+
 // Save a new SOP
 export const saveSOP = async (sop: SOP): Promise<{ success: boolean; id?: string }> => {
   if (!isSupabaseConfigured() || !supabase) return { success: false };
@@ -219,7 +233,7 @@ export const saveSOP = async (sop: SOP): Promise<{ success: boolean; id?: string
         ppe_requirements: sop.ppeRequirements || null,
         materials_required: sop.materialsRequired || null,
         num_steps: sop.steps.length,
-        thumbnail_url: sop.thumbnail_url || (sop.steps.length > 0 ? sop.steps[0].thumbnail || sop.steps[0].image_url : null),
+        thumbnail_url: sop.thumbnail_url || pickBestThumbnail(sop.steps),
       })
       .select('id')
       .single();
@@ -290,7 +304,7 @@ export const updateSOP = async (sop: SOP): Promise<{ success: boolean }> => {
         ppe_requirements: sop.ppeRequirements || null,
         materials_required: sop.materialsRequired || null,
         num_steps: sop.steps.length,
-        thumbnail_url: sop.thumbnail_url || (sop.steps.length > 0 ? sop.steps[0].thumbnail || sop.steps[0].image_url : null),
+        thumbnail_url: sop.thumbnail_url || pickBestThumbnail(sop.steps),
         updated_at: new Date().toISOString(),
       })
       .eq('id', sop.id);

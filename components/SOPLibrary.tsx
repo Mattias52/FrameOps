@@ -600,7 +600,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
           {/* Header Banner */}
           <div className="relative h-80 bg-slate-900">
             <img 
-              src={selectedSop.thumbnail_url || selectedSop.steps[0]?.image_url || selectedSop.steps[0]?.thumbnail || `https://picsum.photos/seed/${selectedSop.id}/1200/400`} 
+              src={selectedSop.thumbnail_url || selectedSop.steps[Math.floor(selectedSop.steps.length / 3)]?.image_url || selectedSop.steps[0]?.image_url || selectedSop.steps[0]?.thumbnail} 
               className="w-full h-full object-cover opacity-60"
               alt=""
               crossOrigin="anonymous"
@@ -784,7 +784,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                             {/* Visual Asset */}
                             <div className="group relative aspect-video bg-slate-100 rounded-[2rem] overflow-hidden border border-slate-200 shadow-inner">
                               <img
-                                src={step.image_url || step.thumbnail || `https://picsum.photos/seed/${step.id}/600/350`}
+                                src={step.image_url || step.thumbnail}
                                 className="w-full h-auto rounded-lg shadow-md mb-4 object-cover group-hover:scale-105 transition-transform duration-700"
                                 alt={step.title}
                                 crossOrigin="anonymous"
@@ -956,7 +956,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
             >
               <div className="relative h-56 overflow-hidden shrink-0">
                 <img 
-                  src={sop.thumbnail_url || `https://picsum.photos/seed/${sop.id}/400/225`} 
+                  src={sop.thumbnail_url || sop.steps[Math.floor(sop.steps.length / 3)]?.image_url || sop.steps[0]?.image_url || sop.steps[0]?.thumbnail} 
                   alt={sop.title}
                   className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-1000"
                   crossOrigin="anonymous"
