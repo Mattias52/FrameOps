@@ -12,6 +12,7 @@ interface SOPGeneratorProps {
 
 const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [sourceType, setSourceType] = useState<'live' | 'upload' | 'youtube' | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -46,6 +47,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addLog = (msg: string) => {
     console.log('[FrameOps]', msg);
@@ -342,64 +344,156 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
             )}
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            {/* Live Recording Card - Updated for LiveSOP */}
-            <div
-              onClick={onLiveMode || startCamera}
-              className="group border-2 border-dashed border-slate-200 rounded-[2rem] p-8 text-center hover:border-indigo-500 hover:bg-indigo-50/30 transition-all cursor-pointer flex flex-col justify-center gap-4 relative overflow-hidden"
+          {/* Source Type Selection */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            {/* Live Recording Card */}
+            <button
+              type="button"
+              onClick={() => setSourceType('live')}
+              className={`group relative rounded-2xl p-6 text-center transition-all ${
+                sourceType === 'live'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
+                  : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent hover:border-indigo-200'
+              }`}
             >
-              {onLiveMode && (
-                <div className="absolute top-2 right-2 px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-black uppercase rounded-full">
-                  New
-                </div>
-              )}
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 group-hover:bg-rose-600 group-hover:text-white flex items-center justify-center mx-auto transition-all duration-300">
-                <i className="fas fa-video text-xl"></i>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-all ${
+                sourceType === 'live' ? 'bg-white/20' : 'bg-slate-200 group-hover:bg-indigo-100'
+              }`}>
+                <i className={`fas fa-video text-lg ${sourceType === 'live' ? 'text-white' : 'text-slate-500 group-hover:text-indigo-600'}`}></i>
               </div>
-              <div>
-                <p className="text-xs font-black text-slate-900 uppercase">Live SOP</p>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Real-time AI Analysis</p>
-              </div>
-            </div>
+              <p className={`text-sm font-bold ${sourceType === 'live' ? 'text-white' : 'text-slate-900'}`}>Live</p>
+              <p className={`text-[10px] mt-1 ${sourceType === 'live' ? 'text-indigo-200' : 'text-slate-400'}`}>Spela in nu</p>
+            </button>
 
-            {/* Enterprise Upload Card */}
-            <div className="group border-2 border-dashed border-slate-200 rounded-[2rem] p-8 text-center hover:border-indigo-500 hover:bg-indigo-50/30 transition-all cursor-pointer relative flex flex-col justify-center gap-4">
-              <input type="file" accept="video/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center mx-auto transition-all duration-300">
-                <i className="fas fa-cloud-upload-alt text-xl"></i>
+            {/* Upload Card */}
+            <button
+              type="button"
+              onClick={() => setSourceType('upload')}
+              className={`group relative rounded-2xl p-6 text-center transition-all ${
+                sourceType === 'upload'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
+                  : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent hover:border-indigo-200'
+              }`}
+            >
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-all ${
+                sourceType === 'upload' ? 'bg-white/20' : 'bg-slate-200 group-hover:bg-indigo-100'
+              }`}>
+                <i className={`fas fa-cloud-upload-alt text-lg ${sourceType === 'upload' ? 'text-white' : 'text-slate-500 group-hover:text-indigo-600'}`}></i>
               </div>
-              <div>
-                <p className="text-xs font-black text-slate-900 uppercase">Cloud Upload</p>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">MP4, MOV, WebM</p>
+              <p className={`text-sm font-bold ${sourceType === 'upload' ? 'text-white' : 'text-slate-900'}`}>Ladda upp</p>
+              <p className={`text-[10px] mt-1 ${sourceType === 'upload' ? 'text-indigo-200' : 'text-slate-400'}`}>MP4, MOV, WebM</p>
+            </button>
+
+            {/* YouTube Card */}
+            <button
+              type="button"
+              onClick={() => setSourceType('youtube')}
+              className={`group relative rounded-2xl p-6 text-center transition-all ${
+                sourceType === 'youtube'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
+                  : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent hover:border-indigo-200'
+              }`}
+            >
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-all ${
+                sourceType === 'youtube' ? 'bg-white/20' : 'bg-slate-200 group-hover:bg-rose-100'
+              }`}>
+                <i className={`fab fa-youtube text-lg ${sourceType === 'youtube' ? 'text-white' : 'text-rose-500'}`}></i>
               </div>
-            </div>
-            
-            {/* YouTube Import Card */}
-            <div className="space-y-4">
-              <div className="relative group">
-                <input 
-                  type="text" 
-                  placeholder="Paste URL..." 
-                  value={youtubeUrl} 
-                  onChange={(e) => setYoutubeUrl((e.target as any).value)} 
-                  className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-[10px] font-black uppercase tracking-widest" 
-                />
-                <i className="fab fa-youtube absolute left-4 top-1/2 -translate-y-1/2 text-rose-500"></i>
-              </div>
-              {ytMetadata && ytId && (
-                <div className="group relative bg-slate-900 rounded-[2rem] overflow-hidden text-white shadow-lg aspect-video">
-                  <img 
-                    src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`} 
-                    className="w-full h-full object-cover opacity-50" 
-                    onError={(e) => ((e.currentTarget as any).src = `https://img.youtube.com/vi/${ytId}/0.jpg`)} 
-                  />
-                  <div className="absolute inset-0 p-4 flex flex-col justify-end bg-gradient-to-t from-slate-900">
-                    <p className="text-[9px] font-black line-clamp-1 uppercase">{ytMetadata.title}</p>
+              <p className={`text-sm font-bold ${sourceType === 'youtube' ? 'text-white' : 'text-slate-900'}`}>YouTube</p>
+              <p className={`text-[10px] mt-1 ${sourceType === 'youtube' ? 'text-indigo-200' : 'text-slate-400'}`}>Klistra in länk</p>
+            </button>
+          </div>
+
+          {/* Expandable Input Area */}
+          {sourceType && (
+            <div className="mb-8 animate-in slide-in-from-top-4 duration-300">
+              {/* Live - Start Recording */}
+              {sourceType === 'live' && (
+                <div
+                  onClick={onLiveMode || startCamera}
+                  className="border-2 border-dashed border-indigo-300 bg-indigo-50/50 rounded-2xl p-8 text-center cursor-pointer hover:bg-indigo-50 transition-all"
+                >
+                  <div className="w-16 h-16 bg-rose-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-rose-200">
+                    <i className="fas fa-circle text-2xl"></i>
                   </div>
+                  <p className="text-lg font-bold text-slate-900">Starta inspelning</p>
+                  <p className="text-sm text-slate-500 mt-1">Klicka för att öppna kameran och börja spela in</p>
+                </div>
+              )}
+
+              {/* Upload - Drag & Drop Area */}
+              {sourceType === 'upload' && (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
+                    videoFile
+                      ? 'border-emerald-400 bg-emerald-50'
+                      : 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="video/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  {videoFile ? (
+                    <>
+                      <div className="w-16 h-16 bg-emerald-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-200">
+                        <i className="fas fa-check text-2xl"></i>
+                      </div>
+                      <p className="text-lg font-bold text-slate-900">{videoFile.name}</p>
+                      <p className="text-sm text-slate-500 mt-1">
+                        {(videoFile.size / 1024 / 1024).toFixed(1)} MB • Klicka för att byta fil
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
+                        <i className="fas fa-cloud-upload-alt text-2xl"></i>
+                      </div>
+                      <p className="text-lg font-bold text-slate-900">Dra och släpp video här</p>
+                      <p className="text-sm text-slate-500 mt-1">eller klicka för att välja fil</p>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* YouTube - URL Input */}
+              {sourceType === 'youtube' && (
+                <div className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Klistra in YouTube-länk här..."
+                      value={youtubeUrl}
+                      onChange={(e) => setYoutubeUrl((e.target as any).value)}
+                      className="w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm font-medium"
+                    />
+                    <i className="fab fa-youtube absolute left-4 top-1/2 -translate-y-1/2 text-rose-500 text-xl"></i>
+                  </div>
+                  {ytMetadata && ytId && (
+                    <div className="flex items-center gap-4 p-4 bg-slate-900 rounded-xl text-white">
+                      <img
+                        src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+                        className="w-32 h-20 object-cover rounded-lg"
+                        onError={(e) => ((e.currentTarget as any).src = `https://img.youtube.com/vi/${ytId}/0.jpg`)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm truncate">{ytMetadata.title}</p>
+                        <p className="text-xs text-slate-400 mt-1">{ytMetadata.author}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <i className="fas fa-check-circle text-emerald-400"></i>
+                          <span className="text-xs text-emerald-400">Redo att analysera</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          </div>
+          )}
 
           {/* Recording UI Overlay */}
           {recordingMode && (
