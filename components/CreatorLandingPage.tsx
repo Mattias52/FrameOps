@@ -7,24 +7,6 @@ interface CreatorLandingPageProps {
 }
 
 const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, onNavigate }) => {
-  const testimonials = [
-    {
-      quote: "My followers finally have something they can actually use. Not just watch once and forget.",
-      author: "DIY Creator",
-      followers: "150K subscribers"
-    },
-    {
-      quote: "I turned my most popular video into a guide and sold 200 copies in the first week.",
-      author: "Fitness Influencer",
-      followers: "80K followers"
-    },
-    {
-      quote: "It's like turning my free content into a premium product - without extra work.",
-      author: "Tech Reviewer",
-      followers: "50K subscribers"
-    }
-  ];
-
   const useCases = [
     {
       icon: "fa-hammer",
@@ -263,36 +245,6 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                 <div className="flex-1 pt-2">
                   <h3 className="text-xl font-bold mb-2">{item.title}</h3>
                   <p className="text-slate-400">{item.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Social Proof */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            Creators Are Already Using FrameOps
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, i) => (
-              <div key={i} className="p-6 bg-slate-900 rounded-2xl border border-slate-800">
-                <div className="flex items-center gap-1 text-amber-400 mb-4">
-                  {[...Array(5)].map((_, j) => (
-                    <i key={j} className="fas fa-star text-sm"></i>
-                  ))}
-                </div>
-                <p className="text-slate-300 mb-4 italic">"{testimonial.quote}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center">
-                    <i className="fas fa-user text-slate-500"></i>
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">{testimonial.author}</p>
-                    <p className="text-slate-500 text-xs">{testimonial.followers}</p>
-                  </div>
                 </div>
               </div>
             ))}
