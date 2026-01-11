@@ -13,6 +13,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import LandingPage from './components/LandingPage';
 import CreatorLandingPage from './components/CreatorLandingPage';
 import APIKeysPage from './components/APIKeysPage';
+import PrivacyPage from './components/PrivacyPage';
+import TermsPage from './components/TermsPage';
 import { fetchSOPs, saveSOP, isSupabaseConfigured } from './services/supabaseService';
 
 const App: React.FC = () => {
@@ -157,6 +159,16 @@ const App: React.FC = () => {
   // Creator landing page - show without app chrome
   if (currentView === AppView.CREATOR_LANDING) {
     return <CreatorLandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
+  }
+
+  // Privacy page - show without app chrome
+  if (currentView === AppView.PRIVACY) {
+    return <PrivacyPage onNavigate={setCurrentView} />;
+  }
+
+  // Terms page - show without app chrome
+  if (currentView === AppView.TERMS) {
+    return <TermsPage onNavigate={setCurrentView} />;
   }
 
   // Loading screen

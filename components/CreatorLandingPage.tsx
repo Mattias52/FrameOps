@@ -347,15 +347,20 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
 
       {/* Footer */}
       <footer className="py-8 px-4 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
               <i className="fas fa-film text-white"></i>
             </div>
             <span className="font-bold">FrameOps</span>
           </div>
+          <div className="flex items-center gap-6 text-slate-400 text-sm">
+            <button onClick={() => onNavigate(AppView.PRIVACY)} className="hover:text-white transition-colors">Privacy Policy</button>
+            <button onClick={() => onNavigate(AppView.TERMS)} className="hover:text-white transition-colors">Terms of Service</button>
+            <a href="mailto:support@frameops.ai" className="hover:text-white transition-colors">Contact</a>
+          </div>
           <p className="text-slate-500 text-sm">
-            &copy; 2025 FrameOps. Made for creators.
+            &copy; {new Date().getFullYear()} FrameOps. Made for creators.
           </p>
         </div>
       </footer>

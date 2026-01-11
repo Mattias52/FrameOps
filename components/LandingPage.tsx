@@ -429,7 +429,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 px-4 sm:px-6 lg:px-8">
+      <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 scroll-mt-24">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-slate-900 mb-4">Everything You Need</h2>
@@ -452,7 +452,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       </section>
 
       {/* Use Cases Section */}
-      <section id="use-cases" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
+      <section id="use-cases" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50 scroll-mt-24">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-slate-900 mb-4">
@@ -480,7 +480,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8">
+      <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 scroll-mt-24">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-slate-900 mb-4">Simple, Transparent Pricing</h2>
@@ -589,8 +589,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
               <span className="font-bold text-white">FrameOps</span>
             </div>
             <div className="flex items-center gap-6 text-slate-400 text-sm">
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+              <button onClick={() => onNavigate(AppView.PRIVACY)} className="hover:text-white transition-colors">Privacy Policy</button>
+              <button onClick={() => onNavigate(AppView.TERMS)} className="hover:text-white transition-colors">Terms of Service</button>
               <a href="mailto:support@frameops.ai" className="hover:text-white transition-colors">Contact</a>
             </div>
             <p className="text-slate-500 text-sm">

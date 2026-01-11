@@ -9,7 +9,9 @@ export enum AppView {
   TRANSCRIPTS = 'transcripts',
   SETTINGS = 'settings',
   SUBSCRIPTION = 'subscription',
-  API_KEYS = 'api_keys'
+  API_KEYS = 'api_keys',
+  PRIVACY = 'privacy',
+  TERMS = 'terms'
 }
 
 export interface SOPStep {
