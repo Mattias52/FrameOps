@@ -496,28 +496,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
         </div>
       </section>
 
-      {/* Use Cases Section */}
-      <section id="use-cases" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50 scroll-mt-24">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">
-              {audience === 'business' ? 'Built for Your Industry' : 'Perfect for Your Content'}
-            </h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              {audience === 'business'
-                ? 'Whether you\'re in manufacturing, healthcare, or training, FrameOps adapts to your documentation needs.'
-                : 'Turn any tutorial, how-to, or educational video into professional downloadable guides.'
-              }
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Use Cases - Compact */}
+      <section id="use-cases" className="py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 scroll-mt-24">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-slate-600 mb-6">
+            {audience === 'business' ? 'Used in:' : 'Perfect for:'}
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
             {useCases.map((useCase, i) => (
-              <div key={i} className="p-6 bg-white rounded-2xl border border-slate-100 hover:shadow-lg transition-shadow group">
-                <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-indigo-600 transition-colors">
-                  <i className={`fas ${useCase.icon} text-xl text-indigo-600 group-hover:text-white transition-colors`}></i>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">{useCase.industry}</h3>
-                <p className="text-slate-600 text-sm">{useCase.example}</p>
+              <div key={i} className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-700 text-sm font-medium">
+                <i className={`fas ${useCase.icon} text-indigo-600`}></i>
+                {useCase.industry}
               </div>
             ))}
           </div>
