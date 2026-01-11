@@ -147,8 +147,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
             </div>
             <div className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-slate-600 hover:text-slate-900 font-medium">Features</a>
-              <a href="#use-cases" className="text-slate-600 hover:text-slate-900 font-medium">Use Cases</a>
               <a href="#pricing" className="text-slate-600 hover:text-slate-900 font-medium">Pricing</a>
+              <button
+                onClick={() => onNavigate(AppView.CREATOR_LANDING)}
+                className="text-amber-600 hover:text-amber-700 font-semibold flex items-center gap-1"
+              >
+                <i className="fab fa-youtube text-sm"></i>
+                For Creators
+              </button>
             </div>
             <div className="flex items-center gap-3">
               <button
