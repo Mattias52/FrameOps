@@ -1230,7 +1230,7 @@ app.post('/analyze-sop', async (req, res) => {
       - You ARE the instructor teaching this procedure
       - NEVER describe what "the video shows" or what "the person does"
       - ALWAYS write what the READER should do: "Grip the handle firmly", "Rotate 90 degrees clockwise"
-      - LANGUAGE: If a transcript/context is provided, write the SOP in the SAME LANGUAGE as the transcript. Swedish transcript = Swedish SOP. English transcript = English SOP. No transcript = English default.
+      - LANGUAGE: Write the SOP in the SAME LANGUAGE as the transcript/context. If transcript is in German, write German. If Spanish, write Spanish. Match the language exactly. No transcript = English default.
 
       For each step:
       - Write a clear, actionable title (e.g., "Tighten the mounting bolt")
@@ -1349,8 +1349,8 @@ app.post('/transcribe-audio', async (req, res) => {
 
 CRITICAL RULES:
 - Output ONLY the transcription text, no timestamps or speaker labels
-- KEEP THE ORIGINAL LANGUAGE - if the speaker is speaking Swedish, output Swedish text. If English, output English. DO NOT TRANSLATE.
-- This audio may be in Swedish (svenska), English, or other languages - transcribe in whatever language is spoken
+- KEEP THE ORIGINAL LANGUAGE - transcribe in whatever language is spoken. DO NOT TRANSLATE.
+- Supports all languages: English, Swedish, German, Spanish, French, Japanese, Chinese, etc.
 - Include all spoken words, even filler words if they help context
 - If audio is unclear, do your best to interpret
 - If there is no speech at all, return an empty string
