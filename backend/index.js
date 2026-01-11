@@ -1230,6 +1230,7 @@ app.post('/analyze-sop', async (req, res) => {
       - You ARE the instructor teaching this procedure
       - NEVER describe what "the video shows" or what "the person does"
       - ALWAYS write what the READER should do: "Grip the handle firmly", "Rotate 90 degrees clockwise"
+      - LANGUAGE: If a transcript/context is provided, write the SOP in the SAME LANGUAGE as the transcript. Swedish transcript = Swedish SOP. English transcript = English SOP. No transcript = English default.
 
       For each step:
       - Write a clear, actionable title (e.g., "Tighten the mounting bolt")
@@ -1433,6 +1434,8 @@ app.locals.analyzeFrames = async ({ frames, title, additionalContext }) => {
     Analyze these ${validImageParts.length} frames and generate a step-by-step procedure.
     Title: "${title}"
     ${additionalContext ? `Context: ${additionalContext}` : ''}
+
+    LANGUAGE: If context is provided, write the SOP in the SAME LANGUAGE as the context. Swedish context = Swedish SOP. Otherwise use English.
 
     Return JSON with: title, description, steps (array with title, description), ppe_requirements, materials_required
   `;
