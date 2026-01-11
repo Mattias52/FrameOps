@@ -11,33 +11,34 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
 
   const businessFeatures = [
     {
-      icon: 'fa-video',
-      title: 'Multiple Input Sources',
-      description: 'Upload videos, paste YouTube links, or record live demonstrations directly in the browser.'
+      icon: 'fa-mobile-screen',
+      title: 'Live Recording',
+      description: 'Record yourself doing the task with your phone. AI watches and creates the SOP as you work.',
+      highlight: true
     },
     {
-      icon: 'fa-brain',
-      title: 'AI-Powered Analysis',
-      description: 'Gemini AI automatically identifies key steps, safety warnings, and required tools from your footage.'
+      icon: 'fa-microphone',
+      title: 'Voice Instructions',
+      description: 'Just talk while you work. AI transcribes your voice and turns it into professional written steps.'
+    },
+    {
+      icon: 'fa-youtube',
+      title: 'YouTube Import',
+      description: 'Paste any YouTube URL. Perfect for turning existing training videos into documentation.'
     },
     {
       icon: 'fa-shield-halved',
-      title: 'Safety & Compliance',
-      description: 'AI highlights potential hazards and suggests PPE requirements automatically.'
+      title: 'Safety Detection',
+      description: 'AI automatically identifies hazards and suggests PPE requirements from your footage.'
     },
     {
       icon: 'fa-file-pdf',
-      title: 'Professional Export',
-      description: 'Generate branded PDF documents ready for print, training binders, or digital distribution.'
-    },
-    {
-      icon: 'fa-users',
-      title: 'Team Collaboration',
-      description: 'Share SOPs across your organization. Keep everyone aligned on procedures.'
+      title: 'PDF Export',
+      description: 'One-click export to professional PDF ready for print or digital distribution.'
     },
     {
       icon: 'fa-clock',
-      title: 'Hours to Minutes',
+      title: '10 Minutes',
       description: 'What took 4-8 hours of manual documentation now takes under 10 minutes.'
     }
   ];
@@ -323,6 +324,108 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
         </div>
       </section>
 
+      {/* Live SOP Feature Highlight */}
+      {audience === 'business' && (
+        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-400 text-sm font-semibold mb-6">
+                <i className="fas fa-star"></i>
+                Our Killer Feature
+              </div>
+              <h2 className="text-4xl font-bold mb-4">
+                Live SOP Recording
+              </h2>
+              <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+                Just do the task. AI creates the SOP while you work.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              {/* Visual Demo */}
+              <div className="relative">
+                <div className="bg-slate-800 rounded-3xl p-6 border border-slate-700">
+                  {/* Phone mockup */}
+                  <div className="bg-black rounded-2xl p-3 max-w-[280px] mx-auto">
+                    <div className="bg-slate-900 rounded-xl aspect-[9/16] flex flex-col">
+                      {/* Camera view */}
+                      <div className="flex-1 bg-gradient-to-b from-slate-800 to-slate-900 rounded-t-xl relative overflow-hidden">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <i className="fas fa-hands text-slate-700 text-6xl"></i>
+                        </div>
+                        {/* Recording indicator */}
+                        <div className="absolute top-3 left-3 flex items-center gap-2 bg-red-600 px-2 py-1 rounded-full">
+                          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                          <span className="text-white text-xs font-bold">REC 02:34</span>
+                        </div>
+                        {/* Listening indicator */}
+                        <div className="absolute top-3 right-3 flex items-center gap-2 bg-emerald-600 px-2 py-1 rounded-full">
+                          <i className="fas fa-microphone text-white text-xs"></i>
+                          <span className="text-white text-xs">Listening...</span>
+                        </div>
+                      </div>
+                      {/* Steps counter */}
+                      <div className="p-3 bg-slate-800 rounded-b-xl">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-slate-400">Steps captured</span>
+                          <span className="text-white font-bold">7</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Floating step cards */}
+                <div className="absolute -right-4 top-1/4 bg-white rounded-xl p-3 shadow-xl max-w-[200px] animate-pulse">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold">3</div>
+                    <span className="text-slate-900 text-sm font-semibold">Step detected</span>
+                  </div>
+                  <p className="text-slate-600 text-xs">"Tighten the bolt to 25 Nm..."</p>
+                </div>
+              </div>
+
+              {/* Benefits */}
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-video text-white text-xl"></i>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold mb-1">Just Record Yourself</h3>
+                    <p className="text-slate-400">Open your phone, hit record, and do the task as you normally would. No special setup needed.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-microphone text-white text-xl"></i>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold mb-1">Talk While You Work</h3>
+                    <p className="text-slate-400">"Now I'm tightening this bolt..." - AI transcribes everything and turns it into professional instructions.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-wand-magic-sparkles text-white text-xl"></i>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold mb-1">AI Does The Rest</h3>
+                    <p className="text-slate-400">Scene detection captures the right moments. AI writes clear instructions. You get a complete SOP.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={onGetStarted}
+                  className="w-full sm:w-auto px-8 py-4 bg-amber-500 text-slate-900 rounded-2xl font-bold text-lg hover:bg-amber-400 transition-all mt-4"
+                >
+                  <i className="fas fa-play mr-2"></i>
+                  Try Live Recording
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Stats Bar */}
       <section className="py-12 bg-indigo-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -366,64 +469,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                 </div>
               </>
             )}
-          </div>
-        </div>
-      </section>
-
-      {/* AI Philosophy Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-slate-50">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold mb-6">
-              <i className="fas fa-shield-check"></i>
-              Our AI Philosophy
-            </div>
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">
-              AI That Enhances Reality, <br />
-              <span className="text-indigo-600">Not Fabricates It</span>
-            </h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              We use AI to extract, organize, and present what's already in your video -
-              making it clearer and more professional, never making things up.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <i className="fas fa-video text-2xl text-indigo-600"></i>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Extract</h3>
-              <p className="text-slate-600">
-                AI analyzes your video frame-by-frame, transcribes audio, and identifies every action, tool, and detail.
-              </p>
-            </div>
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <i className="fas fa-wand-magic-sparkles text-2xl text-emerald-600"></i>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Enhance</h3>
-              <p className="text-slate-600">
-                Transform raw content into clear, professional instructions - better organized, easier to follow.
-              </p>
-            </div>
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-rose-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <i className="fas fa-ban text-2xl text-rose-600"></i>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Never Fake</h3>
-              <p className="text-slate-600">
-                We don't invent steps or add content that wasn't there. Your expertise, your knowledge - just presented better.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-12 p-6 bg-slate-900 rounded-2xl text-center">
-            <p className="text-white text-lg font-medium">
-              <i className="fas fa-quote-left text-indigo-400 mr-2"></i>
-              Your video is the source of truth. AI is just the translator.
-              <i className="fas fa-quote-right text-indigo-400 ml-2"></i>
-            </p>
           </div>
         </div>
       </section>
