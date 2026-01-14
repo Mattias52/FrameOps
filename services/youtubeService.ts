@@ -229,7 +229,47 @@ export const matchFramesToSteps = async (
 };
 
 /**
- * Get YouTube transcript using Railway service
+ * Transcribe audio from uploaded video file using Whisper (OpenAI)
+ */
+export const transcribeUploadedVideoAudio = async (
+  videoFile: File,
+  onProgress?: (msg: string) => void
+): Promise<{ transcript: string; source: string }> => {
+  const log = onProgress || console.log;
+
+  log("Transcribing video audio with Whisper...");
+
+  try {
+    const formData = new FormData();
+    formData.append('video', videoFile);
+
+    // Use Whisper endpoint (falls back to Gemini if no OpenAI key)
+    const response = await fetch(`${RAILWAY_URL}/whisper-transcribe-video`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      log("Whisper transcription not available");
+      return { transcript: '', source: 'none' };
+    }
+
+    const result = await response.json();
+
+    if (result.success && result.transcript) {
+      log(`Whisper transcribed: ${result.transcript.length} chars (${result.source})`);
+      return { transcript: result.transcript, source: result.source };
+    }
+
+    return { transcript: '', source: result.source || 'none' };
+  } catch (error) {
+    log("Whisper transcription failed, continuing without");
+    return { transcript: '', source: 'none' };
+  }
+};
+
+/**
+ * Get YouTube transcript using Whisper (OpenAI) - tries subtitles first, then Whisper
  */
 export const getYoutubeTranscript = async (
   youtubeUrl: string,
@@ -237,10 +277,11 @@ export const getYoutubeTranscript = async (
 ): Promise<{ transcript: string; source: string }> => {
   const log = onProgress || console.log;
 
-  log("Fetching YouTube transcript...");
+  log("Fetching YouTube transcript with Whisper...");
 
   try {
-    const response = await fetch(`${RAILWAY_URL}/get-transcript`, {
+    // Use Whisper endpoint (tries subtitles first, then Whisper for audio)
+    const response = await fetch(`${RAILWAY_URL}/whisper-transcribe-youtube`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -256,7 +297,7 @@ export const getYoutubeTranscript = async (
     const result = await response.json();
 
     if (result.success && result.transcript) {
-      log(`Transcript fetched: ${result.transcript.length} chars (${result.source})`);
+      log(`Transcript: ${result.transcript.length} chars (${result.source})`);
       return { transcript: result.transcript, source: result.source };
     }
 

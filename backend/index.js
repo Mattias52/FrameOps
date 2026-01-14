@@ -1113,6 +1113,7 @@ function cleanup(dir) {
 // Moved from frontend to keep API key server-side
 // ============================================
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 
 let _genai = null;
 function getGenAI() {
@@ -1318,6 +1319,411 @@ app.post('/analyze-sop', async (req, res) => {
 
   } catch (error) {
     console.error(`[${jobId}] Gemini analysis error:`, error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// WHISPER TRANSCRIPTION (OpenAI)
+// Best-in-class speech-to-text
+// ============================================
+
+// Transcribe audio using OpenAI Whisper
+app.post('/whisper-transcribe', async (req, res) => {
+  const { audioBase64, mimeType = 'audio/webm', language } = req.body;
+
+  if (!audioBase64) {
+    return res.status(400).json({ error: 'Missing audioBase64' });
+  }
+
+  if (!OPENAI_API_KEY) {
+    console.error('OPENAI_API_KEY not configured - falling back to Gemini');
+    // Fallback to Gemini if no OpenAI key
+    return res.redirect(307, '/transcribe-audio');
+  }
+
+  const jobId = crypto.randomBytes(8).toString('hex');
+  console.log(`[${jobId}] Whisper transcription: ${(audioBase64.length / 1024).toFixed(1)}KB`);
+
+  try {
+    // Convert base64 to buffer
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+
+    // Determine file extension from mimeType
+    let ext = 'webm';
+    if (mimeType.includes('mp3') || mimeType.includes('mpeg')) ext = 'mp3';
+    else if (mimeType.includes('mp4')) ext = 'mp4';
+    else if (mimeType.includes('wav')) ext = 'wav';
+    else if (mimeType.includes('ogg')) ext = 'ogg';
+
+    // Create FormData for OpenAI API
+    const FormData = require('form-data');
+    const formData = new FormData();
+    formData.append('file', audioBuffer, { filename: `audio.${ext}`, contentType: mimeType });
+    formData.append('model', 'whisper-1');
+    if (language) {
+      formData.append('language', language);
+    }
+    formData.append('response_format', 'verbose_json');
+
+    console.log(`[${jobId}] Sending to OpenAI Whisper API...`);
+
+    const fetch = require('node-fetch');
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        ...formData.getHeaders()
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[${jobId}] OpenAI API error:`, response.status, errorText);
+      throw new Error(`OpenAI Whisper error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[${jobId}] Whisper transcription: ${data.text?.length || 0} chars, ${data.segments?.length || 0} segments`);
+
+    res.json({
+      success: true,
+      transcription: data.text || '',
+      segments: data.segments || [],
+      duration: data.duration,
+      source: 'whisper'
+    });
+
+  } catch (error) {
+    console.error(`[${jobId}] Whisper error:`, error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Transcribe uploaded video audio using Whisper
+app.post('/whisper-transcribe-video', async (req, res) => {
+  const uploadedFile = req.files?.video || req.files?.file;
+
+  if (!uploadedFile) {
+    return res.status(400).json({ error: 'Missing video file upload' });
+  }
+
+  if (!OPENAI_API_KEY) {
+    console.error('OPENAI_API_KEY not configured - falling back to Gemini');
+    return res.redirect(307, '/transcribe-video-audio');
+  }
+
+  const jobId = crypto.randomBytes(8).toString('hex');
+  const jobDir = path.join(TEMP_DIR, `whisper_${jobId}`);
+
+  console.log(`[${jobId}] Whisper video transcription: ${uploadedFile.name}`);
+
+  try {
+    fs.mkdirSync(jobDir, { recursive: true });
+
+    // Save uploaded file
+    const videoPath = path.join(jobDir, 'video.mp4');
+    await uploadedFile.mv(videoPath);
+    console.log(`[${jobId}] Video saved: ${(uploadedFile.size / 1024 / 1024).toFixed(2)} MB`);
+
+    // Extract audio with FFmpeg (Whisper needs audio file)
+    const mp3Path = path.join(jobDir, 'audio.mp3');
+    const maxDuration = 300; // 5 minutes max for Whisper (25MB limit)
+
+    try {
+      execSync(
+        `${FFMPEG_BIN} -i "${videoPath}" -t ${maxDuration} -ar 16000 -ac 1 -b:a 64k "${mp3Path}" -y`,
+        { timeout: 60000 }
+      );
+      console.log(`[${jobId}] Audio extracted`);
+    } catch (ffmpegErr) {
+      console.error(`[${jobId}] FFmpeg failed:`, ffmpegErr.message);
+      cleanup(jobDir);
+      return res.json({ success: true, transcript: '', source: 'ffmpeg-failed' });
+    }
+
+    if (!fs.existsSync(mp3Path) || fs.statSync(mp3Path).size < 1000) {
+      cleanup(jobDir);
+      return res.json({ success: true, transcript: '', source: 'no-audio' });
+    }
+
+    const audioBuffer = fs.readFileSync(mp3Path);
+    const audioSize = audioBuffer.length;
+    console.log(`[${jobId}] Audio size: ${(audioSize / 1024).toFixed(0)} KB`);
+
+    // Check Whisper 25MB limit
+    if (audioSize > 25 * 1024 * 1024) {
+      console.warn(`[${jobId}] Audio exceeds 25MB, may fail`);
+    }
+
+    // Send to Whisper
+    const FormData = require('form-data');
+    const formData = new FormData();
+    formData.append('file', audioBuffer, { filename: 'audio.mp3', contentType: 'audio/mpeg' });
+    formData.append('model', 'whisper-1');
+    formData.append('response_format', 'verbose_json');
+
+    console.log(`[${jobId}] Sending to OpenAI Whisper...`);
+
+    const fetch = require('node-fetch');
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        ...formData.getHeaders()
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[${jobId}] OpenAI error:`, response.status, errorText);
+      cleanup(jobDir);
+      throw new Error(`Whisper error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[${jobId}] Transcription: ${data.text?.length || 0} chars`);
+
+    cleanup(jobDir);
+    res.json({
+      success: true,
+      transcript: data.text || '',
+      segments: data.segments || [],
+      duration: data.duration,
+      source: 'whisper'
+    });
+
+  } catch (error) {
+    console.error(`[${jobId}] Error:`, error.message);
+    cleanup(jobDir);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Transcribe YouTube video audio using Whisper
+app.post('/whisper-transcribe-youtube', async (req, res) => {
+  const { youtubeUrl } = req.body;
+
+  if (!youtubeUrl) {
+    return res.status(400).json({ error: 'Missing youtubeUrl' });
+  }
+
+  if (!OPENAI_API_KEY) {
+    console.error('OPENAI_API_KEY not configured - falling back to Gemini');
+    return res.redirect(307, '/get-transcript');
+  }
+
+  const jobId = crypto.randomBytes(8).toString('hex');
+  const jobDir = path.join(TEMP_DIR, `whisper_yt_${jobId}`);
+
+  console.log(`[${jobId}] Whisper YouTube transcription: ${youtubeUrl}`);
+
+  try {
+    fs.mkdirSync(jobDir, { recursive: true });
+
+    // First try to get YouTube subtitles (free and fast)
+    const tempFile = path.join(jobDir, 'subs');
+    try {
+      execSync(
+        `yt-dlp --skip-download --write-auto-subs --write-subs --sub-format "vtt/srt/best" --sub-langs "en.*,sv.*,de.*,fr.*,es.*" -o "${tempFile}" "${youtubeUrl}"`,
+        { timeout: 30000, stdio: 'pipe' }
+      );
+    } catch (e) {
+      console.log(`[${jobId}] No YouTube subtitles available`);
+    }
+
+    const subFiles = fs.readdirSync(jobDir).filter(f => f.endsWith('.vtt') || f.endsWith('.srt'));
+    if (subFiles.length > 0) {
+      console.log(`[${jobId}] Using YouTube subtitles: ${subFiles[0]}`);
+      const content = fs.readFileSync(path.join(jobDir, subFiles[0]), 'utf8');
+      const transcript = content
+        .replace(/WEBVTT/g, '')
+        .replace(/\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}/g, '')
+        .replace(/<[^>]*>/g, '')
+        .replace(/^\d+$/gm, '')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join(' ')
+        .substring(0, 20000);
+
+      cleanup(jobDir);
+      return res.json({ success: true, transcript, source: 'youtube-subtitles' });
+    }
+
+    // No subtitles - download audio and use Whisper
+    console.log(`[${jobId}] Downloading audio for Whisper...`);
+    const audioTemplate = path.join(jobDir, 'audio.%(ext)s');
+
+    try {
+      execSync(
+        `yt-dlp -x --audio-format mp3 --audio-quality 5 -o "${audioTemplate}" "${youtubeUrl}"`,
+        { timeout: 120000 }
+      );
+    } catch (dlErr) {
+      console.error(`[${jobId}] Audio download failed:`, dlErr.message);
+      cleanup(jobDir);
+      return res.json({ success: true, transcript: '', source: 'download-failed' });
+    }
+
+    const audioFiles = fs.readdirSync(jobDir).filter(f =>
+      f.startsWith('audio.') && (f.endsWith('.mp3') || f.endsWith('.m4a') || f.endsWith('.webm'))
+    );
+
+    if (audioFiles.length === 0) {
+      cleanup(jobDir);
+      return res.json({ success: true, transcript: '', source: 'no-audio' });
+    }
+
+    // Convert to mp3 and trim for Whisper
+    const srcAudio = path.join(jobDir, audioFiles[0]);
+    const mp3Path = path.join(jobDir, 'final.mp3');
+    const maxDuration = 300; // 5 minutes
+
+    execSync(
+      `${FFMPEG_BIN} -i "${srcAudio}" -t ${maxDuration} -ar 16000 -ac 1 -b:a 64k "${mp3Path}" -y`,
+      { timeout: 60000 }
+    );
+
+    const audioBuffer = fs.readFileSync(mp3Path);
+    console.log(`[${jobId}] Audio: ${(audioBuffer.length / 1024).toFixed(0)} KB, sending to Whisper...`);
+
+    const FormData = require('form-data');
+    const formData = new FormData();
+    formData.append('file', audioBuffer, { filename: 'audio.mp3', contentType: 'audio/mpeg' });
+    formData.append('model', 'whisper-1');
+    formData.append('response_format', 'verbose_json');
+
+    const fetch = require('node-fetch');
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        ...formData.getHeaders()
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[${jobId}] Whisper error:`, response.status, errorText);
+      cleanup(jobDir);
+      throw new Error(`Whisper error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[${jobId}] Whisper result: ${data.text?.length || 0} chars`);
+
+    cleanup(jobDir);
+    res.json({
+      success: true,
+      transcript: data.text || '',
+      segments: data.segments || [],
+      duration: data.duration,
+      source: 'whisper'
+    });
+
+  } catch (error) {
+    console.error(`[${jobId}] Error:`, error.message);
+    cleanup(jobDir);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Transcribe audio from uploaded video file
+app.post('/transcribe-video-audio', async (req, res) => {
+  const uploadedFile = req.files?.video || req.files?.file;
+
+  if (!uploadedFile) {
+    return res.status(400).json({ error: 'Missing video file upload' });
+  }
+
+  const jobId = crypto.randomBytes(8).toString('hex');
+  const jobDir = path.join(TEMP_DIR, `transcribe_${jobId}`);
+
+  console.log(`[${jobId}] Transcribing audio from uploaded video: ${uploadedFile.name}`);
+
+  try {
+    fs.mkdirSync(jobDir, { recursive: true });
+
+    // Save uploaded file
+    const videoPath = path.join(jobDir, 'video.mp4');
+    await uploadedFile.mv(videoPath);
+    console.log(`[${jobId}] Video saved: ${(uploadedFile.size / 1024 / 1024).toFixed(2)} MB`);
+
+    // Extract audio with FFmpeg
+    const mp3Path = path.join(jobDir, 'audio.mp3');
+    const maxDuration = 300; // 5 minutes max
+
+    try {
+      execSync(
+        `${FFMPEG_BIN} -i "${videoPath}" -t ${maxDuration} -ar 16000 -ac 1 -b:a 64k "${mp3Path}" -y`,
+        { timeout: 60000 }
+      );
+      console.log(`[${jobId}] Audio extracted to mp3`);
+    } catch (ffmpegErr) {
+      console.error(`[${jobId}] FFmpeg audio extraction failed:`, ffmpegErr.message);
+      cleanup(jobDir);
+      return res.json({ success: true, transcript: '', source: 'ffmpeg-failed' });
+    }
+
+    if (!fs.existsSync(mp3Path) || fs.statSync(mp3Path).size < 1000) {
+      console.log(`[${jobId}] No audio or audio too small`);
+      cleanup(jobDir);
+      return res.json({ success: true, transcript: '', source: 'no-audio' });
+    }
+
+    // Read audio as base64
+    const audioBuffer = fs.readFileSync(mp3Path);
+    const audioBase64 = audioBuffer.toString('base64');
+    console.log(`[${jobId}] Audio size: ${(audioBuffer.length / 1024).toFixed(0)} KB, sending to Gemini...`);
+
+    // Transcribe with Gemini
+    const response = await getGenAI().models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: 'audio/mpeg',
+              data: audioBase64
+            }
+          },
+          {
+            text: `Listen to this audio and transcribe ALL spoken words accurately.
+
+IMPORTANT:
+- This is from an instructional/tutorial video
+- Transcribe EVERYTHING that is spoken
+- Keep the original language (do not translate)
+- Output ONLY the transcription, nothing else
+- If there is background music, ignore it and focus on speech
+- If you hear speech, you MUST transcribe it
+
+Begin transcription:`
+          }
+        ]
+      }
+    });
+
+    const transcription = response.text?.trim() || '';
+    console.log(`[${jobId}] Transcription result: ${transcription.length} chars`);
+    if (transcription.length > 0) {
+      console.log(`[${jobId}] First 200 chars: ${transcription.substring(0, 200)}`);
+    }
+
+    cleanup(jobDir);
+    return res.json({
+      success: true,
+      transcript: transcription.substring(0, 20000),
+      source: 'gemini-audio'
+    });
+
+  } catch (error) {
+    console.error(`[${jobId}] Transcription error:`, error.message);
+    cleanup(jobDir);
     res.status(500).json({ success: false, error: error.message });
   }
 });

@@ -62,7 +62,7 @@ export const transcribeAudio = async (textInput: string): Promise<string> => {
   return textInput;
 };
 
-// Transcribe audio file using Railway backend (for iOS Safari fallback - used by LiveSOPGenerator)
+// Transcribe audio file using Whisper (OpenAI) via Railway backend - used by LiveSOPGenerator
 export const transcribeAudioFile = async (audioBlob: Blob): Promise<string> => {
   try {
     // Convert blob to base64 robustly
@@ -83,9 +83,9 @@ export const transcribeAudioFile = async (audioBlob: Blob): Promise<string> => {
       mimeType = 'audio/mp4';
     }
 
-    console.log(`Sending audio to Railway for transcription: ${(audioBlob.size / 1024).toFixed(1)}KB, type: ${mimeType}`);
+    console.log(`Sending audio to Whisper for transcription: ${(audioBlob.size / 1024).toFixed(1)}KB, type: ${mimeType}`);
 
-    const response = await fetch(`${RAILWAY_URL}/transcribe-audio`, {
+    const response = await fetch(`${RAILWAY_URL}/whisper-transcribe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
