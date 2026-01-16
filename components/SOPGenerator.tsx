@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SOP, SOPStep } from '../types';
 import { analyzeSOPFrames } from '../services/geminiService';
 import { detectIndustrialObjects } from '../services/visionService';
-import { extractYoutubeId, fetchYoutubeMetadata, extractFramesWithSceneDetection, extractFramesFromUploadedVideo, getYoutubeTranscript, matchFramesToSteps, analyzeVideoNative, ExtractedFrame } from '../services/youtubeService';
+import { extractYoutubeId, fetchYoutubeMetadata, extractFramesWithSceneDetection, extractFramesFromUploadedVideo, getYoutubeTranscript, matchFramesToSteps, analyzeVideoNative, transcribeUploadedVideoAudio, ExtractedFrame } from '../services/youtubeService';
 
 interface SOPGeneratorProps {
   onComplete: (sop: SOP) => void;
