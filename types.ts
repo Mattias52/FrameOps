@@ -16,7 +16,6 @@ export enum AppView {
 
 export interface SOPStep {
   id: string;
-  frameIndex?: number;
   timestamp: string;
   title: string;
   description: string;

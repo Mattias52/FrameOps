@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SOP, SOPStep } from '../types';
 import { analyzeSOPFrames } from '../services/geminiService';
 import { detectIndustrialObjects } from '../services/visionService';
-import { extractYoutubeId, fetchYoutubeMetadata, extractFramesWithSceneDetection, extractFramesFromUploadedVideo, getYoutubeTranscript, transcribeUploadedVideoAudio, matchFramesToSteps, ExtractedFrame } from '../services/youtubeService';
+import { extractYoutubeId, fetchYoutubeMetadata, extractFramesWithSceneDetection, extractFramesFromUploadedVideo, getYoutubeTranscript, matchFramesToSteps, ExtractedFrame } from '../services/youtubeService';
 
 interface SOPGeneratorProps {
   onComplete: (sop: SOP) => void;
@@ -21,11 +21,11 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
   const [context, setContext] = useState('');
   const [detailLevel, setDetailLevel] = useState<'quick' | 'normal' | 'detailed'>('normal');
 
-  // Detail level presets - extract MORE frames for better AI selection
+  // Detail level presets based on OpenAI recommendations
   const detailPresets = {
-    quick: { threshold: 0.35, minFrames: 15, maxFrames: 30, label: 'Snabb', desc: '5-10 steg' },
-    normal: { threshold: 0.25, minFrames: 25, maxFrames: 50, label: 'Normal', desc: '10-20 steg' },
-    detailed: { threshold: 0.15, minFrames: 40, maxFrames: 80, label: 'Detaljerad', desc: '15-30 steg' }
+    quick: { threshold: 0.45, minFrames: 6, maxFrames: 12, label: 'Snabb', desc: '6-12 steg' },
+    normal: { threshold: 0.30, minFrames: 12, maxFrames: 25, label: 'Normal', desc: '12-25 steg' },
+    detailed: { threshold: 0.20, minFrames: 20, maxFrames: 50, label: 'Detaljerad', desc: '20-50 steg' }
   };
 
   const currentPreset = detailPresets[detailLevel];
@@ -226,7 +226,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
         }
       }
 
-      // Fetch transcript for better context (YouTube or uploaded video)
+      // Fetch YouTube transcript for better context
       let transcript = '';
       console.log('[FrameOps] ytId check:', ytId, 'videoFile:', !!videoFile);
 
@@ -246,25 +246,8 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
           console.error('[FrameOps] Transcript error:', e);
           addLog("Transcript fetch failed - continuing with visual analysis only");
         }
-      } else if (videoFile) {
-        // Transcribe audio from uploaded video
-        console.log('[FrameOps] Transcribing audio from uploaded video...');
-        addLog("Transcribing video audio...");
-        try {
-          const transcriptResult = await transcribeUploadedVideoAudio(videoFile, addLog);
-          transcript = transcriptResult.transcript;
-          console.log('[FrameOps] Transcript result:', transcript ? `${transcript.length} chars` : 'empty');
-          if (transcript && transcript.length > 0) {
-            addLog(`Audio transcribed: ${transcript.length} chars (${transcriptResult.source})`);
-          } else {
-            addLog("No speech detected in video audio");
-          }
-        } catch (e: any) {
-          console.error('[FrameOps] Audio transcription error:', e);
-          addLog("Audio transcription failed - continuing with visual analysis only");
-        }
       } else {
-        console.log('[FrameOps] No video source for transcription');
+        console.log('[FrameOps] No ytId - skipping transcript fetch');
       }
       setProgress(50);
 
@@ -285,20 +268,17 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
 
       setProgress(90);
 
-      // Gemini now chooses the best frame for each step via frameIndex
-      addLog(`Mapping ${result.steps.length} steps using Gemini's frame selection...`);
+      // Direct 1:1 mapping: step[i] corresponds to frame[i]
+      // Gemini was told to generate exactly N steps for N frames in order
+      addLog(`Mapping ${result.steps.length} steps to ${frames.length} frames (1:1)...`);
 
-      const finalSteps = result.steps.map((s: any) => {
-        const frameIdx = s.frameIndex ?? 0;
-        const safeFrameIdx = Math.min(Math.max(0, frameIdx), frames.length - 1);
-        return {
-          ...s,
-          thumbnail: frames[safeFrameIdx] || frames[0],
-          timestamp: extractedFrames[safeFrameIdx]?.timestamp || s.timestamp
-        };
-      });
+      const finalSteps = result.steps.map((s, idx) => ({
+        ...s,
+        thumbnail: frames[idx] || frames[frames.length - 1],
+        timestamp: extractedFrames[idx]?.timestamp || s.timestamp
+      }));
 
-      addLog(`Mapped ${finalSteps.length} steps with AI-selected thumbnails`);
+      addLog(`Mapped ${finalSteps.length} steps with thumbnails`);
 
       setProgress(95);
 
