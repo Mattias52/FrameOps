@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SOP, SOPStep } from '../types';
 import { analyzeSOPFrames } from '../services/geminiService';
 import { detectIndustrialObjects } from '../services/visionService';
-import { extractYoutubeId, fetchYoutubeMetadata, extractFramesWithSceneDetection, extractFramesFromUploadedVideo, getYoutubeTranscript, matchFramesToSteps, analyzeVideoNative, transcribeUploadedVideoAudio, ExtractedFrame } from '../services/youtubeService';
+import { extractYoutubeId, fetchYoutubeMetadata, extractFramesWithSceneDetection, extractFramesFromUploadedVideo, getYoutubeTranscript, analyzeVideoNative, ExtractedFrame } from '../services/youtubeService';
 
 interface SOPGeneratorProps {
   onComplete: (sop: SOP) => void;
@@ -168,77 +168,68 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
       let extractedFrames: ExtractedFrame[] = [];
 
       if (videoFile) {
-        // NEW FLOW: FFmpeg for frames + Gemini native video for analysis
+        // CLEAN FLOW: FFmpeg for frames + Gemini native video for analysis
+        // NO FALLBACKS - if something fails, it fails clearly
+
         addLog(`Step 1: Extracting frames with FFmpeg...`);
         setProgress(10);
 
-        try {
-          // Step 1: Extract frames with FFmpeg scene detection
-          const sceneResult = await extractFramesFromUploadedVideo(
-            videoFile,
-            addLog,
-            {
-              sceneThreshold: currentPreset.threshold,
-              maxFrames: currentPreset.maxFrames,
-              minFrames: currentPreset.minFrames,
-            }
-          );
-
-          if (!sceneResult.success || sceneResult.frames.length === 0) {
-            throw new Error('No frames returned from FFmpeg');
+        // Step 1: Extract frames with FFmpeg scene detection
+        const sceneResult = await extractFramesFromUploadedVideo(
+          videoFile,
+          addLog,
+          {
+            sceneThreshold: currentPreset.threshold,
+            maxFrames: currentPreset.maxFrames,
+            minFrames: currentPreset.minFrames,
           }
+        );
 
-          addLog(`FFmpeg extracted ${sceneResult.frames.length} scene-detected frames`);
-          extractedFrames = sceneResult.frames;
-          setProgress(30);
-
-          // Step 2: Use Gemini native video analysis
-          addLog(`Step 2: Uploading to Gemini for native video+audio analysis...`);
-          const nativeResult = await analyzeVideoNative(
-            videoFile,
-            title || "New Procedure",
-            extractedFrames,
-            addLog
-          );
-
-          setProgress(90);
-
-          // Build SOP from native result (steps already have matched thumbnails)
-          const newSop: SOP = {
-            id: crypto.randomUUID(),
-            title: nativeResult.title || title || "New Procedure",
-            description: nativeResult.description || `SOP for ${title}`,
-            createdAt: new Date(),
-            ppeRequirements: nativeResult.ppeRequirements || [],
-            materialsRequired: nativeResult.materialsRequired || [],
-            steps: nativeResult.steps.map((s, idx) => ({
-              id: s.id || `step-${idx + 1}`,
-              timestamp: s.timestamp || '00:00',
-              title: s.title,
-              description: s.description,
-              safetyWarnings: s.safetyWarnings || [],
-              toolsRequired: s.toolsRequired || [],
-              thumbnail: s.thumbnail || extractedFrames[0]?.imageBase64 || ''
-            })),
-            source: 'upload',
-            thumbnail: nativeResult.steps[0]?.thumbnail || extractedFrames[0]?.imageBase64 || ''
-          };
-
-          addLog(`SOP generated: ${newSop.steps.length} steps with Gemini native video understanding`);
-          setProgress(100);
-          onComplete(newSop);
-          setIsProcessing(false);
-          return; // Exit early - native flow handles everything
-
-        } catch (nativeError: any) {
-          addLog(`Native video error: ${nativeError.message}`);
-          addLog(`Falling back to frame-based analysis...`);
-          // Populate frames array from extractedFrames for fallback flow
-          if (extractedFrames.length > 0) {
-            frames = extractedFrames.map(f => f.imageBase64);
-            addLog(`Using ${frames.length} FFmpeg frames for fallback analysis`);
-          }
+        if (!sceneResult.success || sceneResult.frames.length === 0) {
+          throw new Error('FFmpeg scene detection failed - no frames returned');
         }
+
+        addLog(`FFmpeg extracted ${sceneResult.frames.length} scene-detected frames`);
+        extractedFrames = sceneResult.frames;
+        setProgress(30);
+
+        // Step 2: Use Gemini native video analysis (watches video + listens to audio)
+        addLog(`Step 2: Uploading to Gemini for native video+audio analysis...`);
+        const nativeResult = await analyzeVideoNative(
+          videoFile,
+          title || "New Procedure",
+          extractedFrames,
+          addLog
+        );
+
+        setProgress(90);
+
+        // Build SOP from native result (steps already have matched thumbnails)
+        const newSop: SOP = {
+          id: crypto.randomUUID(),
+          title: nativeResult.title || title || "New Procedure",
+          description: nativeResult.description || `SOP for ${title}`,
+          createdAt: new Date(),
+          ppeRequirements: nativeResult.ppeRequirements || [],
+          materialsRequired: nativeResult.materialsRequired || [],
+          steps: nativeResult.steps.map((s, idx) => ({
+            id: s.id || `step-${idx + 1}`,
+            timestamp: s.timestamp || '00:00',
+            title: s.title,
+            description: s.description,
+            safetyWarnings: s.safetyWarnings || [],
+            toolsRequired: s.toolsRequired || [],
+            thumbnail: s.thumbnail || extractedFrames[0]?.imageBase64 || ''
+          })),
+          source: 'upload',
+          thumbnail: nativeResult.steps[0]?.thumbnail || extractedFrames[0]?.imageBase64 || ''
+        };
+
+        addLog(`SOP generated: ${newSop.steps.length} steps with Gemini native video understanding`);
+        setProgress(100);
+        onComplete(newSop);
+        setIsProcessing(false);
+        return;
       }
 
       if (ytId) {
@@ -272,45 +263,22 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
         }
       }
 
-      // Fetch transcript with timestamps (segments)
+      // YouTube: Fetch transcript with timestamps (segments)
       let transcript = '';
       let segments: { start: number; end: number; text: string }[] = [];
-      console.log('[FrameOps] ytId check:', ytId, 'videoFile:', !!videoFile);
 
-      if (ytId) {
-        console.log('[FrameOps] Fetching transcript for YouTube video...');
-        addLog("Fetching YouTube transcript...");
-        try {
-          const transcriptResult = await getYoutubeTranscript(youtubeUrl, addLog);
-          transcript = transcriptResult.transcript;
-          segments = transcriptResult.segments || [];
-          console.log('[FrameOps] Transcript result:', transcript ? `${transcript.length} chars, ${segments.length} segments` : 'empty');
-          if (transcript && transcript.length > 0) {
-            addLog(`Transcript loaded: ${transcript.length} chars, ${segments.length} segments (${transcriptResult.source})`);
-          } else {
-            addLog("No transcript available - video may lack subtitles");
-          }
-        } catch (e: any) {
-          console.error('[FrameOps] Transcript error:', e);
-          addLog("Transcript fetch failed - continuing with visual analysis only");
+      addLog("Fetching YouTube transcript...");
+      try {
+        const transcriptResult = await getYoutubeTranscript(youtubeUrl, addLog);
+        transcript = transcriptResult.transcript;
+        segments = transcriptResult.segments || [];
+        if (transcript && transcript.length > 0) {
+          addLog(`Transcript loaded: ${transcript.length} chars, ${segments.length} segments (${transcriptResult.source})`);
+        } else {
+          addLog("No transcript available - video may lack subtitles");
         }
-      } else if (videoFile) {
-        console.log('[FrameOps] Transcribing uploaded video audio...');
-        addLog("Transcribing video audio with Whisper...");
-        try {
-          const transcriptResult = await transcribeUploadedVideoAudio(videoFile, addLog);
-          transcript = transcriptResult.transcript;
-          segments = transcriptResult.segments || [];
-          console.log('[FrameOps] Transcript result:', transcript ? `${transcript.length} chars, ${segments.length} segments` : 'empty');
-          if (transcript && transcript.length > 0) {
-            addLog(`Audio transcribed: ${transcript.length} chars, ${segments.length} segments (${transcriptResult.source})`);
-          } else {
-            addLog("No speech detected in video");
-          }
-        } catch (e: any) {
-          console.error('[FrameOps] Transcription error:', e);
-          addLog("Transcription failed - continuing with visual analysis only");
-        }
+      } catch (e: any) {
+        addLog("Transcript fetch failed - continuing with visual analysis only");
       }
       setProgress(50);
 
@@ -376,8 +344,8 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
         ppeRequirements: result.ppeRequirements,
         materialsRequired: result.materialsRequired,
         createdAt: new Date().toISOString(),
-        sourceType: videoFile ? 'upload' : 'youtube',
-        sourceUrl: youtubeUrl || undefined,
+        sourceType: 'youtube',
+        sourceUrl: youtubeUrl,
         status: 'completed',
         thumbnail_url: thumbnailUrl,
         steps: finalSteps
