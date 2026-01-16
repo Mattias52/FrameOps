@@ -1213,18 +1213,23 @@ app.post('/analyze-sop', async (req, res) => {
       You are an expert technical writer creating a Standard Operating Procedure (SOP).
       You write as THE INSTRUCTOR - as if you are the expert teaching someone how to perform this task.
 
-      IMPORTANT: You are given exactly ${validImageParts.length} frames in chronological order from a procedure video titled: "${title}".
+      You are given ${validImageParts.length} frames (indexed 0-${validImageParts.length - 1}) extracted from a procedure video titled: "${title}".
       ${transcriptInstructions}
       ${additionalContext ? `\nCONTEXT AND TRANSCRIPT:\n${additionalContext}` : ''}
       ${vitContext}
 
       YOUR TASK:
-      Generate EXACTLY ${validImageParts.length} steps - one step for each frame, in the same order.
+      1. Analyze ALL ${validImageParts.length} frames to understand the complete procedure
+      2. Identify the ACTUAL distinct steps in this procedure (may be fewer than ${validImageParts.length})
+      3. For EACH step, select the BEST frame that illustrates that step (by frameIndex 0-${validImageParts.length - 1})
 
-      - Step 1 describes what to DO based on Frame 1
-      - Step 2 describes what to DO based on Frame 2
-      - Step 3 describes what to DO based on Frame 3
-      ... and so on for all ${validImageParts.length} frames.
+      IMPORTANT FRAME SELECTION RULES:
+      - Multiple frames may show the same action - pick the CLEAREST one
+      - Skip frames that are blurry, transitional, or redundant
+      - Each step MUST have a frameIndex pointing to its best matching frame
+      - The same frame CAN be used for multiple steps if it's the best match
+      - Frames can be skipped entirely if they don't show a meaningful step
+      - Generate between 5-25 steps depending on procedure complexity (NOT forced to ${validImageParts.length})
 
       WRITING RULES (CRITICAL):
       - Write in IMPERATIVE form - direct instructions to the reader
@@ -1234,14 +1239,13 @@ app.post('/analyze-sop', async (req, res) => {
       - LANGUAGE: Write the SOP in the SAME LANGUAGE as the transcript/context. If transcript is in German, write German. If Spanish, write Spanish. Match the language exactly. No transcript = English default.
 
       For each step:
-      - Write a clear, actionable title (e.g., "Tighten the mounting bolt")
-      - Write a detailed description of WHAT TO DO and HOW to do it
+      - frameIndex: which frame (0-${validImageParts.length - 1}) best shows this step
+      - title: clear, actionable title (e.g., "Tighten the mounting bolt")
+      - description: detailed WHAT TO DO and HOW to do it
       - Use imperative language ("Position", "Insert", "Tighten", "Verify")
       - Include specific details: measurements, settings, tool names
       - Include specific visual details (hand positions, component alignment)
       - Add safety warnings where appropriate
-
-      You MUST return exactly ${validImageParts.length} steps. No more, no less.
 
       THUMBNAIL SELECTION:
       Also select the BEST frame to use as the cover image/thumbnail for this SOP.
@@ -1285,6 +1289,7 @@ app.post('/analyze-sop', async (req, res) => {
                 type: Type.OBJECT,
                 properties: {
                   id: { type: Type.STRING },
+                  frameIndex: { type: Type.INTEGER },
                   timestamp: { type: Type.STRING },
                   title: { type: Type.STRING },
                   description: { type: Type.STRING },
@@ -1297,7 +1302,7 @@ app.post('/analyze-sop', async (req, res) => {
                     items: { type: Type.STRING }
                   }
                 },
-                required: ["id", "title", "description", "timestamp"]
+                required: ["id", "frameIndex", "title", "description", "timestamp"]
               }
             },
             bestThumbnailIndex: { type: Type.INTEGER }
