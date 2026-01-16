@@ -1220,16 +1220,16 @@ app.post('/analyze-sop', async (req, res) => {
 
       YOUR TASK:
       1. Analyze ALL ${validImageParts.length} frames to understand the complete procedure
-      2. Identify the ACTUAL distinct steps in this procedure (may be fewer than ${validImageParts.length})
-      3. For EACH step, select the BEST frame that illustrates that step (by frameIndex 0-${validImageParts.length - 1})
+      2. Create a DETAILED step-by-step guide - use MOST of the frames (aim for ${Math.max(10, Math.round(validImageParts.length * 0.7))}+ steps)
+      3. For EACH step, specify frameIndex (0-${validImageParts.length - 1}) pointing to the frame that best shows that action
 
       IMPORTANT FRAME SELECTION RULES:
-      - Multiple frames may show the same action - pick the CLEAREST one
-      - Skip frames that are blurry, transitional, or redundant
-      - Each step MUST have a frameIndex pointing to its best matching frame
-      - The same frame CAN be used for multiple steps if it's the best match
-      - Frames can be skipped entirely if they don't show a meaningful step
-      - Generate between 5-25 steps depending on procedure complexity (NOT forced to ${validImageParts.length})
+      - BE DETAILED: Create a step for EVERY meaningful action shown in the frames
+      - Aim for ${Math.max(10, Math.round(validImageParts.length * 0.7))}-${validImageParts.length} steps (most frames should become steps)
+      - Each step MUST have a frameIndex pointing to its best matching frame (0-${validImageParts.length - 1})
+      - If multiple frames show the same action, pick the CLEAREST one
+      - Only skip frames that are truly blurry, black, or show no action
+      - The same frame CAN be used for multiple steps if needed (e.g., one frame shows setup + action)
 
       WRITING RULES (CRITICAL):
       - Write in IMPERATIVE form - direct instructions to the reader
