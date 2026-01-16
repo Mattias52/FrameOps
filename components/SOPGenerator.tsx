@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SOP, SOPStep } from '../types';
 import { analyzeSOPFrames } from '../services/geminiService';
 import { detectIndustrialObjects } from '../services/visionService';
-import { extractYoutubeId, fetchYoutubeMetadata, extractFramesWithSceneDetection, extractFramesFromUploadedVideo, getYoutubeTranscript, matchFramesToSteps, ExtractedFrame } from '../services/youtubeService';
+import { extractYoutubeId, fetchYoutubeMetadata, extractFramesWithSceneDetection, extractFramesFromUploadedVideo, getYoutubeTranscript, matchFramesToSteps, analyzeVideoNative, ExtractedFrame } from '../services/youtubeService';
 
 interface SOPGeneratorProps {
   onComplete: (sop: SOP) => void;
@@ -168,11 +168,12 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
       let extractedFrames: ExtractedFrame[] = [];
 
       if (videoFile) {
-        // Use Railway for uploaded video scene detection (same as YouTube)
-        addLog(`Uploading video to Railway for scene detection...`);
+        // NEW FLOW: FFmpeg for frames + Gemini native video for analysis
+        addLog(`Step 1: Extracting frames with FFmpeg...`);
         setProgress(10);
 
         try {
+          // Step 1: Extract frames with FFmpeg scene detection
           const sceneResult = await extractFramesFromUploadedVideo(
             videoFile,
             addLog,
@@ -183,19 +184,60 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
             }
           );
 
-          if (sceneResult.success && sceneResult.frames.length > 0) {
-            addLog(`Railway extracted ${sceneResult.frames.length} scene-detected frames`);
-            extractedFrames = sceneResult.frames;
-            frames = sceneResult.frames.map(f => f.imageBase64);
-            setProgress(40);
-          } else {
-            throw new Error('No frames returned from Railway');
+          if (!sceneResult.success || sceneResult.frames.length === 0) {
+            throw new Error('No frames returned from FFmpeg');
           }
-        } catch (railwayError: any) {
-          addLog(`Railway error: ${railwayError.message}`);
-          throw new Error(`Video scene detection failed. Make sure Railway service is running.`);
+
+          addLog(`FFmpeg extracted ${sceneResult.frames.length} scene-detected frames`);
+          extractedFrames = sceneResult.frames;
+          setProgress(30);
+
+          // Step 2: Use Gemini native video analysis
+          addLog(`Step 2: Uploading to Gemini for native video+audio analysis...`);
+          const nativeResult = await analyzeVideoNative(
+            videoFile,
+            title || "New Procedure",
+            extractedFrames,
+            addLog
+          );
+
+          setProgress(90);
+
+          // Build SOP from native result (steps already have matched thumbnails)
+          const newSop: SOP = {
+            id: crypto.randomUUID(),
+            title: nativeResult.title || title || "New Procedure",
+            description: nativeResult.description || `SOP for ${title}`,
+            createdAt: new Date(),
+            ppeRequirements: nativeResult.ppeRequirements || [],
+            materialsRequired: nativeResult.materialsRequired || [],
+            steps: nativeResult.steps.map((s, idx) => ({
+              id: s.id || `step-${idx + 1}`,
+              timestamp: s.timestamp || '00:00',
+              title: s.title,
+              description: s.description,
+              safetyWarnings: s.safetyWarnings || [],
+              toolsRequired: s.toolsRequired || [],
+              thumbnail: s.thumbnail || extractedFrames[0]?.imageBase64 || ''
+            })),
+            source: 'upload',
+            thumbnail: nativeResult.steps[0]?.thumbnail || extractedFrames[0]?.imageBase64 || ''
+          };
+
+          addLog(`SOP generated: ${newSop.steps.length} steps with Gemini native video understanding`);
+          setProgress(100);
+          onComplete(newSop);
+          setIsProcessing(false);
+          return; // Exit early - native flow handles everything
+
+        } catch (nativeError: any) {
+          addLog(`Native video error: ${nativeError.message}`);
+          addLog(`Falling back to frame-based analysis...`);
+          // Fall through to old flow as backup
         }
-      } else if (ytId) {
+      }
+
+      if (ytId) {
         addLog(`Connecting to Railway FFmpeg scene detection...`);
         setProgress(10);
 

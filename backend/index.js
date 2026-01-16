@@ -1128,7 +1128,8 @@ function getGenAI() {
 
 // ============================================
 // NATIVE VIDEO SOP ANALYSIS (Gemini File API)
-// Uses Gemini's native video understanding
+// Uses Gemini's native video understanding for audio+video context
+// FFmpeg frames are provided separately and matched by timestamp
 // ============================================
 app.post('/analyze-video-native', async (req, res) => {
   if (!req.files || !req.files.video) {
@@ -1137,9 +1138,12 @@ app.post('/analyze-video-native', async (req, res) => {
 
   const videoFile = req.files.video;
   const title = req.body.title || 'Procedure';
+  // FFmpeg frames with timestamps (provided by frontend)
+  const ffmpegFrames = req.body.ffmpegFrames ? JSON.parse(req.body.ffmpegFrames) : [];
   const jobId = crypto.randomBytes(8).toString('hex');
 
   console.log(`[${jobId}] Native video analysis: "${title}" (${(videoFile.size / 1024 / 1024).toFixed(1)}MB)`);
+  console.log(`[${jobId}] FFmpeg frames provided: ${ffmpegFrames.length}`);
 
   try {
     const genai = getGenAI();
@@ -1175,28 +1179,29 @@ app.post('/analyze-video-native', async (req, res) => {
     const prompt = `
       You are an expert technical writer creating a Standard Operating Procedure (SOP).
 
-      WATCH THIS ENTIRE VIDEO carefully. Pay attention to:
-      - AUDIO: What the presenter/narrator is SAYING (use their exact words!)
-      - VISUAL: What actions are being performed
-      - TOOLS: Any tools, materials, or equipment shown or mentioned
-      - SEQUENCE: The exact order of steps
+      WATCH THIS ENTIRE VIDEO carefully. Pay attention to BOTH:
+      - AUDIO: What the presenter/narrator is SAYING - use their EXACT words!
+      - VISUAL: What actions are being performed on screen
 
-      Create a detailed SOP for this procedure titled: "${title}"
+      Create a detailed SOP for: "${title}"
 
       CRITICAL REQUIREMENTS:
-      - Use the presenter's EXACT words and terminology from the audio
-      - Include ALL steps, even brief ones (like removing screws, brackets, etc.)
-      - Note any tools or equipment mentioned or shown
-      - Include safety warnings and important notes
-      - Provide timestamps for each step (MM:SS format)
-      - Do NOT skip any steps - every action shown should be documented
+      1. Use the presenter's EXACT words and terminology from the audio
+      2. Include ALL steps mentioned or shown, even brief ones like:
+         - "Remove the screw with a Phillips head screwdriver"
+         - "Lift the bracket"
+         - "Set aside the component"
+      3. Note ALL tools or equipment mentioned (screwdrivers, wipes, alcohol, etc.)
+      4. Provide accurate timestamps (MM:SS) for when each step STARTS
+      5. Do NOT summarize or skip steps - document EVERY action
+      6. If the presenter says "be careful" or gives a warning, include it
 
-      For each step, provide:
-      - timestamp: When this step occurs (MM:SS)
-      - title: Clear action title
-      - description: Detailed instructions using the presenter's words
-      - safetyWarnings: Any warnings (empty array if none)
-      - toolsRequired: Tools needed for this step (empty array if none)
+      For each step provide:
+      - timestamp: When this step starts (MM:SS format, e.g., "00:45")
+      - title: Short action title
+      - description: Detailed instructions using presenter's actual words
+      - safetyWarnings: Array of warnings mentioned (or empty)
+      - toolsRequired: Array of tools needed for this step (or empty)
     `;
 
     console.log(`[${jobId}] Generating SOP with native video understanding...`);
@@ -1254,35 +1259,50 @@ app.post('/analyze-video-native', async (req, res) => {
     const resultText = response.text;
     const result = JSON.parse(resultText);
 
-    console.log(`[${jobId}] Generated ${result.steps?.length || 0} steps with native video`);
+    console.log(`[${jobId}] Gemini generated ${result.steps?.length || 0} steps`);
 
-    // Step 4: Extract frames for thumbnails at step timestamps
-    const framesDir = path.join(os.tmpdir(), 'frames', jobId);
-    fs.mkdirSync(framesDir, { recursive: true });
+    // Step 4: Match Gemini's steps to FFmpeg frames by timestamp
+    // Helper to convert MM:SS to seconds
+    const toSeconds = (ts) => {
+      if (!ts) return 0;
+      const parts = ts.split(':').map(Number);
+      if (parts.length === 2) return parts[0] * 60 + parts[1];
+      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      return 0;
+    };
 
-    const frames = [];
-    for (let i = 0; i < result.steps.length; i++) {
-      const step = result.steps[i];
-      const timestamp = step.timestamp || '00:00';
-      const frameFile = path.join(framesDir, `frame_${i}.jpg`);
+    // Match each step to closest FFmpeg frame
+    const stepsWithFrames = result.steps.map((step, idx) => {
+      const stepTime = toSeconds(step.timestamp);
 
-      try {
-        // Extract frame at step's timestamp
-        execSync(`ffmpeg -ss ${timestamp} -i "${videoFile.tempFilePath}" -vframes 1 -q:v 2 "${frameFile}" -y 2>/dev/null`);
-
-        if (fs.existsSync(frameFile)) {
-          const frameData = fs.readFileSync(frameFile);
-          frames.push(`data:image/jpeg;base64,${frameData.toString('base64')}`);
-        } else {
-          frames.push(null);
-        }
-      } catch (e) {
-        frames.push(null);
+      if (ffmpegFrames.length === 0) {
+        // No FFmpeg frames provided - step has no thumbnail
+        return { ...step, id: `step-${idx + 1}` };
       }
-    }
 
-    // Cleanup
-    cleanup(framesDir);
+      // Find closest FFmpeg frame by timestamp
+      let closestFrame = ffmpegFrames[0];
+      let closestDiff = Math.abs(toSeconds(ffmpegFrames[0].timestamp) - stepTime);
+
+      for (const frame of ffmpegFrames) {
+        const frameDiff = Math.abs(toSeconds(frame.timestamp) - stepTime);
+        if (frameDiff < closestDiff) {
+          closestDiff = frameDiff;
+          closestFrame = frame;
+        }
+      }
+
+      console.log(`[${jobId}] Step ${idx + 1} (${step.timestamp}) matched to frame at ${closestFrame.timestamp} (diff: ${closestDiff}s)`);
+
+      return {
+        ...step,
+        id: `step-${idx + 1}`,
+        matchedFrameTimestamp: closestFrame.timestamp,
+        thumbnail: closestFrame.imageBase64
+      };
+    });
+
+    // Cleanup video temp file
     if (videoFile.tempFilePath) {
       try { fs.unlinkSync(videoFile.tempFilePath); } catch (e) {}
     }
@@ -1290,14 +1310,18 @@ app.post('/analyze-video-native', async (req, res) => {
     // Delete file from Gemini
     try {
       await genai.files.delete({ name: file.name });
+      console.log(`[${jobId}] Deleted video from Gemini`);
     } catch (e) {
       console.log(`[${jobId}] Could not delete file from Gemini: ${e.message}`);
     }
 
     res.json({
       success: true,
-      ...result,
-      frames,
+      title: result.title,
+      description: result.description,
+      ppeRequirements: result.ppeRequirements,
+      materialsRequired: result.materialsRequired,
+      steps: stepsWithFrames,
       source: 'gemini-native-video'
     });
 

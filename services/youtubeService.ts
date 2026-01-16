@@ -368,6 +368,64 @@ export const fetchYoutubeThumbnail = async (
 };
 
 /**
+ * Analyze video with Gemini's native video understanding
+ * Uses FFmpeg frames for thumbnails, Gemini for audio+video context
+ */
+export const analyzeVideoNative = async (
+  videoFile: File,
+  title: string,
+  ffmpegFrames: ExtractedFrame[],
+  onProgress?: (msg: string) => void
+): Promise<{
+  title: string;
+  description: string;
+  ppeRequirements: string[];
+  materialsRequired: string[];
+  steps: Array<{
+    id: string;
+    timestamp: string;
+    title: string;
+    description: string;
+    safetyWarnings?: string[];
+    toolsRequired?: string[];
+    thumbnail?: string;
+  }>;
+}> => {
+  const log = onProgress || console.log;
+
+  log("Uploading video to Gemini for native analysis...");
+
+  const formData = new FormData();
+  formData.append('video', videoFile);
+  formData.append('title', title);
+  formData.append('ffmpegFrames', JSON.stringify(ffmpegFrames.map(f => ({
+    timestamp: f.timestamp,
+    timestampSeconds: f.timestampSeconds,
+    imageBase64: f.imageBase64
+  }))));
+
+  const response = await fetch(`${RAILWAY_URL}/analyze-video-native`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Native video analysis failed: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+
+  if (!result.success) {
+    throw new Error(result.error || 'Native video analysis failed');
+  }
+
+  log(`Gemini generated ${result.steps?.length || 0} steps with native video+audio understanding`);
+
+  return result;
+};
+
+/**
  * Full YouTube processing pipeline:
  * 1. Scene detection with FFmpeg (Railway)
  * 2. VIT frame matching (Railway)
