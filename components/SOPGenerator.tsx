@@ -226,8 +226,9 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
         }
       }
 
-      // Fetch YouTube transcript for better context
+      // Fetch transcript with timestamps (segments)
       let transcript = '';
+      let segments: { start: number; end: number; text: string }[] = [];
       console.log('[FrameOps] ytId check:', ytId, 'videoFile:', !!videoFile);
 
       if (ytId) {
@@ -236,9 +237,10 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
         try {
           const transcriptResult = await getYoutubeTranscript(youtubeUrl, addLog);
           transcript = transcriptResult.transcript;
-          console.log('[FrameOps] Transcript result:', transcript ? `${transcript.length} chars` : 'empty');
+          segments = transcriptResult.segments || [];
+          console.log('[FrameOps] Transcript result:', transcript ? `${transcript.length} chars, ${segments.length} segments` : 'empty');
           if (transcript && transcript.length > 0) {
-            addLog(`Transcript loaded: ${transcript.length} chars (${transcriptResult.source})`);
+            addLog(`Transcript loaded: ${transcript.length} chars, ${segments.length} segments (${transcriptResult.source})`);
           } else {
             addLog("No transcript available - video may lack subtitles");
           }
@@ -246,8 +248,23 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
           console.error('[FrameOps] Transcript error:', e);
           addLog("Transcript fetch failed - continuing with visual analysis only");
         }
-      } else {
-        console.log('[FrameOps] No ytId - skipping transcript fetch');
+      } else if (videoFile) {
+        console.log('[FrameOps] Transcribing uploaded video audio...');
+        addLog("Transcribing video audio with Whisper...");
+        try {
+          const transcriptResult = await transcribeUploadedVideoAudio(videoFile, addLog);
+          transcript = transcriptResult.transcript;
+          segments = transcriptResult.segments || [];
+          console.log('[FrameOps] Transcript result:', transcript ? `${transcript.length} chars, ${segments.length} segments` : 'empty');
+          if (transcript && transcript.length > 0) {
+            addLog(`Audio transcribed: ${transcript.length} chars, ${segments.length} segments (${transcriptResult.source})`);
+          } else {
+            addLog("No speech detected in video");
+          }
+        } catch (e: any) {
+          console.error('[FrameOps] Transcription error:', e);
+          addLog("Transcription failed - continuing with visual analysis only");
+        }
       }
       setProgress(50);
 
@@ -255,15 +272,29 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
       setDetectedTags(tags);
       setProgress(60);
 
-      console.log('[FrameOps] Transcript length:', transcript.length, 'Will use:', transcript.length > 0);
-      addLog(transcript ? "Analyzing with transcript..." : "Analyzing frames only (no transcript)...");
-
-      // Increased transcript limit from 4000 to 15000 chars for better context
-      const fullContext = transcript
-        ? `${context}\n\nVIDEO TRANSCRIPT:\n${transcript.substring(0, 15000)}`
-        : context;
+      // Build context: match transcript segments to frame timestamps
+      let fullContext = context;
+      if (segments.length > 0 && extractedFrames.length > 0) {
+        // Create per-frame transcript context
+        const frameContexts = extractedFrames.map((frame, idx) => {
+          const frameTime = frame.timestampSeconds;
+          // Find segments that overlap with this frame (±3 seconds window)
+          const relevantSegments = segments.filter(seg =>
+            seg.start <= frameTime + 3 && seg.end >= frameTime - 3
+          );
+          const segmentText = relevantSegments.map(s => s.text).join(' ').trim();
+          return `Frame ${idx + 1} (${frame.timestamp}): "${segmentText || 'no speech'}"`;
+        });
+        fullContext = `${context}\n\nTRANSCRIPT MATCHED TO FRAMES:\n${frameContexts.join('\n')}`;
+        addLog(`Matched ${segments.length} transcript segments to ${extractedFrames.length} frames`);
+      } else if (transcript) {
+        // Fallback: use full transcript without timestamps
+        fullContext = `${context}\n\nVIDEO TRANSCRIPT:\n${transcript.substring(0, 15000)}`;
+      }
 
       console.log('[FrameOps] Full context length:', fullContext.length);
+      addLog(transcript ? "Analyzing with transcript..." : "Analyzing frames only (no transcript)...");
+
       const result = await analyzeSOPFrames(frames, title || "New Procedure", fullContext, tags);
 
       setProgress(90);

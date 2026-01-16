@@ -1170,7 +1170,24 @@ app.post('/analyze-sop', async (req, res) => {
     const hasTranscript = additionalContext.includes('VIDEO TRANSCRIPT:') &&
       additionalContext.split('VIDEO TRANSCRIPT:')[1]?.trim().length > 50;
 
-    const transcriptInstructions = hasTranscript ? `
+    // Check if transcript is matched to frames (new format)
+    const hasFrameMatchedTranscript = additionalContext.includes('TRANSCRIPT MATCHED TO FRAMES:');
+
+    const transcriptInstructions = hasFrameMatchedTranscript ? `
+      CRITICAL - TRANSCRIPT MATCHED TO EACH FRAME:
+      You have been provided with transcript text MATCHED to each frame by timestamp.
+      Each line shows: Frame N (timestamp): "what was being said at that moment"
+
+      USE THIS ACTIVELY:
+      - For Frame 1, use the transcript text shown for "Frame 1" to write Step 1
+      - For Frame 2, use the transcript text shown for "Frame 2" to write Step 2
+      - And so on for ALL frames
+      - The transcript tells you WHAT the presenter is explaining at each visual moment
+      - Use the presenter's EXACT words and terminology
+      - If the transcript says "no speech", describe based on visual only
+
+      CRITICAL: The transcript for each frame IS the instruction for that step!
+    ` : hasTranscript ? `
       CRITICAL - VIDEO TRANSCRIPT AVAILABLE:
       You have been provided with the audio transcript from this video. USE IT ACTIVELY:
       - The transcript contains what the presenter/narrator is SAYING while performing each step

@@ -228,13 +228,19 @@ export const matchFramesToSteps = async (
   return result.result;
 };
 
+export interface TranscriptSegment {
+  start: number;
+  end: number;
+  text: string;
+}
+
 /**
  * Transcribe audio from uploaded video file using Whisper (OpenAI)
  */
 export const transcribeUploadedVideoAudio = async (
   videoFile: File,
   onProgress?: (msg: string) => void
-): Promise<{ transcript: string; source: string }> => {
+): Promise<{ transcript: string; segments: TranscriptSegment[]; source: string }> => {
   const log = onProgress || console.log;
 
   log("Transcribing video audio with Whisper...");
@@ -251,20 +257,24 @@ export const transcribeUploadedVideoAudio = async (
 
     if (!response.ok) {
       log("Whisper transcription not available");
-      return { transcript: '', source: 'none' };
+      return { transcript: '', segments: [], source: 'none' };
     }
 
     const result = await response.json();
 
     if (result.success && result.transcript) {
-      log(`Whisper transcribed: ${result.transcript.length} chars (${result.source})`);
-      return { transcript: result.transcript, source: result.source };
+      log(`Whisper transcribed: ${result.transcript.length} chars, ${result.segments?.length || 0} segments (${result.source})`);
+      return {
+        transcript: result.transcript,
+        segments: result.segments || [],
+        source: result.source
+      };
     }
 
-    return { transcript: '', source: result.source || 'none' };
+    return { transcript: '', segments: [], source: result.source || 'none' };
   } catch (error) {
     log("Whisper transcription failed, continuing without");
-    return { transcript: '', source: 'none' };
+    return { transcript: '', segments: [], source: 'none' };
   }
 };
 
@@ -274,7 +284,7 @@ export const transcribeUploadedVideoAudio = async (
 export const getYoutubeTranscript = async (
   youtubeUrl: string,
   onProgress?: (msg: string) => void
-): Promise<{ transcript: string; source: string }> => {
+): Promise<{ transcript: string; segments: TranscriptSegment[]; source: string }> => {
   const log = onProgress || console.log;
 
   log("Fetching YouTube transcript with Whisper...");
@@ -291,20 +301,24 @@ export const getYoutubeTranscript = async (
 
     if (!response.ok) {
       log("Transcript not available");
-      return { transcript: '', source: 'none' };
+      return { transcript: '', segments: [], source: 'none' };
     }
 
     const result = await response.json();
 
     if (result.success && result.transcript) {
-      log(`Transcript: ${result.transcript.length} chars (${result.source})`);
-      return { transcript: result.transcript, source: result.source };
+      log(`Transcript: ${result.transcript.length} chars, ${result.segments?.length || 0} segments (${result.source})`);
+      return {
+        transcript: result.transcript,
+        segments: result.segments || [],
+        source: result.source
+      };
     }
 
-    return { transcript: '', source: 'none' };
+    return { transcript: '', segments: [], source: 'none' };
   } catch (error) {
     log("Transcript fetch failed, continuing without");
-    return { transcript: '', source: 'none' };
+    return { transcript: '', segments: [], source: 'none' };
   }
 };
 
