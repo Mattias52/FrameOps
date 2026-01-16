@@ -64,6 +64,19 @@ app.get('/api', (req, res) => {
 const PORT = process.env.PORT || 3000;
 const TEMP_DIR = process.env.TEMP_DIR || path.join(os.tmpdir(), 'frames');
 
+// Global error handlers to prevent server crashes
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err.message);
+  console.error(err.stack);
+  // Don't exit - try to keep server running
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('UNHANDLED REJECTION at:', promise);
+  console.error('Reason:', reason);
+  // Don't exit - try to keep server running
+});
+
 // Ensure temp directory exists
 if (!fs.existsSync(TEMP_DIR)) {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
@@ -1370,6 +1383,10 @@ app.post('/analyze-video-native', async (req, res) => {
 
   } catch (error) {
     console.error(`[${jobId}] Native video analysis error:`, error.message);
+    // Cleanup temp file on error
+    if (videoFile && videoFile.tempFilePath) {
+      try { fs.unlinkSync(videoFile.tempFilePath); } catch (e) {}
+    }
     res.status(500).json({ error: error.message });
   }
 });
@@ -2136,9 +2153,19 @@ app.locals.analyzeFrames = async ({ frames, title, additionalContext }) => {
   };
 };
 
+// Global Express error handler - catches any unhandled errors in routes
+app.use((err, req, res, next) => {
+  console.error('EXPRESS ERROR HANDLER:', err.message);
+  console.error(err.stack);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(500).json({ success: false, error: err.message || 'Internal server error' });
+});
+
 app.listen(PORT, () => {
   console.log(`FrameOps Backend running on port ${PORT}`);
-  console.log('=== VERSION 14: PUBLIC API ADDED ===');
+  console.log('=== VERSION 15: ADDED CRASH PROTECTION ===');
   console.log(`Gemini API Key: ${GEMINI_API_KEY ? 'configured' : 'MISSING!'}`);
   console.log(`API Docs: http://localhost:${PORT}/api/docs`);
 });
