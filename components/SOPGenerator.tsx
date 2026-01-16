@@ -272,21 +272,24 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
       setDetectedTags(tags);
       setProgress(60);
 
-      // Build context: match transcript segments to frame timestamps
+      // Build context: match transcript segments to frame timestamps + full transcript
       let fullContext = context;
       if (segments.length > 0 && extractedFrames.length > 0) {
-        // Create per-frame transcript context
+        // Create per-frame transcript context with WIDER window (±8 seconds)
         const frameContexts = extractedFrames.map((frame, idx) => {
           const frameTime = frame.timestampSeconds;
-          // Find segments that overlap with this frame (±3 seconds window)
+          // Find segments that overlap with this frame (±8 seconds window for better coverage)
           const relevantSegments = segments.filter(seg =>
-            seg.start <= frameTime + 3 && seg.end >= frameTime - 3
+            seg.start <= frameTime + 8 && seg.end >= frameTime - 8
           );
           const segmentText = relevantSegments.map(s => s.text).join(' ').trim();
           return `Frame ${idx + 1} (${frame.timestamp}): "${segmentText || 'no speech'}"`;
         });
-        fullContext = `${context}\n\nTRANSCRIPT MATCHED TO FRAMES:\n${frameContexts.join('\n')}`;
-        addLog(`Matched ${segments.length} transcript segments to ${extractedFrames.length} frames`);
+
+        // Also include FULL transcript so Gemini can see ALL instructions
+        const fullTranscript = segments.map(s => s.text).join(' ');
+        fullContext = `${context}\n\nFULL TRANSCRIPT (use this to ensure NO steps are missed):\n${fullTranscript.substring(0, 10000)}\n\nTRANSCRIPT MATCHED TO FRAMES:\n${frameContexts.join('\n')}`;
+        addLog(`Matched ${segments.length} segments to ${extractedFrames.length} frames (full transcript included)`);
       } else if (transcript) {
         // Fallback: use full transcript without timestamps
         fullContext = `${context}\n\nVIDEO TRANSCRIPT:\n${transcript.substring(0, 15000)}`;

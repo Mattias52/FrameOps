@@ -1175,17 +1175,20 @@ app.post('/analyze-sop', async (req, res) => {
 
     const transcriptInstructions = hasFrameMatchedTranscript ? `
       CRITICAL - TRANSCRIPT MATCHED TO EACH FRAME:
-      Each line shows what the presenter SAID at that frame's timestamp.
+      You have BOTH the full transcript AND per-frame matched text.
+
+      STEP 1: Read the FULL TRANSCRIPT first to understand ALL steps in the procedure.
+      STEP 2: For each frame, use the matched transcript text to write that step.
 
       YOU MUST USE THE PRESENTER'S EXACT WORDS:
       - If transcript says "lift the tab on the right side" → write "Lift the tab on the right side"
+      - If transcript says "use a screwdriver to remove the bracket" → include that step!
       - If transcript says "be careful not to touch the sensor" → include that warning
-      - If transcript says "use a lint-free wipe" → write "Use a lint-free wipe"
-      - COPY the presenter's terminology, measurements, and specific instructions
+      - COPY the presenter's terminology, tools mentioned, and specific instructions
       - DO NOT paraphrase into generic text like "open the lid" when presenter said "lift the tab"
-      - DO NOT write generic descriptions - use the ACTUAL spoken instructions
+      - DO NOT skip important steps mentioned in transcript (tools, removal steps, warnings)
 
-      If transcript says "no speech" for a frame, then describe the visual action.
+      CRITICAL: Check the FULL TRANSCRIPT - if an important action (like removing a bracket, using a specific tool) is mentioned but doesn't have a matching frame, still include it in the nearest relevant step!
 
       The transcript IS the instruction - your job is to format it properly, NOT rewrite it!
     ` : hasTranscript ? `
