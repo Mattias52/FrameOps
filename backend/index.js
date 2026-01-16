@@ -1175,29 +1175,33 @@ app.post('/analyze-sop', async (req, res) => {
 
     const transcriptInstructions = hasFrameMatchedTranscript ? `
       CRITICAL - TRANSCRIPT MATCHED TO EACH FRAME:
-      You have been provided with transcript text MATCHED to each frame by timestamp.
-      Each line shows: Frame N (timestamp): "what was being said at that moment"
+      Each line shows what the presenter SAID at that frame's timestamp.
 
-      USE THIS ACTIVELY:
-      - For Frame 1, use the transcript text shown for "Frame 1" to write Step 1
-      - For Frame 2, use the transcript text shown for "Frame 2" to write Step 2
-      - And so on for ALL frames
-      - The transcript tells you WHAT the presenter is explaining at each visual moment
-      - Use the presenter's EXACT words and terminology
-      - If the transcript says "no speech", describe based on visual only
+      YOU MUST USE THE PRESENTER'S EXACT WORDS:
+      - If transcript says "lift the tab on the right side" → write "Lift the tab on the right side"
+      - If transcript says "be careful not to touch the sensor" → include that warning
+      - If transcript says "use a lint-free wipe" → write "Use a lint-free wipe"
+      - COPY the presenter's terminology, measurements, and specific instructions
+      - DO NOT paraphrase into generic text like "open the lid" when presenter said "lift the tab"
+      - DO NOT write generic descriptions - use the ACTUAL spoken instructions
 
-      CRITICAL: The transcript for each frame IS the instruction for that step!
+      If transcript says "no speech" for a frame, then describe the visual action.
+
+      The transcript IS the instruction - your job is to format it properly, NOT rewrite it!
     ` : hasTranscript ? `
-      CRITICAL - VIDEO TRANSCRIPT AVAILABLE:
-      You have been provided with the audio transcript from this video. USE IT ACTIVELY:
-      - The transcript contains what the presenter/narrator is SAYING while performing each step
-      - Match the spoken explanations to what you see in each frame
-      - Use the presenter's own words and terminology in your step descriptions
-      - If the presenter mentions specific measurements, settings, or warnings - include them
-      - The transcript is your PRIMARY source for understanding WHAT is being done and WHY
-      - The frames show you HOW it looks visually
+      CRITICAL - USE THE PRESENTER'S EXACT WORDS FROM TRANSCRIPT:
+      You have been provided with the audio transcript. This is what the presenter ACTUALLY SAID.
 
-      Combine both sources: transcript for context/explanation + frames for visual details.
+      YOU MUST:
+      - Use the presenter's EXACT words and terminology in your step descriptions
+      - If presenter says "lift the tab on the right" → write that, NOT "open the lid"
+      - If presenter mentions specific tools, parts, measurements → use those exact terms
+      - If presenter gives warnings → include those exact warnings
+      - DO NOT paraphrase into generic instructions
+      - DO NOT write corporate-speak when presenter used simple language
+
+      The transcript tells you WHAT to write. The frames show you WHEN each instruction happens.
+      Your job is to match transcript sections to frames, NOT to rewrite the instructions!
     ` : `
       CRITICAL - NO AUDIO/TRANSCRIPT AVAILABLE (Visual-only video):
       This video has no speech or narration. You must analyze the frames VISUALLY and write as the INSTRUCTOR.
