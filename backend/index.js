@@ -1126,6 +1126,187 @@ function getGenAI() {
   return _genai;
 }
 
+// ============================================
+// NATIVE VIDEO SOP ANALYSIS (Gemini File API)
+// Uses Gemini's native video understanding
+// ============================================
+app.post('/analyze-video-native', async (req, res) => {
+  if (!req.files || !req.files.video) {
+    return res.status(400).json({ error: 'No video file provided' });
+  }
+
+  const videoFile = req.files.video;
+  const title = req.body.title || 'Procedure';
+  const jobId = crypto.randomBytes(8).toString('hex');
+
+  console.log(`[${jobId}] Native video analysis: "${title}" (${(videoFile.size / 1024 / 1024).toFixed(1)}MB)`);
+
+  try {
+    const genai = getGenAI();
+
+    // Step 1: Upload video to Gemini File API
+    console.log(`[${jobId}] Uploading video to Gemini File API...`);
+
+    const uploadResult = await genai.files.upload({
+      file: videoFile.tempFilePath,
+      config: {
+        mimeType: videoFile.mimetype || 'video/mp4',
+        displayName: title
+      }
+    });
+
+    console.log(`[${jobId}] File uploaded: ${uploadResult.name}, state: ${uploadResult.state}`);
+
+    // Step 2: Wait for video processing
+    let file = uploadResult;
+    while (file.state === 'PROCESSING') {
+      console.log(`[${jobId}] Waiting for video processing...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      file = await genai.files.get({ name: file.name });
+    }
+
+    if (file.state === 'FAILED') {
+      throw new Error('Video processing failed');
+    }
+
+    console.log(`[${jobId}] Video ready: ${file.uri}`);
+
+    // Step 3: Generate SOP using native video understanding
+    const prompt = `
+      You are an expert technical writer creating a Standard Operating Procedure (SOP).
+
+      WATCH THIS ENTIRE VIDEO carefully. Pay attention to:
+      - AUDIO: What the presenter/narrator is SAYING (use their exact words!)
+      - VISUAL: What actions are being performed
+      - TOOLS: Any tools, materials, or equipment shown or mentioned
+      - SEQUENCE: The exact order of steps
+
+      Create a detailed SOP for this procedure titled: "${title}"
+
+      CRITICAL REQUIREMENTS:
+      - Use the presenter's EXACT words and terminology from the audio
+      - Include ALL steps, even brief ones (like removing screws, brackets, etc.)
+      - Note any tools or equipment mentioned or shown
+      - Include safety warnings and important notes
+      - Provide timestamps for each step (MM:SS format)
+      - Do NOT skip any steps - every action shown should be documented
+
+      For each step, provide:
+      - timestamp: When this step occurs (MM:SS)
+      - title: Clear action title
+      - description: Detailed instructions using the presenter's words
+      - safetyWarnings: Any warnings (empty array if none)
+      - toolsRequired: Tools needed for this step (empty array if none)
+    `;
+
+    console.log(`[${jobId}] Generating SOP with native video understanding...`);
+
+    const response = await genai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: {
+        parts: [
+          { fileData: { fileUri: file.uri, mimeType: file.mimeType } },
+          { text: prompt }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            ppeRequirements: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            materialsRequired: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            steps: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  timestamp: { type: Type.STRING },
+                  title: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  safetyWarnings: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  },
+                  toolsRequired: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  }
+                },
+                required: ["id", "timestamp", "title", "description"]
+              }
+            }
+          },
+          required: ["title", "description", "steps", "ppeRequirements", "materialsRequired"]
+        }
+      }
+    });
+
+    const resultText = response.text;
+    const result = JSON.parse(resultText);
+
+    console.log(`[${jobId}] Generated ${result.steps?.length || 0} steps with native video`);
+
+    // Step 4: Extract frames for thumbnails at step timestamps
+    const framesDir = path.join(os.tmpdir(), 'frames', jobId);
+    fs.mkdirSync(framesDir, { recursive: true });
+
+    const frames = [];
+    for (let i = 0; i < result.steps.length; i++) {
+      const step = result.steps[i];
+      const timestamp = step.timestamp || '00:00';
+      const frameFile = path.join(framesDir, `frame_${i}.jpg`);
+
+      try {
+        // Extract frame at step's timestamp
+        execSync(`ffmpeg -ss ${timestamp} -i "${videoFile.tempFilePath}" -vframes 1 -q:v 2 "${frameFile}" -y 2>/dev/null`);
+
+        if (fs.existsSync(frameFile)) {
+          const frameData = fs.readFileSync(frameFile);
+          frames.push(`data:image/jpeg;base64,${frameData.toString('base64')}`);
+        } else {
+          frames.push(null);
+        }
+      } catch (e) {
+        frames.push(null);
+      }
+    }
+
+    // Cleanup
+    cleanup(framesDir);
+    if (videoFile.tempFilePath) {
+      try { fs.unlinkSync(videoFile.tempFilePath); } catch (e) {}
+    }
+
+    // Delete file from Gemini
+    try {
+      await genai.files.delete({ name: file.name });
+    } catch (e) {
+      console.log(`[${jobId}] Could not delete file from Gemini: ${e.message}`);
+    }
+
+    res.json({
+      success: true,
+      ...result,
+      frames,
+      source: 'gemini-native-video'
+    });
+
+  } catch (error) {
+    console.error(`[${jobId}] Native video analysis error:`, error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/analyze-sop', async (req, res) => {
   const { frames, title, additionalContext = '', vitTags = [] } = req.body;
 
