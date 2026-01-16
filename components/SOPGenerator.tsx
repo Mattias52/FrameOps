@@ -233,7 +233,11 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
         } catch (nativeError: any) {
           addLog(`Native video error: ${nativeError.message}`);
           addLog(`Falling back to frame-based analysis...`);
-          // Fall through to old flow as backup
+          // Populate frames array from extractedFrames for fallback flow
+          if (extractedFrames.length > 0) {
+            frames = extractedFrames.map(f => f.imageBase64);
+            addLog(`Using ${frames.length} FFmpeg frames for fallback analysis`);
+          }
         }
       }
 
