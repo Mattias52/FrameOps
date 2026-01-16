@@ -1146,34 +1146,75 @@ app.post('/analyze-video-native', async (req, res) => {
   console.log(`[${jobId}] FFmpeg frames provided: ${ffmpegFrames.length}`);
 
   try {
+    const fetch = require('node-fetch');
     const genai = getGenAI();
 
-    // Step 1: Upload video to Gemini File API
+    // Step 1: Upload video to Gemini File API using REST
     console.log(`[${jobId}] Uploading video to Gemini File API...`);
 
-    const uploadResult = await genai.files.upload({
-      file: videoFile.tempFilePath,
-      config: {
-        mimeType: videoFile.mimetype || 'video/mp4',
-        displayName: title
-      }
+    const videoData = fs.readFileSync(videoFile.tempFilePath);
+    const mimeType = videoFile.mimetype || 'video/mp4';
+    const numBytes = videoData.length;
+
+    // Start resumable upload
+    const startResponse = await fetch('https://generativelanguage.googleapis.com/upload/v1beta/files', {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': GEMINI_API_KEY,
+        'X-Goog-Upload-Protocol': 'resumable',
+        'X-Goog-Upload-Command': 'start',
+        'X-Goog-Upload-Header-Content-Length': String(numBytes),
+        'X-Goog-Upload-Header-Content-Type': mimeType,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ file: { display_name: title } })
     });
 
-    console.log(`[${jobId}] File uploaded: ${uploadResult.name}, state: ${uploadResult.state}`);
-
-    // Step 2: Wait for video processing
-    let file = uploadResult;
-    while (file.state === 'PROCESSING') {
-      console.log(`[${jobId}] Waiting for video processing...`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      file = await genai.files.get({ name: file.name });
+    const uploadUrl = startResponse.headers.get('x-goog-upload-url');
+    if (!uploadUrl) {
+      throw new Error('Failed to get upload URL from Gemini');
     }
 
-    if (file.state === 'FAILED') {
+    console.log(`[${jobId}] Got upload URL, uploading ${(numBytes / 1024 / 1024).toFixed(1)}MB...`);
+
+    // Upload video data
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Length': String(numBytes),
+        'X-Goog-Upload-Offset': '0',
+        'X-Goog-Upload-Command': 'upload, finalize'
+      },
+      body: videoData
+    });
+
+    const uploadResult = await uploadResponse.json();
+    if (!uploadResult.file || !uploadResult.file.uri) {
+      throw new Error('Failed to upload video to Gemini: ' + JSON.stringify(uploadResult));
+    }
+
+    let fileUri = uploadResult.file.uri;
+    let fileName = uploadResult.file.name;
+    let fileState = uploadResult.file.state;
+
+    console.log(`[${jobId}] File uploaded: ${fileName}, state: ${fileState}`);
+
+    // Step 2: Wait for video processing
+    while (fileState === 'PROCESSING') {
+      console.log(`[${jobId}] Waiting for video processing...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const statusResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GEMINI_API_KEY}`);
+      const statusResult = await statusResponse.json();
+      fileState = statusResult.state;
+      fileUri = statusResult.uri || fileUri;
+    }
+
+    if (fileState === 'FAILED') {
       throw new Error('Video processing failed');
     }
 
-    console.log(`[${jobId}] Video ready: ${file.uri}`);
+    console.log(`[${jobId}] Video ready: ${fileUri}`);
 
     // Step 3: Generate SOP using native video understanding
     const prompt = `
@@ -1210,7 +1251,7 @@ app.post('/analyze-video-native', async (req, res) => {
       model: "gemini-2.0-flash",
       contents: {
         parts: [
-          { fileData: { fileUri: file.uri, mimeType: file.mimeType } },
+          { fileData: { fileUri: fileUri, mimeType: mimeType } },
           { text: prompt }
         ]
       },
@@ -1307,9 +1348,11 @@ app.post('/analyze-video-native', async (req, res) => {
       try { fs.unlinkSync(videoFile.tempFilePath); } catch (e) {}
     }
 
-    // Delete file from Gemini
+    // Delete file from Gemini using REST API
     try {
-      await genai.files.delete({ name: file.name });
+      await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GEMINI_API_KEY}`, {
+        method: 'DELETE'
+      });
       console.log(`[${jobId}] Deleted video from Gemini`);
     } catch (e) {
       console.log(`[${jobId}] Could not delete file from Gemini: ${e.message}`);
