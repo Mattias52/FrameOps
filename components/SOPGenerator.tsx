@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SOP, SOPStep } from '../types';
 import { analyzeSOPFrames } from '../services/geminiService';
 import { detectIndustrialObjects } from '../services/visionService';
-import { extractYoutubeId, fetchYoutubeMetadata, extractFramesWithSceneDetection, extractFramesFromUploadedVideo, getYoutubeTranscript, analyzeVideoNative, ExtractedFrame } from '../services/youtubeService';
+import { extractYoutubeId, fetchYoutubeMetadata, extractFramesFromUploadedVideo, analyzeVideoNative, analyzeYoutubeNative, ExtractedFrame } from '../services/youtubeService';
 
 interface SOPGeneratorProps {
   onComplete: (sop: SOP) => void;
@@ -233,127 +233,53 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
       }
 
       if (ytId) {
-        addLog(`Connecting to Railway FFmpeg scene detection...`);
+        // CLEAN FLOW: Same as upload - download video, upload to Gemini native
+        // Gemini watches AND listens to the video for best quality
+
+        addLog(`Step 1: Downloading YouTube video and analyzing with Gemini native...`);
         setProgress(10);
 
-        try {
-          // Use Railway backend for proper scene detection
-          const sceneResult = await extractFramesWithSceneDetection(
-            youtubeUrl,
-            addLog,
-            {
-              sceneThreshold: currentPreset.threshold,
-              maxFrames: currentPreset.maxFrames,
-              minFrames: currentPreset.minFrames,
-            }
-          );
-
-          if (sceneResult.success && sceneResult.frames.length > 0) {
-            addLog(`Railway extracted ${sceneResult.frames.length} scene-detected frames`);
-            extractedFrames = sceneResult.frames; // Keep full frame data for VIT matching
-            frames = sceneResult.frames.map(f => f.imageBase64);
-            setProgress(40);
-          } else {
-            throw new Error('No frames returned from Railway');
+        const nativeResult = await analyzeYoutubeNative(
+          youtubeUrl,
+          title || ytMetadata?.title || "YouTube Procedure",
+          addLog,
+          {
+            sceneThreshold: currentPreset.threshold,
+            maxFrames: currentPreset.maxFrames,
+            minFrames: currentPreset.minFrames,
           }
-        } catch (railwayError: any) {
-          addLog(`Railway error: ${railwayError.message}`);
-          addLog(`Scene detection requires Railway backend to be running`);
-          throw new Error(`YouTube scene detection failed. Make sure Railway service is running.`);
-        }
+        );
+
+        setProgress(90);
+
+        // Build SOP from native result (steps already have matched thumbnails)
+        const newSop: SOP = {
+          id: crypto.randomUUID(),
+          title: nativeResult.title || title || "YouTube Procedure",
+          description: nativeResult.description || `SOP for ${title}`,
+          createdAt: new Date(),
+          ppeRequirements: nativeResult.ppeRequirements || [],
+          materialsRequired: nativeResult.materialsRequired || [],
+          steps: nativeResult.steps.map((s, idx) => ({
+            id: s.id || `step-${idx + 1}`,
+            timestamp: s.timestamp || '00:00',
+            title: s.title,
+            description: s.description,
+            safetyWarnings: s.safetyWarnings || [],
+            toolsRequired: s.toolsRequired || [],
+            thumbnail: s.thumbnail || ''
+          })),
+          source: 'youtube',
+          sourceUrl: youtubeUrl,
+          thumbnail: nativeResult.steps[0]?.thumbnail || ''
+        };
+
+        addLog(`SOP generated: ${newSop.steps.length} steps with Gemini native video+audio understanding`);
+        setProgress(100);
+        onComplete(newSop);
+        setIsProcessing(false);
+        return;
       }
-
-      // YouTube: Fetch transcript with timestamps (segments)
-      let transcript = '';
-      let segments: { start: number; end: number; text: string }[] = [];
-
-      addLog("Fetching YouTube transcript...");
-      try {
-        const transcriptResult = await getYoutubeTranscript(youtubeUrl, addLog);
-        transcript = transcriptResult.transcript;
-        segments = transcriptResult.segments || [];
-        if (transcript && transcript.length > 0) {
-          addLog(`Transcript loaded: ${transcript.length} chars, ${segments.length} segments (${transcriptResult.source})`);
-        } else {
-          addLog("No transcript available - video may lack subtitles");
-        }
-      } catch (e: any) {
-        addLog("Transcript fetch failed - continuing with visual analysis only");
-      }
-      setProgress(50);
-
-      const tags: string[] = [];
-      setDetectedTags(tags);
-      setProgress(60);
-
-      // Build context: match transcript segments to frame timestamps + full transcript
-      let fullContext = context;
-      if (segments.length > 0 && extractedFrames.length > 0) {
-        // Create per-frame transcript context with WIDER window (±8 seconds)
-        const frameContexts = extractedFrames.map((frame, idx) => {
-          const frameTime = frame.timestampSeconds;
-          // Find segments that overlap with this frame (±8 seconds window for better coverage)
-          const relevantSegments = segments.filter(seg =>
-            seg.start <= frameTime + 8 && seg.end >= frameTime - 8
-          );
-          const segmentText = relevantSegments.map(s => s.text).join(' ').trim();
-          return `Frame ${idx + 1} (${frame.timestamp}): "${segmentText || 'no speech'}"`;
-        });
-
-        // Also include FULL transcript so Gemini can see ALL instructions
-        const fullTranscript = segments.map(s => s.text).join(' ');
-        fullContext = `${context}\n\nFULL TRANSCRIPT (use this to ensure NO steps are missed):\n${fullTranscript.substring(0, 10000)}\n\nTRANSCRIPT MATCHED TO FRAMES:\n${frameContexts.join('\n')}`;
-        addLog(`Matched ${segments.length} segments to ${extractedFrames.length} frames (full transcript included)`);
-      } else if (transcript) {
-        // Fallback: use full transcript without timestamps
-        fullContext = `${context}\n\nVIDEO TRANSCRIPT:\n${transcript.substring(0, 15000)}`;
-      }
-
-      console.log('[FrameOps] Full context length:', fullContext.length);
-      addLog(transcript ? "Analyzing with transcript..." : "Analyzing frames only (no transcript)...");
-
-      const result = await analyzeSOPFrames(frames, title || "New Procedure", fullContext, tags);
-
-      setProgress(90);
-
-      // Direct 1:1 mapping: step[i] corresponds to frame[i]
-      // Gemini was told to generate exactly N steps for N frames in order
-      addLog(`Mapping ${result.steps.length} steps to ${frames.length} frames (1:1)...`);
-
-      const finalSteps = result.steps.map((s, idx) => ({
-        ...s,
-        thumbnail: frames[idx] || frames[frames.length - 1],
-        timestamp: extractedFrames[idx]?.timestamp || s.timestamp
-      }));
-
-      addLog(`Mapped ${finalSteps.length} steps with thumbnails`);
-
-      setProgress(95);
-
-      // Use Gemini-selected best thumbnail, fallback to ~33% into video
-      const bestThumbnailIdx = typeof result.bestThumbnailIndex === 'number'
-        ? result.bestThumbnailIndex
-        : Math.floor(frames.length / 3);
-      const thumbnailUrl = frames[bestThumbnailIdx] || frames[Math.floor(frames.length / 3)] || frames[0];
-      addLog(`Using frame ${bestThumbnailIdx} as cover image (Gemini selected)`);
-
-      const newSOP: SOP = {
-        id: Math.random().toString(36).substr(2, 9),
-        title: result.title,
-        description: result.description,
-        ppeRequirements: result.ppeRequirements,
-        materialsRequired: result.materialsRequired,
-        createdAt: new Date().toISOString(),
-        sourceType: 'youtube',
-        sourceUrl: youtubeUrl,
-        status: 'completed',
-        thumbnail_url: thumbnailUrl,
-        steps: finalSteps
-      };
-
-      onComplete(newSOP);
-      setProgress(100);
-      setTimeout(() => { setStep(3); setIsProcessing(false); }, 1000);
 
     } catch (err: any) {
       console.error(err);

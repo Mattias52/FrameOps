@@ -1394,6 +1394,321 @@ app.post('/analyze-video-native', async (req, res) => {
   }
 });
 
+// ============================================
+// YOUTUBE NATIVE VIDEO ANALYSIS (Same as upload)
+// Downloads YouTube video, uploads to Gemini, uses native video understanding
+// ============================================
+app.post('/analyze-youtube-native', async (req, res) => {
+  const { youtubeUrl, title, sceneThreshold = 0.2, maxFrames = 30, minFrames = 10 } = req.body;
+
+  if (!youtubeUrl) {
+    return res.status(400).json({ error: 'Missing youtubeUrl' });
+  }
+
+  const jobId = crypto.randomBytes(8).toString('hex');
+  const jobDir = path.join(TEMP_DIR, `yt_native_${jobId}`);
+
+  console.log(`[${jobId}] YouTube NATIVE analysis: ${youtubeUrl}`);
+  console.log(`[${jobId}] Title: "${title}"`);
+
+  try {
+    fs.mkdirSync(jobDir, { recursive: true });
+    const fetch = require('node-fetch');
+    const genai = getGenAI();
+
+    // Step 1: Download YouTube video
+    console.log(`[${jobId}] Downloading YouTube video...`);
+    const videoPath = path.join(jobDir, 'video.mp4');
+
+    execSync(
+      `yt-dlp -f "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" --merge-output-format mp4 -o "${videoPath}" "${youtubeUrl}"`,
+      { timeout: 300000 } // 5 min timeout for download
+    );
+
+    if (!fs.existsSync(videoPath)) {
+      throw new Error('Failed to download YouTube video');
+    }
+
+    const videoStats = fs.statSync(videoPath);
+    console.log(`[${jobId}] Downloaded: ${(videoStats.size / 1024 / 1024).toFixed(1)}MB`);
+
+    // Step 2: Extract frames with FFmpeg scene detection (same as regular flow)
+    console.log(`[${jobId}] Extracting frames with FFmpeg...`);
+
+    // Get video duration
+    const probeResult = execSync(`${FFPROBE_BIN} -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`, { encoding: 'utf8' });
+    const duration = parseFloat(probeResult.trim()) || 60;
+    console.log(`[${jobId}] Video duration: ${duration}s`);
+
+    // Scene detection
+    const sceneOutput = execSync(
+      `${FFMPEG_BIN} -i "${videoPath}" -vf "select='gt(scene,${sceneThreshold})',showinfo" -f null - 2>&1`,
+      { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
+    );
+
+    let timestamps = [];
+    const regex = /pts_time:([\d.]+)/g;
+    let match;
+    while ((match = regex.exec(sceneOutput)) !== null) {
+      timestamps.push(parseFloat(match[1]));
+    }
+
+    // Add start if not present
+    if (timestamps.length === 0 || timestamps[0] > 2) {
+      timestamps.unshift(0);
+    }
+
+    // If not enough scenes, use interval
+    if (timestamps.length < minFrames) {
+      const interval = duration / minFrames;
+      timestamps = Array.from({ length: minFrames }, (_, i) => i * interval);
+    }
+
+    // Limit frames
+    if (timestamps.length > maxFrames) {
+      const step = timestamps.length / maxFrames;
+      timestamps = timestamps.filter((_, i) => Math.floor(i % step) === 0).slice(0, maxFrames);
+    }
+
+    console.log(`[${jobId}] Extracting ${timestamps.length} frames...`);
+
+    // Extract frames
+    const ffmpegFrames = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      const ts = timestamps[i];
+      const framePath = path.join(jobDir, `frame_${i}.jpg`);
+
+      execSync(
+        `${FFMPEG_BIN} -ss ${ts} -i "${videoPath}" -vframes 1 -q:v 2 -vf "scale=1280:-1" "${framePath}" -y`,
+        { timeout: 10000 }
+      );
+
+      if (fs.existsSync(framePath)) {
+        const frameData = fs.readFileSync(framePath);
+        const base64 = `data:image/jpeg;base64,${frameData.toString('base64')}`;
+        const mins = Math.floor(ts / 60);
+        const secs = Math.floor(ts % 60);
+        ffmpegFrames.push({
+          timestamp: `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`,
+          timestampSeconds: ts,
+          imageBase64: base64
+        });
+      }
+    }
+
+    console.log(`[${jobId}] Extracted ${ffmpegFrames.length} frames`);
+
+    // Step 3: Upload video to Gemini File API
+    console.log(`[${jobId}] Uploading to Gemini File API...`);
+
+    const videoData = fs.readFileSync(videoPath);
+    const mimeType = 'video/mp4';
+    const numBytes = videoData.length;
+
+    const startResponse = await fetch('https://generativelanguage.googleapis.com/upload/v1beta/files', {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': GEMINI_API_KEY,
+        'X-Goog-Upload-Protocol': 'resumable',
+        'X-Goog-Upload-Command': 'start',
+        'X-Goog-Upload-Header-Content-Length': String(numBytes),
+        'X-Goog-Upload-Header-Content-Type': mimeType,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ file: { display_name: title || 'YouTube Video' } })
+    });
+
+    const uploadUrl = startResponse.headers.get('x-goog-upload-url');
+    if (!uploadUrl) {
+      throw new Error('Failed to get upload URL from Gemini');
+    }
+
+    console.log(`[${jobId}] Uploading ${(numBytes / 1024 / 1024).toFixed(1)}MB to Gemini...`);
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Length': String(numBytes),
+        'X-Goog-Upload-Offset': '0',
+        'X-Goog-Upload-Command': 'upload, finalize'
+      },
+      body: videoData
+    });
+
+    const uploadResult = await uploadResponse.json();
+    if (!uploadResult.file || !uploadResult.file.uri) {
+      throw new Error('Failed to upload video to Gemini: ' + JSON.stringify(uploadResult));
+    }
+
+    let fileUri = uploadResult.file.uri;
+    let fileName = uploadResult.file.name;
+    let fileState = uploadResult.file.state;
+
+    console.log(`[${jobId}] File uploaded: ${fileName}, state: ${fileState}`);
+
+    // Wait for processing
+    while (fileState === 'PROCESSING') {
+      console.log(`[${jobId}] Waiting for Gemini to process video...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const statusResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GEMINI_API_KEY}`);
+      const statusResult = await statusResponse.json();
+      fileState = statusResult.state;
+      fileUri = statusResult.uri || fileUri;
+    }
+
+    if (fileState === 'FAILED') {
+      throw new Error('Gemini video processing failed');
+    }
+
+    console.log(`[${jobId}] Video ready, generating SOP...`);
+
+    // Step 4: Generate SOP with native video understanding (SAME prompt as upload)
+    const prompt = `
+      You are an expert technical writer creating a Standard Operating Procedure (SOP).
+
+      WATCH THIS ENTIRE VIDEO carefully. Pay attention to BOTH:
+      - AUDIO: What the presenter/narrator is SAYING - use their EXACT words!
+      - VISUAL: What actions are being performed on screen
+
+      Create a detailed SOP for: "${title || 'Procedure'}"
+
+      CRITICAL REQUIREMENTS:
+      1. Use the presenter's EXACT words and terminology from the audio
+      2. Include ALL steps mentioned or shown, even brief ones like:
+         - "Remove the screw with a Phillips head screwdriver"
+         - "Lift the bracket"
+         - "Set aside the component"
+      3. Note ALL tools or equipment mentioned (screwdrivers, wipes, alcohol, etc.)
+      4. Provide accurate timestamps (MM:SS) for when each step STARTS
+      5. Do NOT summarize or skip steps - document EVERY action
+      6. If the presenter says "be careful" or gives a warning, include it
+      7. ALWAYS write in ENGLISH unless the audio is clearly in another language
+
+      For each step provide:
+      - timestamp: When this step starts (MM:SS format, e.g., "00:45")
+      - title: Short action title
+      - description: Detailed instructions using presenter's actual words
+      - safetyWarnings: Array of warnings mentioned (or empty)
+      - toolsRequired: Array of tools needed for this step (or empty)
+    `;
+
+    const response = await genai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: {
+        parts: [
+          { fileData: { fileUri: fileUri, mimeType: mimeType } },
+          { text: prompt }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            ppeRequirements: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            materialsRequired: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            steps: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  timestamp: { type: Type.STRING },
+                  title: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  safetyWarnings: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  },
+                  toolsRequired: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  }
+                },
+                required: ["id", "timestamp", "title", "description"]
+              }
+            }
+          },
+          required: ["title", "description", "steps", "ppeRequirements", "materialsRequired"]
+        }
+      }
+    });
+
+    const resultText = response.text;
+    const result = JSON.parse(resultText);
+
+    console.log(`[${jobId}] Gemini generated ${result.steps?.length || 0} steps`);
+
+    // Step 5: Match steps to FFmpeg frames by timestamp
+    const toSeconds = (ts) => {
+      if (!ts) return 0;
+      const parts = ts.split(':').map(Number);
+      if (parts.length === 2) return parts[0] * 60 + parts[1];
+      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      return 0;
+    };
+
+    const stepsWithFrames = result.steps.map((step, idx) => {
+      const stepTime = toSeconds(step.timestamp);
+
+      if (ffmpegFrames.length === 0) {
+        return { ...step, id: `step-${idx + 1}` };
+      }
+
+      let closestFrame = ffmpegFrames[0];
+      let closestDiff = Math.abs(ffmpegFrames[0].timestampSeconds - stepTime);
+
+      for (const frame of ffmpegFrames) {
+        const frameDiff = Math.abs(frame.timestampSeconds - stepTime);
+        if (frameDiff < closestDiff) {
+          closestDiff = frameDiff;
+          closestFrame = frame;
+        }
+      }
+
+      console.log(`[${jobId}] Step ${idx + 1} (${step.timestamp}) → frame ${closestFrame.timestamp}`);
+
+      return {
+        ...step,
+        id: `step-${idx + 1}`,
+        thumbnail: closestFrame.imageBase64
+      };
+    });
+
+    // Cleanup
+    try {
+      await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GEMINI_API_KEY}`, { method: 'DELETE' });
+      console.log(`[${jobId}] Deleted video from Gemini`);
+    } catch (e) {}
+
+    cleanup(jobDir);
+
+    res.json({
+      success: true,
+      title: result.title,
+      description: result.description,
+      ppeRequirements: result.ppeRequirements,
+      materialsRequired: result.materialsRequired,
+      steps: stepsWithFrames,
+      source: 'gemini-native-youtube'
+    });
+
+  } catch (error) {
+    console.error(`[${jobId}] YouTube native error:`, error.message);
+    cleanup(jobDir);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/analyze-sop', async (req, res) => {
   const { frames, title, additionalContext = '', vitTags = [] } = req.body;
 
