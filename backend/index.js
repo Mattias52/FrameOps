@@ -1523,7 +1523,7 @@ app.post('/analyze-sop', async (req, res) => {
       - You ARE the instructor teaching this procedure
       - NEVER describe what "the video shows" or what "the person does"
       - ALWAYS write what the READER should do: "Grip the handle firmly", "Rotate 90 degrees clockwise"
-      - LANGUAGE: Write the SOP in the SAME LANGUAGE as the transcript/context. If transcript is in German, write German. If Spanish, write Spanish. Match the language exactly. No transcript = English default.
+      - LANGUAGE: ALWAYS write the SOP in ENGLISH unless the user explicitly provides context in another language. Ignore any text visible in the video frames - only match language if the TRANSCRIPT or USER CONTEXT is in another language.
 
       For each step:
       - Write a clear, actionable title (e.g., "Tighten the mounting bolt")
