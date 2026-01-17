@@ -21,7 +21,10 @@ app.use(express.json({ limit: '50mb' }));
 
 // Add file upload middleware for uploaded videos (2GB max for Supabase Pro)
 app.use(fileUpload({
-  limits: { fileSize: 2 * 1024 * 1024 * 1024 },
+  limits: {
+    fileSize: 2 * 1024 * 1024 * 1024,  // 2GB for video files
+    fieldSize: 100 * 1024 * 1024        // 100MB for form fields (ffmpegFrames with base64 images)
+  },
   useTempFiles: true,
   tempFileDir: path.join(os.tmpdir(), 'uploads')
 }));
@@ -2165,7 +2168,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`FrameOps Backend running on port ${PORT}`);
-  console.log('=== VERSION 15: ADDED CRASH PROTECTION ===');
+  console.log('=== VERSION 16: FIXED fieldSize LIMIT ===');
   console.log(`Gemini API Key: ${GEMINI_API_KEY ? 'configured' : 'MISSING!'}`);
   console.log(`API Docs: http://localhost:${PORT}/api/docs`);
 });
