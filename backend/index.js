@@ -173,7 +173,7 @@ if (!hasYtDlp || !hasFfmpeg) {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '12.0.0' });
+  res.json({ status: 'ok', version: '17.0.0' });
 });
 
 // Get transcript from YouTube video - tries subtitles first, then audio transcription
@@ -1663,6 +1663,12 @@ app.post('/analyze-youtube-native', async (req, res) => {
     const result = JSON.parse(resultText);
 
     console.log(`[${jobId}] Gemini generated ${result.steps?.length || 0} steps`);
+    console.log(`[${jobId}] SOP Title: "${result.title}"`);
+    console.log(`[${jobId}] Materials: ${result.materialsRequired?.join(', ') || 'none'}`);
+    // Log first 3 steps for debugging
+    result.steps?.slice(0, 3).forEach((s, i) => {
+      console.log(`[${jobId}] Step ${i+1}: [${s.timestamp}] ${s.title}`);
+    });
 
     // Step 5: Match steps to FFmpeg frames by timestamp
     // Prefer frames slightly AFTER the step timestamp (action happens after timestamp)
