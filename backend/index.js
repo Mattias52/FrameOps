@@ -1581,7 +1581,14 @@ app.post('/analyze-youtube-native', async (req, res) => {
 
     console.log(`[${jobId}] Video ready, generating SOP...`);
 
-    // Step 4: Generate SOP with native video understanding (SAME prompt as upload)
+    // Build frame list for Gemini to select from
+    const frameListForPrompt = ffmpegFrames.map((f, idx) =>
+      `Frame ${idx}: timestamp ${f.timestamp}`
+    ).join('\n');
+
+    console.log(`[${jobId}] Sending ${ffmpegFrames.length} frames for Gemini to select from`);
+
+    // Step 4: Generate SOP with native video understanding + frame selection
     const prompt = `
       You are an expert technical writer creating a Standard Operating Procedure (SOP).
 
@@ -1601,10 +1608,19 @@ app.post('/analyze-youtube-native', async (req, res) => {
       7. ALWAYS write in ENGLISH
       8. Note ALL tools, materials, or equipment visible/mentioned
 
+      IMPORTANT - FRAME SELECTION:
+      I have extracted the following frames from the video. For EACH step, you MUST select
+      the frame that BEST shows the action being described. Choose the frame where the
+      action is VISIBLE - not where it's being discussed, but where it's actually SHOWN.
+
+      Available frames:
+      ${frameListForPrompt}
+
       For each step provide:
       - timestamp: When this action starts (MM:SS format, e.g., "00:45")
       - title: Short action title (2-5 words, starts with verb)
       - description: Clear step-by-step instructions for this specific action
+      - frameIndex: The frame number (0-${ffmpegFrames.length - 1}) that BEST shows this action visually
       - safetyWarnings: Array of any safety concerns (or empty array)
       - toolsRequired: Array of tools/materials used in this step (or empty array)
     `;
@@ -1641,6 +1657,7 @@ app.post('/analyze-youtube-native', async (req, res) => {
                   timestamp: { type: Type.STRING },
                   title: { type: Type.STRING },
                   description: { type: Type.STRING },
+                  frameIndex: { type: Type.NUMBER },
                   safetyWarnings: {
                     type: Type.ARRAY,
                     items: { type: Type.STRING }
@@ -1650,7 +1667,7 @@ app.post('/analyze-youtube-native', async (req, res) => {
                     items: { type: Type.STRING }
                   }
                 },
-                required: ["id", "timestamp", "title", "description"]
+                required: ["id", "timestamp", "title", "description", "frameIndex"]
               }
             }
           },
@@ -1665,69 +1682,27 @@ app.post('/analyze-youtube-native', async (req, res) => {
     console.log(`[${jobId}] Gemini generated ${result.steps?.length || 0} steps`);
     console.log(`[${jobId}] SOP Title: "${result.title}"`);
     console.log(`[${jobId}] Materials: ${result.materialsRequired?.join(', ') || 'none'}`);
-    // Log first 3 steps for debugging
+    // Log first 3 steps for debugging (now with frame selection)
     result.steps?.slice(0, 3).forEach((s, i) => {
-      console.log(`[${jobId}] Step ${i+1}: [${s.timestamp}] ${s.title}`);
+      console.log(`[${jobId}] Step ${i+1}: [${s.timestamp}] ${s.title} → Frame ${s.frameIndex}`);
     });
 
-    // Step 5: Match steps to FFmpeg frames by timestamp
-    // Prefer frames slightly AFTER the step timestamp (action happens after timestamp)
-    const toSeconds = (ts) => {
-      if (!ts) return 0;
-      const parts = ts.split(':').map(Number);
-      if (parts.length === 2) return parts[0] * 60 + parts[1];
-      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-      return 0;
-    };
-
-    const usedFrameIndices = new Set(); // Track used frames to avoid duplicates
-
+    // Step 5: Use Gemini's frame selection (no more timestamp matching!)
     const stepsWithFrames = result.steps.map((step, idx) => {
-      const stepTime = toSeconds(step.timestamp);
-
       if (ffmpegFrames.length === 0) {
         return { ...step, id: `step-${idx + 1}` };
       }
 
-      // Find best frame: prefer frame at or slightly after stepTime, avoid reusing frames
-      let bestFrame = null;
-      let bestScore = Infinity;
-      let bestFrameIdx = 0;
+      // Use Gemini's selected frame, with bounds checking
+      const frameIdx = Math.max(0, Math.min(step.frameIndex || 0, ffmpegFrames.length - 1));
+      const selectedFrame = ffmpegFrames[frameIdx];
 
-      for (let i = 0; i < ffmpegFrames.length; i++) {
-        const frame = ffmpegFrames[i];
-        const timeDiff = frame.timestampSeconds - stepTime;
-
-        // Score: prefer frames 0-3 seconds AFTER the step timestamp
-        // Penalize frames before the timestamp and frames too far after
-        let score;
-        if (timeDiff >= 0 && timeDiff <= 3) {
-          score = timeDiff; // Best: 0-3 seconds after
-        } else if (timeDiff > 3) {
-          score = timeDiff + 5; // Penalty for being too far after
-        } else {
-          score = Math.abs(timeDiff) + 10; // Bigger penalty for being before
-        }
-
-        // Penalize reusing already-used frames (but still allow if no better option)
-        if (usedFrameIndices.has(i)) {
-          score += 20;
-        }
-
-        if (score < bestScore) {
-          bestScore = score;
-          bestFrame = frame;
-          bestFrameIdx = i;
-        }
-      }
-
-      usedFrameIndices.add(bestFrameIdx);
-      console.log(`[${jobId}] Step ${idx + 1} (${step.timestamp}) → frame ${bestFrame.timestamp}`);
+      console.log(`[${jobId}] Step ${idx + 1}: Gemini selected frame ${frameIdx} (${selectedFrame.timestamp})`);
 
       return {
         ...step,
         id: `step-${idx + 1}`,
-        thumbnail: bestFrame.imageBase64
+        thumbnail: selectedFrame.imageBase64
       };
     });
 
@@ -2530,7 +2505,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`FrameOps Backend running on port ${PORT}`);
-  console.log('=== VERSION 16: FIXED fieldSize LIMIT ===');
+  console.log('=== VERSION 18: GEMINI SELECTS FRAMES DIRECTLY ===');
   console.log(`Gemini API Key: ${GEMINI_API_KEY ? 'configured' : 'MISSING!'}`);
   console.log(`API Docs: http://localhost:${PORT}/api/docs`);
 });
