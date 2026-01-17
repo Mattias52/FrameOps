@@ -1435,9 +1435,17 @@ app.post('/analyze-youtube-native', async (req, res) => {
     // Step 2: Extract frames with FFmpeg scene detection (same as regular flow)
     console.log(`[${jobId}] Extracting frames with FFmpeg...`);
 
-    // Get video duration
-    const probeResult = execSync(`${FFPROBE_BIN} -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`, { encoding: 'utf8' });
-    const duration = parseFloat(probeResult.trim()) || 60;
+    // Get video duration using ffmpeg (parse from stderr output)
+    let duration = 60;
+    try {
+      const ffmpegInfo = execSync(`${FFMPEG_BIN} -i "${videoPath}" 2>&1 || true`, { encoding: 'utf8' });
+      const durationMatch = ffmpegInfo.match(/Duration:\s*(\d+):(\d+):(\d+\.?\d*)/);
+      if (durationMatch) {
+        duration = parseFloat(durationMatch[1]) * 3600 + parseFloat(durationMatch[2]) * 60 + parseFloat(durationMatch[3]);
+      }
+    } catch (e) {
+      console.log(`[${jobId}] Could not parse duration, using default 60s`);
+    }
     console.log(`[${jobId}] Video duration: ${duration}s`);
 
     // Scene detection
