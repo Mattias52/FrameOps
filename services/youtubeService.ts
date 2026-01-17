@@ -390,6 +390,10 @@ export const analyzeVideoNative = async (
     toolsRequired?: string[];
     thumbnail?: string;
   }>;
+  allFrames?: Array<{
+    timestamp: string;
+    imageBase64: string;
+  }>;
 }> => {
   const log = onProgress || console.log;
 
@@ -452,6 +456,10 @@ export const analyzeYoutubeNative = async (
     safetyWarnings?: string[];
     toolsRequired?: string[];
     thumbnail?: string;
+  }>;
+  allFrames?: Array<{
+    timestamp: string;
+    imageBase64: string;
   }>;
 }> => {
   const log = onProgress || console.log;

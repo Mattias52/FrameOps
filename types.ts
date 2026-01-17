@@ -25,6 +25,11 @@ export interface SOPStep {
   image_url?: string;
 }
 
+export interface FrameOption {
+  timestamp: string;
+  imageBase64: string;
+}
+
 export interface SOP {
   id: string;
   title: string;
@@ -38,6 +43,7 @@ export interface SOP {
   ppeRequirements?: string[];
   materialsRequired?: string[];
   thumbnail_url?: string;
+  allFrames?: FrameOption[];
 }
 
 export interface AnalysisProgress {

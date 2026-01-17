@@ -576,6 +576,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     onMoveUp={() => moveStepUp(idx)}
                     onMoveDown={() => moveStepDown(idx)}
                     onImageReplace={(url) => updateStepImage(idx, url)}
+                    allFrames={editedSop.allFrames}
                   />
                 ))}
               </div>

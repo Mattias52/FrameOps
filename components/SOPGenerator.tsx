@@ -222,7 +222,8 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
             thumbnail: s.thumbnail || extractedFrames[0]?.imageBase64 || ''
           })),
           source: 'upload',
-          thumbnail: nativeResult.steps[0]?.thumbnail || extractedFrames[0]?.imageBase64 || ''
+          thumbnail: nativeResult.steps[0]?.thumbnail || extractedFrames[0]?.imageBase64 || '',
+          allFrames: nativeResult.allFrames || []
         };
 
         addLog(`SOP generated: ${newSop.steps.length} steps with Gemini native video understanding`);
@@ -271,7 +272,8 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
           })),
           source: 'youtube',
           sourceUrl: youtubeUrl,
-          thumbnail: nativeResult.steps[0]?.thumbnail || ''
+          thumbnail: nativeResult.steps[0]?.thumbnail || '',
+          allFrames: nativeResult.allFrames || []
         };
 
         addLog(`SOP generated: ${newSop.steps.length} steps with Gemini native video+audio understanding`);

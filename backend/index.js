@@ -1381,6 +1381,10 @@ app.post('/analyze-video-native', async (req, res) => {
       ppeRequirements: result.ppeRequirements,
       materialsRequired: result.materialsRequired,
       steps: stepsWithFrames,
+      allFrames: ffmpegFrames.map(f => ({
+        timestamp: f.timestamp,
+        imageBase64: f.imageBase64
+      })),
       source: 'gemini-native-video'
     });
 
@@ -1721,6 +1725,10 @@ app.post('/analyze-youtube-native', async (req, res) => {
       ppeRequirements: result.ppeRequirements,
       materialsRequired: result.materialsRequired,
       steps: stepsWithFrames,
+      allFrames: ffmpegFrames.map(f => ({
+        timestamp: f.timestamp,
+        imageBase64: f.imageBase64
+      })),
       source: 'gemini-native-youtube'
     });
 

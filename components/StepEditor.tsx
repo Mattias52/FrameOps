@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { SOPStep } from '../types';
+import { SOPStep, FrameOption } from '../types';
 
 interface StepEditorProps {
   step: SOPStep;
@@ -10,6 +10,7 @@ interface StepEditorProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onImageReplace: (newImageUrl: string) => void;
+  allFrames?: FrameOption[];
 }
 
 const StepEditor: React.FC<StepEditorProps> = ({
@@ -21,12 +22,21 @@ const StepEditor: React.FC<StepEditorProps> = ({
   onMoveUp,
   onMoveDown,
   onImageReplace,
+  allFrames = [],
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [localStep, setLocalStep] = useState<SOPStep>(step);
   const [newWarning, setNewWarning] = useState('');
   const [newTool, setNewTool] = useState('');
+  const [showFramePicker, setShowFramePicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFrameSelect = (frame: FrameOption) => {
+    handleChange('thumbnail', frame.imageBase64);
+    handleChange('image_url', frame.imageBase64);
+    onImageReplace(frame.imageBase64);
+    setShowFramePicker(false);
+  };
 
   const handleChange = (field: keyof SOPStep, value: any) => {
     const updated = { ...localStep, [field]: value };
@@ -221,13 +231,22 @@ const StepEditor: React.FC<StepEditorProps> = ({
                   className="w-full h-full object-cover"
                   crossOrigin="anonymous"
                 />
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                  {allFrames.length > 0 && (
+                    <button
+                      onClick={() => setShowFramePicker(true)}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"
+                    >
+                      <i className="fas fa-images mr-2"></i>
+                      Choose Frame
+                    </button>
+                  )}
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-4 py-2 bg-white text-slate-900 rounded-xl font-bold text-sm hover:bg-indigo-600 hover:text-white transition-colors"
+                    className="px-4 py-2 bg-white text-slate-900 rounded-xl font-bold text-sm hover:bg-slate-100 transition-colors"
                   >
                     <i className="fas fa-upload mr-2"></i>
-                    Replace Image
+                    Upload
                   </button>
                 </div>
                 <input
@@ -239,7 +258,9 @@ const StepEditor: React.FC<StepEditorProps> = ({
                 />
               </div>
               <p className="text-xs text-slate-500 text-center">
-                Click to replace • Max 5MB • JPG, PNG, WebP
+                {allFrames.length > 0
+                  ? `${allFrames.length} frames available • Or upload custom`
+                  : 'Click to replace • Max 5MB • JPG, PNG, WebP'}
               </p>
             </div>
           </div>
@@ -316,6 +337,56 @@ const StepEditor: React.FC<StepEditorProps> = ({
               >
                 <i className="fas fa-plus"></i>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Frame Picker Modal */}
+      {showFramePicker && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900">
+                <i className="fas fa-images text-indigo-600 mr-2"></i>
+                Choose Frame for Step {stepIndex + 1}
+              </h3>
+              <button
+                onClick={() => setShowFramePicker(false)}
+                className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                {allFrames.map((frame, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleFrameSelect(frame)}
+                    className="group relative aspect-video bg-slate-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-indigo-500 transition-all"
+                  >
+                    <img
+                      src={frame.imageBase64}
+                      alt={`Frame at ${frame.timestamp}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                      <span className="text-white text-xs font-mono">{frame.timestamp}</span>
+                    </div>
+                    <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/20 transition-colors flex items-center justify-center">
+                      <span className="opacity-0 group-hover:opacity-100 bg-white text-indigo-600 px-2 py-1 rounded text-xs font-bold">
+                        Select
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+              <p className="text-sm text-slate-500 text-center">
+                Click on a frame to use it for this step • {allFrames.length} frames available
+              </p>
             </div>
           </div>
         </div>
