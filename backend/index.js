@@ -1232,7 +1232,14 @@ app.post('/analyze-video-native', async (req, res) => {
 
     console.log(`[${jobId}] Video ready: ${fileUri}`);
 
-    // Step 3: Generate SOP using native video understanding
+    // Build frame list for Gemini to select from
+    const frameListForPrompt = ffmpegFrames.map((f, idx) =>
+      `Frame ${idx}: timestamp ${f.timestamp}`
+    ).join('\n');
+
+    console.log(`[${jobId}] Sending ${ffmpegFrames.length} frames for Gemini to select from`);
+
+    // Step 3: Generate SOP using native video understanding + frame selection
     const prompt = `
       You are an expert technical writer creating a Standard Operating Procedure (SOP).
 
@@ -1252,11 +1259,21 @@ app.post('/analyze-video-native', async (req, res) => {
       4. Provide accurate timestamps (MM:SS) for when each step STARTS
       5. Do NOT summarize or skip steps - document EVERY action
       6. If the presenter says "be careful" or gives a warning, include it
+      7. ALWAYS write in ENGLISH
+
+      IMPORTANT - FRAME SELECTION:
+      I have extracted the following frames from the video. For EACH step, you MUST select
+      the frame that BEST shows the action being described. Choose the frame where the
+      action is VISIBLE - not where it's being discussed, but where it's actually SHOWN.
+
+      Available frames:
+      ${frameListForPrompt}
 
       For each step provide:
       - timestamp: When this step starts (MM:SS format, e.g., "00:45")
       - title: Short action title
       - description: Detailed instructions using presenter's actual words
+      - frameIndex: The frame number (0-${ffmpegFrames.length - 1}) that BEST shows this action visually
       - safetyWarnings: Array of warnings mentioned (or empty)
       - toolsRequired: Array of tools needed for this step (or empty)
     `;
@@ -1295,6 +1312,7 @@ app.post('/analyze-video-native', async (req, res) => {
                   timestamp: { type: Type.STRING },
                   title: { type: Type.STRING },
                   description: { type: Type.STRING },
+                  frameIndex: { type: Type.NUMBER },
                   safetyWarnings: {
                     type: Type.ARRAY,
                     items: { type: Type.STRING }
@@ -1304,7 +1322,7 @@ app.post('/analyze-video-native', async (req, res) => {
                     items: { type: Type.STRING }
                   }
                 },
-                required: ["id", "timestamp", "title", "description"]
+                required: ["id", "timestamp", "title", "description", "frameIndex"]
               }
             }
           },
@@ -1317,45 +1335,27 @@ app.post('/analyze-video-native', async (req, res) => {
     const result = JSON.parse(resultText);
 
     console.log(`[${jobId}] Gemini generated ${result.steps?.length || 0} steps`);
+    // Log first 3 steps with frame selection
+    result.steps?.slice(0, 3).forEach((s, i) => {
+      console.log(`[${jobId}] Step ${i+1}: [${s.timestamp}] ${s.title} → Frame ${s.frameIndex}`);
+    });
 
-    // Step 4: Match Gemini's steps to FFmpeg frames by timestamp
-    // Helper to convert MM:SS to seconds
-    const toSeconds = (ts) => {
-      if (!ts) return 0;
-      const parts = ts.split(':').map(Number);
-      if (parts.length === 2) return parts[0] * 60 + parts[1];
-      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-      return 0;
-    };
-
-    // Match each step to closest FFmpeg frame
+    // Step 4: Use Gemini's frame selection (no more timestamp matching!)
     const stepsWithFrames = result.steps.map((step, idx) => {
-      const stepTime = toSeconds(step.timestamp);
-
       if (ffmpegFrames.length === 0) {
-        // No FFmpeg frames provided - step has no thumbnail
         return { ...step, id: `step-${idx + 1}` };
       }
 
-      // Find closest FFmpeg frame by timestamp
-      let closestFrame = ffmpegFrames[0];
-      let closestDiff = Math.abs(toSeconds(ffmpegFrames[0].timestamp) - stepTime);
+      // Use Gemini's selected frame, with bounds checking
+      const frameIdx = Math.max(0, Math.min(step.frameIndex || 0, ffmpegFrames.length - 1));
+      const selectedFrame = ffmpegFrames[frameIdx];
 
-      for (const frame of ffmpegFrames) {
-        const frameDiff = Math.abs(toSeconds(frame.timestamp) - stepTime);
-        if (frameDiff < closestDiff) {
-          closestDiff = frameDiff;
-          closestFrame = frame;
-        }
-      }
-
-      console.log(`[${jobId}] Step ${idx + 1} (${step.timestamp}) matched to frame at ${closestFrame.timestamp} (diff: ${closestDiff}s)`);
+      console.log(`[${jobId}] Step ${idx + 1}: Gemini selected frame ${frameIdx} (${selectedFrame.timestamp})`);
 
       return {
         ...step,
         id: `step-${idx + 1}`,
-        matchedFrameTimestamp: closestFrame.timestamp,
-        thumbnail: closestFrame.imageBase64
+        thumbnail: selectedFrame.imageBase64
       };
     });
 
