@@ -1493,6 +1493,16 @@ app.post('/analyze-youtube-native', async (req, res) => {
 
       if (fs.existsSync(framePath)) {
         const frameData = fs.readFileSync(framePath);
+        const fileSize = frameData.length;
+
+        // Filter out "empty" frames - very small files are usually just solid colors/backgrounds
+        // A 1280px wide JPEG with actual content should be at least 15KB
+        const MIN_FRAME_SIZE = 15000;
+        if (fileSize < MIN_FRAME_SIZE) {
+          console.log(`[${jobId}] Skipping low-quality frame at ${ts}s (${(fileSize/1024).toFixed(1)}KB)`);
+          continue;
+        }
+
         const base64 = `data:image/jpeg;base64,${frameData.toString('base64')}`;
         const mins = Math.floor(ts / 60);
         const secs = Math.floor(ts % 60);
@@ -1504,7 +1514,7 @@ app.post('/analyze-youtube-native', async (req, res) => {
       }
     }
 
-    console.log(`[${jobId}] Extracted ${ffmpegFrames.length} frames`);
+    console.log(`[${jobId}] Extracted ${ffmpegFrames.length} quality frames (filtered low-quality)`);
 
     // Step 3: Upload video to Gemini File API
     console.log(`[${jobId}] Uploading to Gemini File API...`);
@@ -1575,30 +1585,28 @@ app.post('/analyze-youtube-native', async (req, res) => {
     const prompt = `
       You are an expert technical writer creating a Standard Operating Procedure (SOP).
 
-      WATCH THIS ENTIRE VIDEO carefully. Pay attention to BOTH:
-      - AUDIO: What the presenter/narrator is SAYING - use their EXACT words!
-      - VISUAL: What actions are being performed on screen
+      WATCH THIS ENTIRE VIDEO carefully from start to finish. Pay attention to BOTH:
+      - AUDIO: What is being SAID (narration, speech, instructions)
+      - VISUAL: What ACTIONS are being performed on screen
 
       Create a detailed SOP for: "${title || 'Procedure'}"
 
       CRITICAL REQUIREMENTS:
-      1. Use the presenter's EXACT words and terminology from the audio
-      2. Include ALL steps mentioned or shown, even brief ones like:
-         - "Remove the screw with a Phillips head screwdriver"
-         - "Lift the bracket"
-         - "Set aside the component"
-      3. Note ALL tools or equipment mentioned (screwdrivers, wipes, alcohol, etc.)
-      4. Provide accurate timestamps (MM:SS) for when each step STARTS
-      5. Do NOT summarize or skip steps - document EVERY action
-      6. If the presenter says "be careful" or gives a warning, include it
-      7. ALWAYS write in ENGLISH unless the audio is clearly in another language
+      1. If the video has narration/speech, use the presenter's EXACT words
+      2. If the video has NO narration (silent/music only), describe the VISUAL actions clearly
+      3. Each step should describe ONE specific action shown in the video
+      4. Provide accurate timestamps (MM:SS) for when each action STARTS
+      5. Do NOT skip any actions - document EVERY distinct action
+      6. Use clear, actionable language: "Remove the screw", "Cut along the line", "Insert the tool"
+      7. ALWAYS write in ENGLISH
+      8. Note ALL tools, materials, or equipment visible/mentioned
 
       For each step provide:
-      - timestamp: When this step starts (MM:SS format, e.g., "00:45")
-      - title: Short action title
-      - description: Detailed instructions using presenter's actual words
-      - safetyWarnings: Array of warnings mentioned (or empty)
-      - toolsRequired: Array of tools needed for this step (or empty)
+      - timestamp: When this action starts (MM:SS format, e.g., "00:45")
+      - title: Short action title (2-5 words, starts with verb)
+      - description: Clear step-by-step instructions for this specific action
+      - safetyWarnings: Array of any safety concerns (or empty array)
+      - toolsRequired: Array of tools/materials used in this step (or empty array)
     `;
 
     const response = await genai.models.generateContent({
@@ -1657,6 +1665,7 @@ app.post('/analyze-youtube-native', async (req, res) => {
     console.log(`[${jobId}] Gemini generated ${result.steps?.length || 0} steps`);
 
     // Step 5: Match steps to FFmpeg frames by timestamp
+    // Prefer frames slightly AFTER the step timestamp (action happens after timestamp)
     const toSeconds = (ts) => {
       if (!ts) return 0;
       const parts = ts.split(':').map(Number);
@@ -1665,6 +1674,8 @@ app.post('/analyze-youtube-native', async (req, res) => {
       return 0;
     };
 
+    const usedFrameIndices = new Set(); // Track used frames to avoid duplicates
+
     const stepsWithFrames = result.steps.map((step, idx) => {
       const stepTime = toSeconds(step.timestamp);
 
@@ -1672,23 +1683,45 @@ app.post('/analyze-youtube-native', async (req, res) => {
         return { ...step, id: `step-${idx + 1}` };
       }
 
-      let closestFrame = ffmpegFrames[0];
-      let closestDiff = Math.abs(ffmpegFrames[0].timestampSeconds - stepTime);
+      // Find best frame: prefer frame at or slightly after stepTime, avoid reusing frames
+      let bestFrame = null;
+      let bestScore = Infinity;
+      let bestFrameIdx = 0;
 
-      for (const frame of ffmpegFrames) {
-        const frameDiff = Math.abs(frame.timestampSeconds - stepTime);
-        if (frameDiff < closestDiff) {
-          closestDiff = frameDiff;
-          closestFrame = frame;
+      for (let i = 0; i < ffmpegFrames.length; i++) {
+        const frame = ffmpegFrames[i];
+        const timeDiff = frame.timestampSeconds - stepTime;
+
+        // Score: prefer frames 0-3 seconds AFTER the step timestamp
+        // Penalize frames before the timestamp and frames too far after
+        let score;
+        if (timeDiff >= 0 && timeDiff <= 3) {
+          score = timeDiff; // Best: 0-3 seconds after
+        } else if (timeDiff > 3) {
+          score = timeDiff + 5; // Penalty for being too far after
+        } else {
+          score = Math.abs(timeDiff) + 10; // Bigger penalty for being before
+        }
+
+        // Penalize reusing already-used frames (but still allow if no better option)
+        if (usedFrameIndices.has(i)) {
+          score += 20;
+        }
+
+        if (score < bestScore) {
+          bestScore = score;
+          bestFrame = frame;
+          bestFrameIdx = i;
         }
       }
 
-      console.log(`[${jobId}] Step ${idx + 1} (${step.timestamp}) → frame ${closestFrame.timestamp}`);
+      usedFrameIndices.add(bestFrameIdx);
+      console.log(`[${jobId}] Step ${idx + 1} (${step.timestamp}) → frame ${bestFrame.timestamp}`);
 
       return {
         ...step,
         id: `step-${idx + 1}`,
-        thumbnail: closestFrame.imageBase64
+        thumbnail: bestFrame.imageBase64
       };
     });
 
