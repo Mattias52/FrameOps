@@ -48,6 +48,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
 
   // Scene detection settings (user-controllable)
   const [sceneSensitivity, setSceneSensitivity] = useState(50); // 0-100, 50 = balanced
+  const [showSettings, setShowSettings] = useState(false);
 
   // AI Director state
   const [directorMode, setDirectorMode] = useState(false);
@@ -920,553 +921,322 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col md:flex-row">
-      {/* Camera View - Full screen on mobile, left side on desktop */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {/* Header */}
-        <div className="p-3 md:p-4 flex items-center justify-between bg-black/50 safe-area-top">
-          <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+    <div className="fixed inset-0 z-50 bg-black">
+      {/* Full screen video */}
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* Top bar - minimal */}
+      <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between safe-area-top z-20">
+        <button
+          onClick={handleCancel}
+          className="w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
+        >
+          <i className="fas fa-times"></i>
+        </button>
+
+        {/* Title input - only show when recording */}
+        {cameraStarted && (
+          <div className="flex-1 mx-4">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Namnge din SOP..."
+              className="w-full bg-black/40 backdrop-blur-sm text-white text-center font-medium px-4 py-2 rounded-full border-none outline-none placeholder:text-white/50"
+            />
+          </div>
+        )}
+
+        {/* Recording time */}
+        {isRecording ? (
+          <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-full">
+            <div className={`w-2 h-2 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`}></div>
+            <span className="text-white font-mono text-sm font-bold">{formatTime(recordingTime)}</span>
+          </div>
+        ) : cameraStarted ? (
+          <button
+            onClick={() => setShowSettings(true)}
+            className="w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
+          >
+            <i className="fas fa-cog"></i>
+          </button>
+        ) : <div className="w-10" />}
+      </div>
+
+      {/* Start overlay - clean and minimal */}
+      {!cameraStarted && (
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/90 to-black/95 flex flex-col items-center justify-center z-30 p-6">
+          <div className="text-center max-w-sm">
             <button
-              onClick={handleCancel}
-              className="w-10 h-10 md:w-10 md:h-10 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 active:scale-95 transition-transform flex-shrink-0"
+              className="w-28 h-28 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 hover:bg-indigo-500 active:scale-95 transition-all shadow-2xl shadow-indigo-500/30"
+              onClick={(e) => {
+                e.preventDefault();
+                startCamera();
+              }}
             >
-              <i className="fas fa-arrow-left"></i>
+              <i className="fas fa-video text-white text-4xl"></i>
             </button>
-            <div className="min-w-0 flex-1">
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="SOP Title..."
-                className="bg-transparent text-white text-base md:text-lg font-bold border-none outline-none placeholder:text-white/50 w-full"
-              />
-              <p className="text-white/50 text-[10px] md:text-xs font-medium">Live SOP Recording</p>
+            <h2 className="text-white text-2xl font-bold mb-2">Starta kamera</h2>
+            <p className="text-slate-400 mb-8">Tryck för att börja filma din SOP</p>
+
+            {/* Quick settings preview */}
+            <div className="flex items-center justify-center gap-4 text-sm">
+              <button
+                onClick={() => setShowSettings(true)}
+                className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+              >
+                <i className="fas fa-sliders-h"></i>
+                <span>Inställningar</span>
+              </button>
+              {directorMode && (
+                <span className="flex items-center gap-2 text-indigo-400">
+                  <i className="fas fa-film"></i>
+                  <span>AI Director på</span>
+                </span>
+              )}
+            </div>
+
+            {cameraError && (
+              <div className="mt-6 bg-red-600/20 border border-red-500/50 rounded-xl p-4">
+                <p className="text-red-400 text-sm">{cameraError}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Recording indicators - minimal */}
+      {isRecording && (
+        <>
+          {/* Mic indicator - small icon only */}
+          <div className="absolute top-20 left-4 z-20">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+              isListening || audioRecordingActive ? 'bg-emerald-600' : 'bg-slate-700/80'
+            }`}>
+              <i className={`fas fa-microphone text-white text-xs ${isListening ? 'animate-pulse' : ''}`}></i>
             </div>
           </div>
 
-          {isRecording && (
-            <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-              <div className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`}></div>
-              <span className="text-white font-mono text-base md:text-lg font-bold">{formatTime(recordingTime)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Video Preview */}
-        <div className="flex-1 relative bg-black min-h-0">
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            className="w-full h-full object-cover md:object-contain"
-          />
-          <canvas ref={canvasRef} className="hidden" />
-
-          {/* Camera start overlay - iOS Safari requires user gesture */}
-          {!cameraStarted && (
-            <div className="absolute inset-0 bg-slate-900/95 flex items-center justify-center z-[100]">
-              <div className="text-center p-6 max-w-sm">
-                <button 
-                  className="w-24 h-24 md:w-32 md:h-32 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 cursor-pointer hover:bg-indigo-700 active:scale-95 transition-all shadow-2xl ring-4 ring-white/20"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    startCamera();
-                  }}
-                >
-                  <i className="fas fa-video text-white text-4xl md:text-5xl"></i>
-                </button>
-                <h3 className="text-white text-xl md:text-2xl font-bold mb-2">Tap the circle above</h3>
-                <p className="text-slate-400 text-sm md:text-base mb-4">We need to start the camera before recording</p>
-                
-                {/* Scene Sensitivity Slider */}
-                <div className="bg-slate-800/80 rounded-xl p-4 mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-white/80 text-sm font-medium">Scene Sensitivity</label>
-                    <span className="text-indigo-400 text-sm font-bold">{sceneSensitivity}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={sceneSensitivity}
-                    onChange={(e) => setSceneSensitivity(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                  />
-                  <div className="flex justify-between text-xs text-slate-500 mt-1">
-                    <span>Fewer frames</span>
-                    <span>More frames</span>
-                  </div>
-                  <p className="text-slate-400 text-xs mt-2">
-                    {sceneSensitivity < 30 ? '🎯 Only major scene changes' :
-                     sceneSensitivity < 70 ? '⚖️ Balanced capture' :
-                     '📸 Capture more details'}
-                  </p>
-                </div>
-
-                {/* AI Director Toggle */}
-                <div className="bg-gradient-to-r from-indigo-900/80 to-purple-900/80 rounded-xl p-4 mb-4 border border-indigo-500/30">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
-                        <i className="fas fa-film text-white"></i>
-                      </div>
-                      <div>
-                        <h4 className="text-white font-bold text-sm">AI Director</h4>
-                        <p className="text-indigo-300 text-xs">Get filming tips in real-time</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setDirectorMode(!directorMode)}
-                      className={`w-14 h-8 rounded-full transition-colors relative ${
-                        directorMode ? 'bg-indigo-500' : 'bg-slate-600'
-                      }`}
-                    >
-                      <div className={`w-6 h-6 bg-white rounded-full absolute top-1 transition-transform ${
-                        directorMode ? 'translate-x-7' : 'translate-x-1'
-                      }`}></div>
-                    </button>
-                  </div>
-                  {directorMode && (
-                    <p className="text-indigo-200 text-xs mt-3 bg-indigo-950/50 p-2 rounded-lg">
-                      <i className="fas fa-magic mr-2"></i>
-                      AI will give you tips while filming and alert you to problems
-                    </p>
-                  )}
-                </div>
-                {cameraError && (
-                  <div className="bg-red-600/20 border border-red-500 rounded-lg p-3 max-w-xs mx-auto">
-                    <p className="text-red-400 text-sm">{cameraError}</p>
-                    <button 
-                      onClick={startCamera}
-                      className="mt-2 text-red-300 hover:text-white text-sm underline">
-                      Try again
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Recording indicator overlay */}
-          {isRecording && !isPaused && (
-            <div className="absolute top-3 right-3 md:top-4 md:right-4 flex items-center gap-2 bg-red-600 px-2.5 py-1 md:px-3 md:py-1.5 rounded-full">
-              <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-white rounded-full animate-pulse"></div>
-              <span className="text-white text-[10px] md:text-xs font-bold uppercase">REC</span>
-            </div>
-          )}
-
-          {/* Speech recognition indicator */}
-          {isRecording && (
-            <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-col gap-2 max-w-[60%]">
-              {/* Microphone status */}
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${isListening ? 'bg-emerald-600' : 'bg-slate-700'}`}>
-                <i className={`fas fa-microphone text-white ${isListening ? 'animate-pulse' : ''}`}></i>
-                <span className="text-white text-xs font-medium">
-                  {isListening ? 'Listening...' : (speechSupported ? 'Mic starting...' : 'No mic')}
-                </span>
-              </div>
-
-              {/* Live transcript preview */}
-              {(currentTranscript || transcriptRef.current) && (
-                <div className="bg-black/70 backdrop-blur-sm px-3 py-2 rounded-lg max-w-full">
-                  <p className="text-white/90 text-xs line-clamp-2">
-                    {currentTranscript || transcriptRef.current.slice(-100)}
-                  </p>
-                </div>
-              )}
-
-              {/* Speech error with retry */}
-              {speechError && (
-                <div className="bg-red-600/90 px-3 py-2 rounded-lg flex items-center gap-2">
-                  <p className="text-white text-xs flex-1">{speechError}</p>
-                  <button
-                    onClick={() => {
-                      setSpeechError(null);
-                      setSpeechSupported(true);
-                      startSpeechRecognition();
-                    }}
-                    className="text-white/80 hover:text-white text-xs underline"
-                  >
-                    Retry
-                  </button>
-                </div>
-              )}
-
-              {/* Audio fallback indicator */}
-              {hasAudioFallback && audioRecordingActive && (
-                <div className="bg-emerald-600/90 px-3 py-2 rounded-lg flex items-center gap-2">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  <p className="text-white text-xs font-medium">Recording audio for AI transcription</p>
-                </div>
-              )}
-
-              {/* No speech - show it's optional */}
-              {!speechSupported && !speechError && !hasAudioFallback && (
-                <div className="bg-slate-700/90 px-3 py-1.5 rounded-lg">
-                  <p className="text-white/70 text-xs">Recording without speech</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* AI Director Feedback Panel */}
-          {isRecording && directorMode && (
-            <div className="absolute bottom-3 left-3 right-3 md:bottom-4 md:left-4 md:right-auto md:max-w-sm z-10">
-              {/* Feedback Display */}
-              {directorTip && (
-                <div className={`mb-3 rounded-xl p-3 backdrop-blur-md border-2 animate-in slide-in-from-bottom duration-300 ${
-                  directorSeverity === 'high'
-                    ? 'bg-red-900/90 border-red-500'
-                    : directorSeverity === 'medium'
-                    ? 'bg-amber-900/90 border-amber-500'
-                    : 'bg-emerald-900/90 border-emerald-500'
-                }`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      directorSeverity === 'high'
-                        ? 'bg-red-500'
-                        : directorSeverity === 'medium'
-                        ? 'bg-amber-500'
-                        : 'bg-emerald-500'
-                    }`}>
-                      <i className={`fas ${
-                        directorSeverity === 'high'
-                          ? 'fa-exclamation-triangle'
-                          : directorSeverity === 'medium'
-                          ? 'fa-lightbulb'
-                          : 'fa-check'
-                      } text-white text-sm`}></i>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      {directorIssue && (
-                        <p className={`text-xs font-bold uppercase tracking-wide mb-1 ${
-                          directorSeverity === 'high'
-                            ? 'text-red-300'
-                            : directorSeverity === 'medium'
-                            ? 'text-amber-300'
-                            : 'text-emerald-300'
-                        }`}>
-                          {directorIssue}
-                        </p>
-                      )}
-                      <p className="text-white text-sm font-medium">{directorTip}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setDirectorTip(null);
-                        setDirectorIssue(null);
-                        setDirectorSeverity(null);
-                      }}
-                      className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/30 flex-shrink-0"
-                    >
-                      <i className="fas fa-times text-xs"></i>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Get Feedback Button */}
-              <button
-                onClick={() => requestDirectorFeedback('on_demand')}
-                disabled={directorLoading}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all ${
-                  directorLoading
-                    ? 'bg-indigo-800/80 text-indigo-300 cursor-wait'
-                    : 'bg-indigo-600/90 text-white hover:bg-indigo-500 active:scale-98'
-                } backdrop-blur-md border border-indigo-400/30`}
-              >
-                {directorLoading ? (
-                  <>
-                    <i className="fas fa-circle-notch fa-spin"></i>
-                    <span>Analyserar...</span>
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-film"></i>
-                    <span>Få AI-feedback</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-
-          {/* Mobile: Steps count badge */}
-          {isMobile && liveSteps.length > 0 && (
+          {/* Steps count - bottom right */}
+          {liveSteps.length > 0 && (
             <button
               onClick={() => setShowStepsPanel(true)}
-              className="absolute bottom-3 right-3 bg-indigo-600 text-white px-3 py-2 rounded-full flex items-center gap-2 active:scale-95 transition-transform shadow-lg"
+              className="absolute bottom-32 right-4 bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-full flex items-center gap-2 z-20"
             >
-              <i className="fas fa-list-ol text-sm"></i>
-              <span className="text-sm font-bold">{liveSteps.length} steps</span>
+              <i className="fas fa-layer-group text-indigo-400"></i>
+              <span className="font-bold">{liveSteps.length}</span>
             </button>
           )}
+        </>
+      )}
 
-          {/* Finishing overlay */}
-          {isFinishing && (
-            <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4">
-              <div className="text-center">
-                <div className="w-12 h-12 md:w-16 md:h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3 md:mb-4"></div>
-                <p className="text-white text-base md:text-lg font-bold">Generating SOP...</p>
-                <p className="text-white/60 text-xs md:text-sm">AI is analyzing {allFramesRef.current.length} captured frames</p>
+      {/* AI Director feedback - only show when there's a tip */}
+      {isRecording && directorMode && directorTip && (
+        <div className="absolute top-20 left-4 right-4 md:right-auto md:max-w-sm z-20">
+          <div className={`rounded-2xl p-4 backdrop-blur-md border ${
+            directorSeverity === 'high'
+              ? 'bg-red-900/90 border-red-500/50'
+              : directorSeverity === 'medium'
+              ? 'bg-amber-900/90 border-amber-500/50'
+              : 'bg-emerald-900/90 border-emerald-500/50'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                directorSeverity === 'high' ? 'bg-red-500' :
+                directorSeverity === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
+              }`}>
+                <i className={`fas ${
+                  directorSeverity === 'high' ? 'fa-exclamation' :
+                  directorSeverity === 'medium' ? 'fa-lightbulb' : 'fa-check'
+                } text-white text-sm`}></i>
               </div>
+              <div className="flex-1">
+                <p className="text-white text-sm font-medium">{directorTip}</p>
+              </div>
+              <button
+                onClick={() => setDirectorTip(null)}
+                className="text-white/50 hover:text-white"
+              >
+                <i className="fas fa-times"></i>
+              </button>
             </div>
-          )}
+          </div>
         </div>
+      )}
 
-        {/* Controls */}
-        <div className="p-4 md:p-6 bg-black/50 flex items-center justify-center gap-4 md:gap-6 safe-area-bottom">
+      {/* Bottom controls */}
+      <div className="absolute bottom-0 left-0 right-0 p-6 safe-area-bottom z-20">
+        <div className="flex items-center justify-center gap-6">
           {!isRecording ? (
+            /* Start recording button */
             <button
-              onClick={(e) => {
-                console.log("Direct click on record button");
-                if (!cameraStarted) {
-                  alert('Du måste starta kameran först! Klicka på den stora knappen i mitten av skärmen.');
-                  return;
-                }
+              onClick={() => {
+                if (!cameraStarted) return;
                 handleStartRecording();
               }}
-              className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center group active:scale-95 transition-transform shadow-xl"
-              style={{ pointerEvents: 'auto', zIndex: 50 }}
+              disabled={!cameraStarted}
+              className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center disabled:opacity-30"
             >
-              <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full group-active:bg-red-700 transition-colors ${cameraStarted ? 'bg-red-600' : 'bg-slate-400'}`}></div>
+              <div className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-400 transition-colors"></div>
             </button>
           ) : (
+            /* Recording controls */
             <>
               <button
                 onClick={togglePause}
-                className="w-12 h-12 md:w-14 md:h-14 bg-white/10 rounded-full flex items-center justify-center text-white active:bg-white/30 transition-colors"
+                className="w-14 h-14 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
               >
-                <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'} text-lg md:text-xl`}></i>
+                <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'} text-lg`}></i>
               </button>
 
               <button
                 onClick={handleStopRecording}
                 disabled={isFinishing}
-                className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center group active:scale-95 transition-transform disabled:opacity-50 shadow-xl"
+                className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center disabled:opacity-50"
               >
-                <div className="w-6 h-6 md:w-8 md:h-8 bg-slate-900 rounded-md md:rounded-lg"></div>
+                <div className="w-8 h-8 rounded-lg bg-white"></div>
               </button>
 
-              {/* Mobile: Show steps button */}
-              {isMobile ? (
+              {directorMode && (
                 <button
-                  onClick={() => setShowStepsPanel(true)}
-                  className="w-12 h-12 md:w-14 md:h-14 bg-white/10 rounded-full flex items-center justify-center text-white active:bg-white/30 transition-colors relative"
+                  onClick={() => requestDirectorFeedback('on_demand')}
+                  disabled={directorLoading}
+                  className="w-14 h-14 bg-indigo-600/80 backdrop-blur-sm rounded-full flex items-center justify-center text-white disabled:opacity-50"
                 >
-                  <i className="fas fa-list-ol text-lg"></i>
-                  {liveSteps.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">
-                      {liveSteps.length}
-                    </span>
+                  {directorLoading ? (
+                    <i className="fas fa-circle-notch fa-spin"></i>
+                  ) : (
+                    <i className="fas fa-film"></i>
                   )}
                 </button>
-              ) : (
-                <div className="w-14 h-14"></div>
               )}
             </>
           )}
         </div>
       </div>
 
-      {/* Desktop: Live Steps Preview - Right panel */}
-      {!isMobile && (
-        <div className="w-80 lg:w-96 bg-slate-800 flex flex-col border-l border-slate-700">
-          <div className="p-4 border-b border-slate-700">
-            <h3 className="text-white font-bold flex items-center gap-2">
-              <i className="fas fa-list-ol text-indigo-400"></i>
-              Live Steps
-              <span className="ml-auto bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full">
-                {liveSteps.length}
-              </span>
-            </h3>
-            <p className="text-slate-400 text-xs mt-1">Steps appear as you record</p>
+      {/* Finishing overlay */}
+      {isFinishing && (
+        <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-40">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-white text-lg font-bold">Skapar SOP...</p>
+            <p className="text-slate-400 text-sm mt-1">{allFramesRef.current.length} bilder analyseras</p>
           </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {liveSteps.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-slate-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <i className="fas fa-video text-slate-500 text-2xl"></i>
-                </div>
-                <p className="text-slate-400 text-sm font-medium">Start recording to capture steps</p>
-                <p className="text-slate-500 text-xs mt-1">Steps will appear here automatically</p>
-              </div>
-            ) : (
-              liveSteps.map((step, idx) => (
-                <div
-                  key={step.id}
-                  className="bg-slate-700/50 rounded-xl overflow-hidden animate-in slide-in-from-right duration-300"
-                >
-                  <div
-                    className="relative aspect-video cursor-pointer group"
-                    onClick={() => setPreviewImage(step.thumbnail)}
-                  >
-                    <img
-                      src={step.thumbnail}
-                      alt={`Step ${idx + 1}`}
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                      crossOrigin="anonymous"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                      <i className="fas fa-search-plus text-white text-xl opacity-0 group-hover:opacity-100 transition-opacity"></i>
-                    </div>
-                    <div className="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs font-mono">
-                      {step.timestamp}
-                    </div>
-                    <div className="absolute top-2 right-2 bg-indigo-600 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                      {idx + 1}
-                    </div>
-                  </div>
-                  <div className="p-3">
-                    <p className="text-white text-sm font-bold line-clamp-1">
-                      {step.status === 'capturing' ? (
-                        <span className="text-slate-400 flex items-center gap-2">
-                          <i className="fas fa-circle-notch fa-spin text-indigo-400"></i>
-                          Captured
-                        </span>
-                      ) : step.title}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Stats */}
-          {isRecording && (
-            <div className="p-4 border-t border-slate-700 grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-white">{liveSteps.length}</p>
-                <p className="text-slate-400 text-xs uppercase">Steps</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-white">{formatTime(recordingTime)}</p>
-                <p className="text-slate-400 text-xs uppercase">Duration</p>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Fullscreen Image Preview Modal */}
-      {previewImage && (
-        <div
-          className="fixed inset-0 z-70 bg-black/95 flex items-center justify-center p-4"
-          onClick={() => setPreviewImage(null)}
-        >
-          <button
-            className="absolute top-4 right-4 w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors z-10"
-            onClick={() => setPreviewImage(null)}
-          >
-            <i className="fas fa-times text-xl"></i>
-          </button>
-          <img
-            src={previewImage}
-            alt="Full preview"
-            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-            crossOrigin="anonymous"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <p className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/60 text-sm">
-            Tap anywhere or ✕ to close
-          </p>
-        </div>
-      )}
-
-      {/* Mobile: Bottom Sheet for Steps */}
-      {isMobile && showStepsPanel && (
-        <div className="fixed inset-0 z-60 flex flex-col">
-          {/* Backdrop */}
-          <div
-            className="flex-1 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowStepsPanel(false)}
-          />
-
-          {/* Bottom Sheet */}
-          <div className="bg-slate-800 rounded-t-3xl max-h-[70vh] flex flex-col animate-in slide-in-from-bottom duration-300">
-            {/* Handle */}
-            <div className="flex justify-center py-3">
-              <div className="w-10 h-1 bg-slate-600 rounded-full"></div>
-            </div>
-
-            {/* Header */}
-            <div className="px-4 pb-3 flex items-center justify-between border-b border-slate-700">
-              <div>
-                <h3 className="text-white font-bold flex items-center gap-2">
-                  <i className="fas fa-list-ol text-indigo-400"></i>
-                  Live Steps
-                  <span className="bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full">
-                    {liveSteps.length}
-                  </span>
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowStepsPanel(false)}
-                className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-white"
-              >
-                <i className="fas fa-times text-sm"></i>
+      {/* Settings panel */}
+      {showSettings && (
+        <div className="absolute inset-0 z-50 flex items-end md:items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowSettings(false)} />
+          <div className="relative bg-slate-900 w-full md:w-96 md:rounded-2xl p-6 space-y-6 rounded-t-3xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-white text-lg font-bold">Inställningar</h3>
+              <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-white">
+                <i className="fas fa-times"></i>
               </button>
             </div>
 
-            {/* Steps List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {liveSteps.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-slate-400 text-sm">No steps captured yet</p>
-                </div>
-              ) : (
-                liveSteps.map((step, idx) => (
-                  <div
-                    key={step.id}
-                    className="bg-slate-700/50 rounded-xl overflow-hidden flex gap-3"
-                  >
-                    <div
-                      className="relative w-28 h-20 flex-shrink-0 cursor-pointer"
-                      onClick={() => {
-                        setShowStepsPanel(false);
-                        setPreviewImage(step.thumbnail);
-                      }}
-                    >
-                      <img
-                        src={step.thumbnail}
-                        alt={`Step ${idx + 1}`}
-                        className="w-full h-full object-cover rounded-l-xl"
-                        crossOrigin="anonymous"
-                      />
-                      <div className="absolute inset-0 bg-black/0 active:bg-black/30 flex items-center justify-center rounded-l-xl">
-                        <i className="fas fa-expand text-white text-sm opacity-0 active:opacity-100"></i>
-                      </div>
-                      <div className="absolute top-1 left-1 bg-indigo-600 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
-                        {idx + 1}
-                      </div>
-                    </div>
-                    <div className="flex-1 py-2 pr-3 flex flex-col justify-center">
-                      <p className="text-white/50 text-[10px] font-mono">{step.timestamp}</p>
-                      <p className="text-white text-sm font-medium line-clamp-1">
-                        {step.status === 'capturing' ? 'Captured' : step.title}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
+            {/* Scene Sensitivity */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-white text-sm font-medium">Känslighet</label>
+                <span className="text-indigo-400 text-sm font-bold">{sceneSensitivity}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={sceneSensitivity}
+                onChange={(e) => setSceneSensitivity(Number(e.target.value))}
+                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+              />
+              <p className="text-slate-500 text-xs mt-2">
+                {sceneSensitivity < 30 ? 'Färre bilder, bara stora förändringar' :
+                 sceneSensitivity < 70 ? 'Balanserat' : 'Fler bilder, mer detaljer'}
+              </p>
             </div>
 
-            {/* Stats */}
-            {isRecording && (
-              <div className="p-4 border-t border-slate-700 grid grid-cols-2 gap-4 safe-area-bottom">
-                <div className="text-center">
-                  <p className="text-xl font-bold text-white">{liveSteps.length}</p>
-                  <p className="text-slate-400 text-[10px] uppercase">Steps</p>
+            {/* AI Director */}
+            <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
+                  <i className="fas fa-film text-white"></i>
                 </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-white">{formatTime(recordingTime)}</p>
-                  <p className="text-slate-400 text-[10px] uppercase">Duration</p>
+                <div>
+                  <p className="text-white font-medium">AI Director</p>
+                  <p className="text-slate-400 text-xs">Tips medan du filmar</p>
                 </div>
               </div>
-            )}
+              <button
+                onClick={() => setDirectorMode(!directorMode)}
+                className={`w-12 h-7 rounded-full transition-colors relative ${directorMode ? 'bg-indigo-500' : 'bg-slate-600'}`}
+              >
+                <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-transform ${directorMode ? 'translate-x-6' : 'translate-x-1'}`}></div>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowSettings(false)}
+              className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 transition-colors"
+            >
+              Klar
+            </button>
           </div>
+        </div>
+      )}
+
+      {/* Steps panel (mobile bottom sheet) */}
+      {showStepsPanel && (
+        <div className="absolute inset-0 z-50 flex flex-col">
+          <div className="flex-1 bg-black/60" onClick={() => setShowStepsPanel(false)} />
+          <div className="bg-slate-900 rounded-t-3xl max-h-[70vh] flex flex-col">
+            <div className="flex justify-center py-3">
+              <div className="w-10 h-1 bg-slate-700 rounded-full"></div>
+            </div>
+            <div className="px-4 pb-3 flex items-center justify-between">
+              <h3 className="text-white font-bold">
+                Steg <span className="text-indigo-400">({liveSteps.length})</span>
+              </h3>
+              <button onClick={() => setShowStepsPanel(false)} className="text-slate-400">
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {liveSteps.map((step, idx) => (
+                <div key={step.id} className="flex gap-3 bg-slate-800 rounded-xl p-2">
+                  <img
+                    src={step.thumbnail}
+                    alt=""
+                    className="w-20 h-14 object-cover rounded-lg"
+                    onClick={() => { setShowStepsPanel(false); setPreviewImage(step.thumbnail); }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-500 text-xs font-mono">{step.timestamp}</p>
+                    <p className="text-white text-sm font-medium truncate">{step.title || `Steg ${idx + 1}`}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image preview */}
+      {previewImage && (
+        <div className="absolute inset-0 z-50 bg-black flex items-center justify-center" onClick={() => setPreviewImage(null)}>
+          <button className="absolute top-4 right-4 text-white/60 hover:text-white z-10">
+            <i className="fas fa-times text-2xl"></i>
+          </button>
+          <img src={previewImage} alt="" className="max-w-full max-h-full object-contain" />
         </div>
       )}
     </div>
