@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { AppView } from '../types';
 
 interface LandingPageProps {
@@ -7,9 +7,7 @@ interface LandingPageProps {
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) => {
-  const [audience, setAudience] = useState<'business' | 'creator'>('business');
-
-  const businessFeatures = [
+  const features = [
     {
       icon: 'fa-mobile-screen',
       title: 'Live Recording',
@@ -22,9 +20,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       description: 'Just talk while you work. AI transcribes your voice and turns it into professional written steps.'
     },
     {
-      icon: 'fa-youtube',
-      title: 'YouTube Import',
-      description: 'Paste any YouTube URL. Perfect for turning existing training videos into documentation.'
+      icon: 'fa-cloud-upload-alt',
+      title: 'Video Upload',
+      description: 'Upload existing training videos. AI analyzes the footage and extracts clear step-by-step instructions.'
     },
     {
       icon: 'fa-shield-halved',
@@ -43,56 +41,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
     }
   ];
 
-  const creatorFeatures = [
-    {
-      icon: 'fa-youtube',
-      title: 'YouTube Integration',
-      description: 'Paste any YouTube link and instantly transform tutorials into step-by-step guides.'
-    },
-    {
-      icon: 'fa-wand-magic-sparkles',
-      title: 'AI Transcription',
-      description: 'Automatic audio transcription ensures every spoken detail is captured in your guides.'
-    },
-    {
-      icon: 'fa-book-open',
-      title: 'Course Materials',
-      description: 'Turn video content into downloadable PDFs, course handouts, and reference guides.'
-    },
-    {
-      icon: 'fa-palette',
-      title: 'Custom Branding',
-      description: 'Add your logo, colors, and style to create professional branded documentation.'
-    },
-    {
-      icon: 'fa-bolt',
-      title: 'Instant Guides',
-      description: 'Create companion guides for your videos in minutes, not hours.'
-    },
-    {
-      icon: 'fa-chart-line',
-      title: 'Grow Your Audience',
-      description: 'Offer downloadable guides as lead magnets or premium content.'
-    }
-  ];
-
-  const features = audience === 'business' ? businessFeatures : creatorFeatures;
-
-  const businessUseCases = [
+  const useCases = [
     { industry: 'Manufacturing', example: 'Machine setup, maintenance procedures, quality checks', icon: 'fa-industry' },
     { industry: 'Healthcare', example: 'Clinical procedures, equipment operation, sterilization', icon: 'fa-hospital' },
     { industry: 'Food Service', example: 'Health code compliance, recipes, cleaning procedures', icon: 'fa-utensils' },
     { industry: 'Training & HR', example: 'Onboarding, safety training, compliance documentation', icon: 'fa-graduation-cap' },
   ];
-
-  const creatorUseCases = [
-    { industry: 'Tech Tutorials', example: 'Software walkthroughs, coding guides, app tutorials', icon: 'fa-code' },
-    { industry: 'DIY & Crafts', example: 'Project instructions, material lists, step-by-step crafts', icon: 'fa-hammer' },
-    { industry: 'Online Courses', example: 'Course handouts, lesson summaries, student guides', icon: 'fa-chalkboard-teacher' },
-    { industry: 'How-To Content', example: 'Recipe cards, repair guides, installation manuals', icon: 'fa-lightbulb' },
-  ];
-
-  const useCases = audience === 'business' ? businessUseCases : creatorUseCases;
 
   const pricing = [
     {
@@ -188,66 +142,26 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-4xl mx-auto">
-            {/* Audience Toggle */}
-            <div className="inline-flex items-center bg-slate-100 rounded-full p-1 mb-8">
-              <button
-                onClick={() => setAudience('business')}
-                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${
-                  audience === 'business'
-                    ? 'bg-white text-slate-900 shadow-md'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <i className="fas fa-building mr-2"></i>
-                For Business
-              </button>
-              <button
-                onClick={() => setAudience('creator')}
-                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${
-                  audience === 'creator'
-                    ? 'bg-white text-slate-900 shadow-md'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <i className="fas fa-video mr-2"></i>
-                For Creators
-              </button>
-            </div>
-
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold mb-6">
               <i className="fas fa-sparkles"></i>
               Powered by Google Gemini AI
             </div>
 
-            {audience === 'business' ? (
-              <>
-                <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-tight mb-6">
-                  Turn Videos Into <br />
-                  <span className="text-indigo-600">Professional SOPs</span>
-                </h1>
-                <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
-                  <strong className="text-slate-900">Record live</strong> with your phone, <strong className="text-slate-900">upload a video</strong>, or <strong className="text-slate-900">paste a YouTube link</strong> — AI creates the SOP in minutes.
-                </p>
-              </>
-            ) : (
-              <>
-                <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-tight mb-6">
-                  Turn Videos Into <br />
-                  <span className="text-indigo-600">Step-by-Step Guides</span>
-                </h1>
-                <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
-                  Transform your YouTube tutorials into downloadable PDF guides. Give your audience
-                  something they can print, follow along, and share.
-                </p>
-              </>
-            )}
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-tight mb-6">
+              Turn Videos Into <br />
+              <span className="text-indigo-600">Professional SOPs</span>
+            </h1>
+            <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+              <strong className="text-slate-900">Record live</strong> with your phone, <strong className="text-slate-900">upload a video</strong>, or <strong className="text-slate-900">paste a YouTube link</strong> — AI creates the SOP in minutes.
+            </p>
+
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
                 onClick={onGetStarted}
                 className="w-full sm:w-auto px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 hover:shadow-2xl hover:shadow-indigo-300 hover:-translate-y-0.5"
               >
                 <i className="fas fa-play mr-2"></i>
-                {audience === 'business' ? 'Create Your First SOP' : 'Create Your First Guide'}
+                Create Your First SOP
               </button>
               <button
                 onClick={() => onNavigate(AppView.SUBSCRIPTION)}
@@ -323,8 +237,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       </section>
 
       {/* Live SOP Feature Highlight */}
-      {audience === 'business' && (
-        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-400 text-sm font-semibold mb-6">
@@ -422,51 +335,27 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
             </div>
           </div>
         </section>
-      )}
 
       {/* Stats Bar */}
       <section className="py-12 bg-indigo-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {audience === 'business' ? (
-              <>
-                <div>
-                  <p className="text-4xl font-bold text-white">95%</p>
-                  <p className="text-indigo-200 mt-1">Time Saved</p>
-                </div>
-                <div>
-                  <p className="text-4xl font-bold text-white">10min</p>
-                  <p className="text-indigo-200 mt-1">Avg. SOP Creation</p>
-                </div>
-                <div>
-                  <p className="text-4xl font-bold text-white">50+</p>
-                  <p className="text-indigo-200 mt-1">Industries Served</p>
-                </div>
-                <div>
-                  <p className="text-4xl font-bold text-white">99.9%</p>
-                  <p className="text-indigo-200 mt-1">Uptime</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div>
-                  <p className="text-4xl font-bold text-white">5min</p>
-                  <p className="text-indigo-200 mt-1">Per Guide</p>
-                </div>
-                <div>
-                  <p className="text-4xl font-bold text-white">1-Click</p>
-                  <p className="text-indigo-200 mt-1">YouTube Import</p>
-                </div>
-                <div>
-                  <p className="text-4xl font-bold text-white">PDF</p>
-                  <p className="text-indigo-200 mt-1">Ready to Share</p>
-                </div>
-                <div>
-                  <p className="text-4xl font-bold text-white">AI</p>
-                  <p className="text-indigo-200 mt-1">Transcription</p>
-                </div>
-              </>
-            )}
+            <div>
+              <p className="text-4xl font-bold text-white">95%</p>
+              <p className="text-indigo-200 mt-1">Time Saved</p>
+            </div>
+            <div>
+              <p className="text-4xl font-bold text-white">10min</p>
+              <p className="text-indigo-200 mt-1">Avg. SOP Creation</p>
+            </div>
+            <div>
+              <p className="text-4xl font-bold text-white">50+</p>
+              <p className="text-indigo-200 mt-1">Industries Served</p>
+            </div>
+            <div>
+              <p className="text-4xl font-bold text-white">99.9%</p>
+              <p className="text-indigo-200 mt-1">Uptime</p>
+            </div>
           </div>
         </div>
       </section>
@@ -498,7 +387,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       <section id="use-cases" className="py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 scroll-mt-24">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-slate-600 mb-6">
-            {audience === 'business' ? 'Used in:' : 'Perfect for:'}
+            Used in:
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             {useCases.map((useCase, i) => (
@@ -578,25 +467,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       {/* CTA Section */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-900">
         <div className="max-w-4xl mx-auto text-center">
-          {audience === 'business' ? (
-            <>
-              <h2 className="text-4xl font-bold text-white mb-6">
-                Ready to Save Hours on Documentation?
-              </h2>
-              <p className="text-xl text-slate-400 mb-10">
-                Join teams who've replaced manual SOP writing with AI-powered automation.
-              </p>
-            </>
-          ) : (
-            <>
-              <h2 className="text-4xl font-bold text-white mb-6">
-                Ready to Level Up Your Content?
-              </h2>
-              <p className="text-xl text-slate-400 mb-10">
-                Give your audience downloadable guides they'll actually use.
-              </p>
-            </>
-          )}
+          <h2 className="text-4xl font-bold text-white mb-6">
+            Ready to Save Hours on Documentation?
+          </h2>
+          <p className="text-xl text-slate-400 mb-10">
+            Join teams who've replaced manual SOP writing with AI-powered automation.
+          </p>
           <button
             onClick={onGetStarted}
             className="px-10 py-5 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-500 transition-colors shadow-xl"

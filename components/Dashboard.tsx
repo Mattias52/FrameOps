@@ -46,18 +46,9 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate }) => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-slate-500 mt-1">Create and manage your standard operating procedures</p>
-        </div>
-        <button
-          onClick={() => onNavigate(AppView.GENERATOR)}
-          className="inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-        >
-          <i className="fas fa-plus"></i>
-          Create New SOP
-        </button>
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
+        <p className="text-slate-500 mt-1">Create and manage your standard operating procedures</p>
       </div>
 
       {/* Stats Grid */}
