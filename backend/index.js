@@ -1740,6 +1740,98 @@ app.post('/analyze-youtube-native', async (req, res) => {
   }
 });
 
+// ============================================
+// AI DIRECTOR - Real-time filming feedback
+// ============================================
+app.post('/director-feedback', async (req, res) => {
+  const {
+    frame,           // Current camera frame (base64)
+    context,         // What the user is trying to film (e.g., "changing car oil")
+    currentStep,     // What step they're on (e.g., "showing the tools needed")
+    previousTips,    // Last few tips given (to avoid repetition)
+    mode             // 'on_demand' or 'proactive'
+  } = req.body;
+
+  if (!frame) {
+    return res.status(400).json({ error: 'Missing frame' });
+  }
+
+  const jobId = crypto.randomBytes(4).toString('hex');
+  console.log(`[DIR-${jobId}] Director feedback request (${mode})`);
+
+  try {
+    const genai = getGenAI();
+
+    const prompt = `You are an AI director helping someone film an instructional video.
+
+CONTEXT: They are filming "${context || 'an instructional video'}"
+CURRENT STEP: ${currentStep || 'Unknown'}
+${previousTips?.length ? `PREVIOUS TIPS (don't repeat): ${previousTips.join(', ')}` : ''}
+
+Look at this frame from their camera and give feedback.
+
+${mode === 'proactive' ? `
+PROACTIVE MODE: Only respond if you see a PROBLEM that needs fixing:
+- Very blurry or out of focus
+- Too dark or overexposed
+- Important action is cut off or not visible
+- Hand blocking the view
+- Wrong angle for what they're trying to show
+
+If the frame looks OK, respond with just: {"needsFeedback": false}
+` : `
+ON-DEMAND MODE: Give a helpful tip to improve the shot.
+`}
+
+Respond in JSON format:
+{
+  "needsFeedback": true/false,
+  "tip": "Your brief tip in Swedish (max 20 words)",
+  "issue": "blur|lighting|framing|obstruction|angle|none",
+  "severity": "low|medium|high"
+}`;
+
+    const imageData = frame.includes(',') ? frame.split(',')[1] : frame;
+
+    const response = await genai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{
+        parts: [
+          { inlineData: { mimeType: 'image/jpeg', data: imageData } },
+          { text: prompt }
+        ]
+      }],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 150
+      }
+    });
+
+    const responseText = response.text.trim();
+    console.log(`[DIR-${jobId}] Response: ${responseText.substring(0, 100)}`);
+
+    // Parse JSON response
+    let result;
+    try {
+      // Extract JSON from response (might have markdown backticks)
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      result = jsonMatch ? JSON.parse(jsonMatch[0]) : { needsFeedback: false };
+    } catch (e) {
+      // If parsing fails, treat as a tip
+      result = { needsFeedback: true, tip: responseText, issue: 'general', severity: 'low' };
+    }
+
+    res.json({
+      success: true,
+      ...result
+    });
+
+  } catch (error) {
+    console.error(`[DIR-${jobId}] Error:`, error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/analyze-sop', async (req, res) => {
   const { frames, title, additionalContext = '', vitTags = [] } = req.body;
 

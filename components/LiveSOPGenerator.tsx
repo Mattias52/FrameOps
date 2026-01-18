@@ -49,6 +49,16 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
   // Scene detection settings (user-controllable)
   const [sceneSensitivity, setSceneSensitivity] = useState(50); // 0-100, 50 = balanced
 
+  // AI Director state
+  const [directorMode, setDirectorMode] = useState(false);
+  const [directorTip, setDirectorTip] = useState<string | null>(null);
+  const [directorIssue, setDirectorIssue] = useState<string | null>(null);
+  const [directorSeverity, setDirectorSeverity] = useState<'low' | 'medium' | 'high' | null>(null);
+  const [directorLoading, setDirectorLoading] = useState(false);
+  const previousTipsRef = useRef<string[]>([]);
+  const lastProactiveCheckRef = useRef<number>(0);
+  const PROACTIVE_CHECK_INTERVAL = 5000; // Check every 5 seconds in proactive mode
+
   // Detect mobile
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -651,6 +661,87 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
     }
   };
 
+  // AI Director: Request feedback on current frame
+  const requestDirectorFeedback = async (mode: 'on_demand' | 'proactive') => {
+    if (!videoRef.current || !canvasRef.current || directorLoading) return;
+
+    // Don't spam proactive checks
+    if (mode === 'proactive') {
+      const now = Date.now();
+      if (now - lastProactiveCheckRef.current < PROACTIVE_CHECK_INTERVAL) return;
+      lastProactiveCheckRef.current = now;
+    }
+
+    setDirectorLoading(true);
+    try {
+      // Capture current frame
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0);
+      const frame = canvas.toDataURL('image/jpeg', 0.7);
+
+      const response = await fetch('https://frameops-production.up.railway.app/director-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          frame,
+          context: title || 'instructional video',
+          currentStep: liveSteps.length > 0 ? `Step ${liveSteps.length + 1}` : 'Getting started',
+          previousTips: previousTipsRef.current.slice(-3),
+          mode
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.needsFeedback && data.tip) {
+        setDirectorTip(data.tip);
+        setDirectorIssue(data.issue);
+        setDirectorSeverity(data.severity);
+        previousTipsRef.current.push(data.tip);
+
+        // Auto-hide tip after 8 seconds
+        setTimeout(() => {
+          setDirectorTip(null);
+          setDirectorIssue(null);
+          setDirectorSeverity(null);
+        }, 8000);
+      } else if (mode === 'on_demand' && !data.needsFeedback) {
+        // On demand but no issues - show positive feedback
+        setDirectorTip('Ser bra ut! Fortsätt filma.');
+        setDirectorSeverity('low');
+        setTimeout(() => {
+          setDirectorTip(null);
+          setDirectorSeverity(null);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Director feedback error:', error);
+      if (mode === 'on_demand') {
+        setDirectorTip('Kunde inte analysera bilden just nu');
+        setDirectorSeverity('low');
+        setTimeout(() => setDirectorTip(null), 3000);
+      }
+    } finally {
+      setDirectorLoading(false);
+    }
+  };
+
+  // Proactive director check during recording
+  useEffect(() => {
+    if (!isRecording || !directorMode || isPaused) return;
+
+    const interval = setInterval(() => {
+      requestDirectorFeedback('proactive');
+    }, PROACTIVE_CHECK_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [isRecording, directorMode, isPaused, title, liveSteps.length]);
+
   // Stop recording and finalize SOP
   const handleStopRecording = async () => {
     if (!isRecording) return;
@@ -765,7 +856,14 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
       const thumbnailUrl = frames[bestThumbnailIdx] || frames[Math.floor(frames.length / 3)] || frames[0];
       console.log(`Using frame ${bestThumbnailIdx} as cover image (Gemini selected)`);
 
-      // Create final SOP
+      // Create video blob from recorded chunks (will be uploaded to Supabase Storage)
+      let videoBlob: Blob | undefined;
+      if (recordedChunksRef.current.length > 0) {
+        videoBlob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        console.log('Video blob created:', (videoBlob.size / 1024 / 1024).toFixed(2), 'MB');
+      }
+
+      // Create final SOP (videoBlob will be uploaded by App.tsx when saving)
       const sop: SOP = {
         id: Math.random().toString(36).substr(2, 9),
         title: result.title || title,
@@ -776,7 +874,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
         sourceType: 'live',
         status: 'completed',
         thumbnail_url: thumbnailUrl,
-        steps: finalSteps
+        steps: finalSteps,
+        videoBlob: videoBlob // Pass blob for upload, not base64
       };
 
       onComplete(sop);
@@ -900,10 +999,41 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
                     <span>More frames</span>
                   </div>
                   <p className="text-slate-400 text-xs mt-2">
-                    {sceneSensitivity < 30 ? '🎯 Only major scene changes' : 
-                     sceneSensitivity < 70 ? '⚖️ Balanced capture' : 
+                    {sceneSensitivity < 30 ? '🎯 Only major scene changes' :
+                     sceneSensitivity < 70 ? '⚖️ Balanced capture' :
                      '📸 Capture more details'}
                   </p>
+                </div>
+
+                {/* AI Director Toggle */}
+                <div className="bg-gradient-to-r from-indigo-900/80 to-purple-900/80 rounded-xl p-4 mb-4 border border-indigo-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
+                        <i className="fas fa-film text-white"></i>
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold text-sm">AI Director</h4>
+                        <p className="text-indigo-300 text-xs">Get filming tips in real-time</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setDirectorMode(!directorMode)}
+                      className={`w-14 h-8 rounded-full transition-colors relative ${
+                        directorMode ? 'bg-indigo-500' : 'bg-slate-600'
+                      }`}
+                    >
+                      <div className={`w-6 h-6 bg-white rounded-full absolute top-1 transition-transform ${
+                        directorMode ? 'translate-x-7' : 'translate-x-1'
+                      }`}></div>
+                    </button>
+                  </div>
+                  {directorMode && (
+                    <p className="text-indigo-200 text-xs mt-3 bg-indigo-950/50 p-2 rounded-lg">
+                      <i className="fas fa-magic mr-2"></i>
+                      AI will give you tips while filming and alert you to problems
+                    </p>
+                  )}
                 </div>
                 {cameraError && (
                   <div className="bg-red-600/20 border border-red-500 rounded-lg p-3 max-w-xs mx-auto">
@@ -978,6 +1108,87 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
                   <p className="text-white/70 text-xs">Recording without speech</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* AI Director Feedback Panel */}
+          {isRecording && directorMode && (
+            <div className="absolute bottom-3 left-3 right-3 md:bottom-4 md:left-4 md:right-auto md:max-w-sm z-10">
+              {/* Feedback Display */}
+              {directorTip && (
+                <div className={`mb-3 rounded-xl p-3 backdrop-blur-md border-2 animate-in slide-in-from-bottom duration-300 ${
+                  directorSeverity === 'high'
+                    ? 'bg-red-900/90 border-red-500'
+                    : directorSeverity === 'medium'
+                    ? 'bg-amber-900/90 border-amber-500'
+                    : 'bg-emerald-900/90 border-emerald-500'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      directorSeverity === 'high'
+                        ? 'bg-red-500'
+                        : directorSeverity === 'medium'
+                        ? 'bg-amber-500'
+                        : 'bg-emerald-500'
+                    }`}>
+                      <i className={`fas ${
+                        directorSeverity === 'high'
+                          ? 'fa-exclamation-triangle'
+                          : directorSeverity === 'medium'
+                          ? 'fa-lightbulb'
+                          : 'fa-check'
+                      } text-white text-sm`}></i>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {directorIssue && (
+                        <p className={`text-xs font-bold uppercase tracking-wide mb-1 ${
+                          directorSeverity === 'high'
+                            ? 'text-red-300'
+                            : directorSeverity === 'medium'
+                            ? 'text-amber-300'
+                            : 'text-emerald-300'
+                        }`}>
+                          {directorIssue}
+                        </p>
+                      )}
+                      <p className="text-white text-sm font-medium">{directorTip}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setDirectorTip(null);
+                        setDirectorIssue(null);
+                        setDirectorSeverity(null);
+                      }}
+                      className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/30 flex-shrink-0"
+                    >
+                      <i className="fas fa-times text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Get Feedback Button */}
+              <button
+                onClick={() => requestDirectorFeedback('on_demand')}
+                disabled={directorLoading}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all ${
+                  directorLoading
+                    ? 'bg-indigo-800/80 text-indigo-300 cursor-wait'
+                    : 'bg-indigo-600/90 text-white hover:bg-indigo-500 active:scale-98'
+                } backdrop-blur-md border border-indigo-400/30`}
+              >
+                {directorLoading ? (
+                  <>
+                    <i className="fas fa-circle-notch fa-spin"></i>
+                    <span>Analyserar...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-film"></i>
+                    <span>Få AI-feedback</span>
+                  </>
+                )}
+              </button>
             </div>
           )}
 

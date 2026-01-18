@@ -20,7 +20,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
   const [filterType, setFilterType] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   // Edit mode states
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedSop, setEditedSop] = useState<SOP | null>(null);
@@ -29,6 +29,29 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
   const [newMaterial, setNewMaterial] = useState('');
   const refDocInputRef = useRef<HTMLInputElement>(null);
   const [referenceDoc, setReferenceDoc] = useState<string | null>(null);
+
+  // Video player ref for Live SOPs
+  const videoPlayerRef = useRef<HTMLVideoElement>(null);
+
+  // Seek video to specific timestamp
+  const seekToTimestamp = (timestamp: string) => {
+    if (!videoPlayerRef.current) return;
+
+    // Parse timestamp (MM:SS or HH:MM:SS)
+    const parts = timestamp.split(':').map(Number);
+    let seconds = 0;
+    if (parts.length === 2) {
+      seconds = parts[0] * 60 + parts[1];
+    } else if (parts.length === 3) {
+      seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+
+    videoPlayerRef.current.currentTime = seconds;
+    videoPlayerRef.current.play();
+
+    // Scroll video into view
+    videoPlayerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   // Handle delete SOP
   const handleDelete = async (sop: SOP) => {
@@ -629,6 +652,32 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
             </div>
           </div>
 
+          {/* Video Player for Live SOPs */}
+          {selectedSop.videoUrl && selectedSop.sourceType === 'live' && (
+            <div className="p-6 bg-slate-900 border-b border-slate-800">
+              <div className="max-w-4xl mx-auto">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-play text-white text-sm"></i>
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold">Original Recording</h3>
+                    <p className="text-slate-400 text-xs">Click on step timestamps to jump to that moment</p>
+                  </div>
+                </div>
+                <video
+                  ref={videoPlayerRef}
+                  src={selectedSop.videoUrl}
+                  controls
+                  className="w-full rounded-xl shadow-2xl"
+                  style={{ maxHeight: '400px' }}
+                >
+                  Your browser does not support video playback.
+                </video>
+              </div>
+            </div>
+          )}
+
           <div className="p-10 grid grid-cols-1 lg:grid-cols-4 gap-12">
             {/* Left Content Area */}
             <div className="lg:col-span-3 space-y-16">
@@ -748,7 +797,26 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                             <div className="space-y-6">
                               <div className="space-y-2">
-                                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Phase {idx + 1} • {step.timestamp}</span>
+                                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">
+                                  Phase {idx + 1}
+                                  {step.timestamp && (
+                                    <>
+                                      {' • '}
+                                      {selectedSop.videoUrl ? (
+                                        <button
+                                          onClick={() => seekToTimestamp(step.timestamp)}
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-100 hover:bg-indigo-600 hover:text-white rounded-md transition-colors"
+                                          title="Jump to this moment in video"
+                                        >
+                                          <i className="fas fa-play text-[8px]"></i>
+                                          {step.timestamp}
+                                        </button>
+                                      ) : (
+                                        step.timestamp
+                                      )}
+                                    </>
+                                  )}
+                                </span>
                                 <h3 className="text-3xl font-black text-slate-900 leading-tight">{step.title}</h3>
                               </div>
                               <p className="text-lg text-slate-600 leading-relaxed">

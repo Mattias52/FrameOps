@@ -82,6 +82,7 @@ const dbToSOP = (dbSop: DbSOP, steps: DbStep[]): SOP => ({
   ppeRequirements: dbSop.ppe_requirements || [],
   materialsRequired: dbSop.materials_required || [],
   thumbnail_url: dbSop.thumbnail_url || undefined,
+  videoUrl: dbSop.video_url || undefined,
   steps: steps
     .sort((a, b) => (a.step_order ?? a.step_number) - (b.step_order ?? b.step_number))
     .map(s => ({
@@ -129,6 +130,60 @@ export const uploadThumbnail = async (
   } catch (err) {
     console.error('Error uploading thumbnail:', err);
     return null;
+  }
+};
+
+// Upload video to Supabase Storage
+export const uploadVideo = async (
+  sopId: string,
+  videoBlob: Blob
+): Promise<string | null> => {
+  if (!supabase) return null;
+
+  try {
+    const fileName = `${sopId}/recording.webm`;
+
+    console.log(`Uploading video: ${(videoBlob.size / 1024 / 1024).toFixed(2)} MB`);
+
+    const { error } = await supabase.storage
+      .from('video-uploads')
+      .upload(fileName, videoBlob, {
+        contentType: 'video/webm',
+        upsert: true,
+      });
+
+    if (error) {
+      console.error('Error uploading video:', error);
+      return null;
+    }
+
+    // Get public URL
+    const { data } = supabase.storage.from('video-uploads').getPublicUrl(fileName);
+    console.log('Video uploaded successfully:', data.publicUrl);
+    return data.publicUrl;
+  } catch (err) {
+    console.error('Error uploading video:', err);
+    return null;
+  }
+};
+
+// Delete video from Supabase Storage
+export const deleteVideo = async (sopId: string): Promise<boolean> => {
+  if (!supabase) return false;
+
+  try {
+    const { error } = await supabase.storage
+      .from('video-uploads')
+      .remove([`${sopId}/recording.webm`]);
+
+    if (error) {
+      console.error('Error deleting video:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Error deleting video:', err);
+    return false;
   }
 };
 
@@ -217,8 +272,8 @@ const pickBestThumbnail = (steps: SOP['steps']): string | null => {
   return bestStep.thumbnail || bestStep.image_url || steps[0].thumbnail || steps[0].image_url || null;
 };
 
-// Save a new SOP
-export const saveSOP = async (sop: SOP): Promise<{ success: boolean; id?: string }> => {
+// Save a new SOP (with optional video blob for live recordings)
+export const saveSOP = async (sop: SOP, videoBlob?: Blob): Promise<{ success: boolean; id?: string; videoUrl?: string }> => {
   if (!isSupabaseConfigured() || !supabase) return { success: false };
 
   try {
@@ -244,6 +299,21 @@ export const saveSOP = async (sop: SOP): Promise<{ success: boolean; id?: string
     }
 
     const sopId = insertedSop.id;
+
+    // Upload video if provided (for live recordings)
+    let videoUrl: string | null = null;
+    if (videoBlob && videoBlob.size > 0) {
+      console.log('Uploading video for live SOP...');
+      videoUrl = await uploadVideo(sopId, videoBlob);
+
+      if (videoUrl) {
+        // Update SOP with video URL
+        await supabase
+          .from('sops')
+          .update({ video_url: videoUrl })
+          .eq('id', sopId);
+      }
+    }
 
     // Upload thumbnails and insert steps
     const stepsToInsert = await Promise.all(
@@ -283,7 +353,7 @@ export const saveSOP = async (sop: SOP): Promise<{ success: boolean; id?: string
       return { success: false };
     }
 
-    return { success: true, id: sopId };
+    return { success: true, id: sopId, videoUrl: videoUrl || undefined };
   } catch (err) {
     console.error('Error saving SOP:', err);
     return { success: false };
@@ -376,6 +446,9 @@ export const deleteSOP = async (sopId: string): Promise<boolean> => {
       const filePaths = files.map(f => `${sopId}/${f.name}`);
       await supabase.storage.from('thumbnails').remove(filePaths);
     }
+
+    // Delete video from storage (for live recordings)
+    await deleteVideo(sopId);
 
     // Delete SOP
     const { error } = await supabase.from('sops').delete().eq('id', sopId);

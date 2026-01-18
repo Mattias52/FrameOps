@@ -44,6 +44,8 @@ export interface SOP {
   materialsRequired?: string[];
   thumbnail_url?: string;
   allFrames?: FrameOption[];
+  videoUrl?: string; // For live recordings - embedded video playback
+  videoBlob?: Blob; // Temporary - only used for uploading, not stored
 }
 
 export interface AnalysisProgress {

@@ -61,19 +61,27 @@ const App: React.FC = () => {
   }, []);
 
   const handleAddSOP = async (newSop: SOP) => {
+    // Extract video blob before adding to state (blob is only for upload)
+    const videoBlob = newSop.videoBlob;
+    const sopWithoutBlob = { ...newSop, videoBlob: undefined };
+
     // Optimistically update UI
-    const updated = [newSop, ...sops];
+    const updated = [sopWithoutBlob, ...sops];
     setSops(updated);
 
     if (isSupabaseConfigured()) {
-      // Save to Supabase
+      // Save to Supabase (with video blob for live recordings)
       setSyncStatus('saving');
-      const result = await saveSOP(newSop);
+      const result = await saveSOP(sopWithoutBlob, videoBlob);
       if (result.success) {
-        // Update the SOP with the database-generated ID
-        if (result.id) {
+        // Update the SOP with the database-generated ID and video URL
+        if (result.id || result.videoUrl) {
           setSops(prev => prev.map(s =>
-            s.id === newSop.id ? { ...s, id: result.id! } : s
+            s.id === newSop.id ? {
+              ...s,
+              id: result.id || s.id,
+              videoUrl: result.videoUrl || s.videoUrl
+            } : s
           ));
         }
         setSyncStatus('saved');
@@ -83,10 +91,12 @@ const App: React.FC = () => {
         console.error('Failed to save to Supabase');
       }
     } else {
-      // Fallback: Save to localStorage without thumbnails
+      // Fallback: Save to localStorage without thumbnails or video
       try {
         const toSave = updated.map(sop => ({
           ...sop,
+          videoBlob: undefined,
+          videoUrl: undefined, // Can't store video in localStorage
           steps: sop.steps.map(step => ({ ...step, thumbnail: undefined }))
         }));
         (window as any).localStorage.setItem('sop_stream_data', JSON.stringify(toSave));
