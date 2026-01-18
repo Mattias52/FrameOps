@@ -324,6 +324,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                     <p className="text-slate-400">Scene detection captures the right moments. AI writes clear instructions. You get a complete SOP.</p>
                   </div>
                 </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-rose-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-film text-white text-xl"></i>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold mb-1">AI Director</h3>
+                    <p className="text-slate-400">Get real-time tips while recording. AI checks lighting, framing, and guides you to better footage.</p>
+                  </div>
+                </div>
                 <button
                   onClick={onGetStarted}
                   className="w-full sm:w-auto px-8 py-4 bg-amber-500 text-slate-900 rounded-2xl font-bold text-lg hover:bg-amber-400 transition-all mt-4"

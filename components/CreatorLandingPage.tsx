@@ -115,7 +115,7 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
           <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10">
             Your followers watch your videos once and forget. Give them something they can
             <strong className="text-white"> print, follow, and actually use</strong>.
-            And monetize your content beyond ads.
+            Paste a YouTube link or <strong className="text-white">record live</strong> while you work.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
@@ -124,14 +124,15 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
               className="w-full sm:w-auto px-8 py-4 bg-amber-500 text-slate-900 rounded-2xl font-bold text-lg hover:bg-amber-400 transition-all shadow-xl shadow-amber-500/20"
             >
               <i className="fab fa-youtube mr-2"></i>
-              Try With Your YouTube Video
+              Use YouTube Video
             </button>
-            <a
-              href="#how-it-works"
-              className="w-full sm:w-auto px-8 py-4 bg-slate-800 text-white rounded-2xl font-bold text-lg border border-slate-700 hover:border-slate-600 transition-colors"
+            <button
+              onClick={() => onNavigate(AppView.LIVE_GENERATOR)}
+              className="w-full sm:w-auto px-8 py-4 bg-emerald-500 text-white rounded-2xl font-bold text-lg hover:bg-emerald-400 transition-all shadow-xl shadow-emerald-500/20"
             >
-              See How It Works
-            </a>
+              <i className="fas fa-video mr-2"></i>
+              Record Live
+            </button>
           </div>
 
           {/* Quick Demo */}
@@ -248,6 +249,125 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Live SOP Recording */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Phone Mockup */}
+            <div className="relative flex justify-center">
+              <div className="relative w-72 h-[500px] bg-slate-800 rounded-[3rem] border-4 border-slate-700 shadow-2xl overflow-hidden">
+                {/* Phone Screen */}
+                <div className="absolute inset-3 bg-slate-900 rounded-[2.5rem] overflow-hidden">
+                  {/* Status Bar */}
+                  <div className="flex items-center justify-between px-6 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 bg-red-500 rounded-full text-white text-xs font-bold flex items-center gap-1">
+                        <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                        REC 02:34
+                      </span>
+                    </div>
+                    <div className="px-3 py-1 bg-emerald-500 rounded-full text-white text-xs font-medium flex items-center gap-1">
+                      <i className="fas fa-microphone text-[10px]"></i>
+                      Listening...
+                    </div>
+                  </div>
+
+                  {/* Camera View Placeholder */}
+                  <div className="flex-1 flex items-center justify-center h-64">
+                    <i className="fas fa-hand-paper text-slate-700 text-6xl"></i>
+                  </div>
+
+                  {/* Step Detection Popup */}
+                  <div className="absolute bottom-32 left-1/2 -translate-x-1/2 px-4 py-3 bg-white rounded-xl shadow-xl">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-bold">3</span>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">Step detected</p>
+                        <p className="text-xs text-slate-500">"Apply the first coat..."</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Stats */}
+                  <div className="absolute bottom-6 left-0 right-0 px-6">
+                    <div className="flex items-center justify-between text-slate-400 text-sm">
+                      <span>Steps captured</span>
+                      <span className="font-bold text-white">7</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-medium mb-6">
+                <i className="fas fa-bolt"></i>
+                <span>Perfect for tutorials</span>
+              </div>
+
+              <h2 className="text-4xl font-bold mb-6">
+                Or Record Live While You Create
+              </h2>
+
+              <p className="text-slate-400 text-lg mb-8">
+                Don't have a polished YouTube video? No problem. Just open FrameOps on your phone,
+                hit record, and do your thing. AI creates the SOP as you work.
+              </p>
+
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-video text-white"></i>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">Just Film Yourself</h3>
+                    <p className="text-slate-400">Open your phone, hit record, and do the task as you normally would.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-microphone text-white"></i>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">Talk While You Work</h3>
+                    <p className="text-slate-400">"Now I'm applying the second coat..." - AI transcribes and turns it into instructions.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-wand-magic-sparkles text-white"></i>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">Get a Complete SOP</h3>
+                    <p className="text-slate-400">Scene detection captures the right moments. You get a ready-to-sell guide.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-rose-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-film text-white"></i>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">AI Director</h3>
+                    <p className="text-slate-400">Get real-time tips on lighting and framing while you record. Better footage, better guides.</p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => onNavigate(AppView.LIVE_GENERATOR)}
+                className="mt-8 px-8 py-4 bg-emerald-500 text-white rounded-2xl font-bold text-lg hover:bg-emerald-400 transition-all shadow-xl shadow-emerald-500/20"
+              >
+                <i className="fas fa-video mr-2"></i>
+                Try Live Recording
+              </button>
+            </div>
           </div>
         </div>
       </section>
