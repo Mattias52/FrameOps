@@ -8,9 +8,10 @@ import { extractYoutubeId, fetchYoutubeMetadata, extractFramesFromUploadedVideo,
 interface SOPGeneratorProps {
   onComplete: (sop: SOP) => void;
   onLiveMode?: () => void;
+  onNavigateToLibrary?: () => void;
 }
 
-const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) => {
+const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onNavigateToLibrary }) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [sourceType, setSourceType] = useState<'live' | 'upload' | 'youtube' | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -53,6 +54,16 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
     console.log('[FrameOps]', msg);
     setLog(prev => [msg, ...prev].slice(0, 5));
   };
+
+  // Auto-navigate to library after SOP completion
+  useEffect(() => {
+    if (step === 3 && onNavigateToLibrary) {
+      const timer = setTimeout(() => {
+        onNavigateToLibrary();
+      }, 2500); // 2.5 second delay to show success message
+      return () => clearTimeout(timer);
+    }
+  }, [step, onNavigateToLibrary]);
 
   useEffect(() => {
     const id = extractYoutubeId(youtubeUrl);
@@ -638,10 +649,18 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode }) =
             <i className="fas fa-check-double text-3xl"></i>
           </div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2 uppercase">Analysis Successful</h2>
-          <p className="text-slate-500 font-medium mb-10 max-w-sm mx-auto">Procedural mapping complete. Documentation stored in library.</p>
+          <p className="text-slate-500 font-medium mb-6 max-w-sm mx-auto">Procedural mapping complete. Documentation stored in library.</p>
+          <p className="text-indigo-600 font-bold text-sm mb-8">
+            <i className="fas fa-arrow-right mr-2 animate-pulse"></i>
+            Taking you to your SOP...
+          </p>
           <div className="flex justify-center gap-4">
-            <button onClick={() => setStep(1)} className="px-8 py-4 bg-slate-100 text-slate-700 font-black uppercase tracking-widest text-[10px] rounded-xl">New Procedure</button>
-            <button onClick={() => (window as any).location.hash = '#library'} className="px-8 py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-xl shadow-indigo-600/30">Go to Library</button>
+            <button onClick={() => setStep(1)} className="px-8 py-4 bg-slate-100 text-slate-700 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-200 transition-colors">
+              <i className="fas fa-plus mr-2"></i>New Procedure
+            </button>
+            <button onClick={onNavigateToLibrary} className="px-8 py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-colors">
+              <i className="fas fa-book-open mr-2"></i>View Now
+            </button>
           </div>
         </div>
       )}

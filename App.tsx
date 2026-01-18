@@ -126,6 +126,7 @@ const App: React.FC = () => {
             <SOPGenerator
               onComplete={handleAddSOP}
               onLiveMode={() => setCurrentView(AppView.LIVE_GENERATOR)}
+              onNavigateToLibrary={() => setCurrentView(AppView.LIBRARY)}
             />
           </ErrorBoundary>
         );
