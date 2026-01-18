@@ -1,19 +1,52 @@
 import React, { useState } from 'react';
 
+// Promo codes - in production, validate these server-side
+const VALID_PROMO_CODES: Record<string, { type: 'pro' | 'team'; days: number; name: string }> = {
+  'INFLUENCER2024': { type: 'pro', days: 30, name: 'Influencer Program' },
+  'CREATOR30': { type: 'pro', days: 30, name: 'Creator Program' },
+  'BETAUSER': { type: 'pro', days: 90, name: 'Beta Tester' },
+  'TEAMTRIAL': { type: 'team', days: 14, name: 'Team Trial' },
+};
+
 const SubscriptionPlans: React.FC = () => {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoStatus, setPromoStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [promoMessage, setPromoMessage] = useState('');
+
+  const handlePromoSubmit = () => {
+    const code = promoCode.trim().toUpperCase();
+    const promo = VALID_PROMO_CODES[code];
+
+    if (promo) {
+      // Store promo in localStorage (in production, this would be server-side)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + promo.days);
+      localStorage.setItem('frameops_promo', JSON.stringify({
+        code,
+        type: promo.type,
+        expiresAt: expiresAt.toISOString(),
+        name: promo.name
+      }));
+      setPromoStatus('success');
+      setPromoMessage(`${promo.name} activated! You have ${promo.type === 'pro' ? 'Pro' : 'Team'} access for ${promo.days} days.`);
+    } else {
+      setPromoStatus('error');
+      setPromoMessage('Invalid promo code. Please check and try again.');
+    }
+  };
 
   const plans = [
     {
-      name: 'Free',
+      name: 'Free Preview',
       monthlyPrice: '0',
       yearlyPrice: '0',
-      description: 'Perfect for trying out FrameOps',
+      description: 'Preview any video before you buy',
       features: [
-        '3 SOPs per month',
-        'Standard quality frames',
-        'PDF export with watermark',
-        'Community support',
+        'Unlimited video previews',
+        'See first 3 steps of any SOP',
+        'Test with your own videos',
+        'No credit card required',
         'Basic AI analysis'
       ],
       limitations: [],
@@ -211,8 +244,8 @@ const SubscriptionPlans: React.FC = () => {
             </thead>
             <tbody className="text-sm">
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">SOPs per month</td>
-                <td className="p-4 text-center text-slate-600">3</td>
+                <td className="p-4 text-slate-700">Full SOPs</td>
+                <td className="p-4 text-center text-slate-600">Preview only</td>
                 <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">Unlimited</td>
                 <td className="p-4 text-center text-slate-600">Unlimited</td>
                 <td className="p-4 text-center text-slate-600">Unlimited</td>
@@ -261,6 +294,61 @@ const SubscriptionPlans: React.FC = () => {
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Promo Code Section */}
+      <div className="max-w-md mx-auto mb-20">
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-8 border border-indigo-100">
+          <div className="text-center mb-6">
+            <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <i className="fas fa-gift text-indigo-600 text-xl"></i>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">Have a promo code?</h3>
+            <p className="text-sm text-slate-500 mt-1">Enter your code to unlock special access</p>
+          </div>
+
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={promoCode}
+              onChange={(e) => {
+                setPromoCode(e.target.value);
+                setPromoStatus('idle');
+              }}
+              placeholder="Enter promo code..."
+              className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm font-medium uppercase"
+            />
+            <button
+              onClick={handlePromoSubmit}
+              disabled={!promoCode.trim()}
+              className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Apply
+            </button>
+          </div>
+
+          {promoStatus === 'success' && (
+            <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <div className="flex items-center gap-2 text-emerald-700">
+                <i className="fas fa-check-circle"></i>
+                <span className="font-semibold text-sm">{promoMessage}</span>
+              </div>
+            </div>
+          )}
+
+          {promoStatus === 'error' && (
+            <div className="mt-4 p-4 bg-rose-50 border border-rose-200 rounded-xl">
+              <div className="flex items-center gap-2 text-rose-700">
+                <i className="fas fa-times-circle"></i>
+                <span className="font-semibold text-sm">{promoMessage}</span>
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-slate-400 text-center mt-4">
+            Influencer? Creator? <a href="mailto:partners@frameops.ai" className="text-indigo-600 hover:underline">Contact us</a> for a free trial code.
+          </p>
         </div>
       </div>
 
