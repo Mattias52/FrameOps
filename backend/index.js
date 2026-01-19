@@ -1424,9 +1424,8 @@ app.post('/analyze-youtube-native', async (req, res) => {
     console.log(`[${jobId}] Downloading YouTube video...`);
     const videoPath = path.join(jobDir, 'video.mp4');
 
-    // Use Android client to bypass bot detection, add retries
     execSync(
-      `yt-dlp --extractor-args "youtube:player_client=android" -f "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" --merge-output-format mp4 --retries 3 -o "${videoPath}" "${youtubeUrl}"`,
+      `yt-dlp -f "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" --merge-output-format mp4 -o "${videoPath}" "${youtubeUrl}"`,
       { timeout: 300000 } // 5 min timeout for download
     );
 
