@@ -1439,30 +1439,59 @@ app.post('/analyze-youtube-native', async (req, res) => {
     // Step 2: Extract frames with FFmpeg scene detection (same as regular flow)
     console.log(`[${jobId}] Extracting frames with FFmpeg...`);
 
-    // Get video duration using ffmpeg (parse from stderr output)
+    // Get video duration using ffprobe (more reliable)
     let duration = 60;
     try {
-      const ffmpegInfo = execSync(`${FFMPEG_BIN} -i "${videoPath}" 2>&1 || true`, { encoding: 'utf8' });
-      const durationMatch = ffmpegInfo.match(/Duration:\s*(\d+):(\d+):(\d+\.?\d*)/);
-      if (durationMatch) {
-        duration = parseFloat(durationMatch[1]) * 3600 + parseFloat(durationMatch[2]) * 60 + parseFloat(durationMatch[3]);
-      }
+      const durationOutput = execSync(
+        `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`,
+        { encoding: 'utf8' }
+      ).trim();
+      duration = parseFloat(durationOutput);
     } catch (e) {
       console.log(`[${jobId}] Could not parse duration, using default 60s`);
     }
     console.log(`[${jobId}] Video duration: ${duration}s`);
 
-    // Scene detection
-    const sceneOutput = execSync(
-      `${FFMPEG_BIN} -i "${videoPath}" -vf "select='gt(scene,${sceneThreshold})',showinfo" -f null - 2>&1`,
-      { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
-    );
-
+    // Scene detection with format=yuv420p (same as upload endpoint)
     let timestamps = [];
-    const regex = /pts_time:([\d.]+)/g;
-    let match;
-    while ((match = regex.exec(sceneOutput)) !== null) {
-      timestamps.push(parseFloat(match[1]));
+    console.log(`[${jobId}] Running scene detection with threshold ${sceneThreshold}...`);
+
+    try {
+      const sceneOutput = execSync(
+        `${FFMPEG_BIN} -hide_banner -loglevel info -nostats -i "${videoPath}" -vf "format=yuv420p,select='gt(scene,${sceneThreshold})',showinfo" -f null - 2>&1`,
+        { encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 }
+      );
+
+      const ptsMatches = sceneOutput.match(/pts_time:[\d.]+/g) || [];
+      timestamps = ptsMatches
+        .map(match => parseFloat(match.split(':')[1]))
+        .filter(ts => !isNaN(ts) && ts >= 0 && ts <= duration);
+
+      console.log(`[${jobId}] Found ${timestamps.length} scene timestamps from FFmpeg`);
+    } catch (e) {
+      console.log(`[${jobId}] Scene detection failed: ${e.message}`);
+    }
+
+    // If too few scenes, try lower threshold (same as upload endpoint)
+    if (timestamps.length < minFrames) {
+      const lowerThreshold = sceneThreshold * 0.5;
+      console.log(`[${jobId}] Too few scenes (${timestamps.length}), retrying with threshold ${lowerThreshold}`);
+
+      try {
+        const sceneOutput = execSync(
+          `${FFMPEG_BIN} -hide_banner -loglevel info -nostats -i "${videoPath}" -vf "format=yuv420p,select='gt(scene,${lowerThreshold})',showinfo" -f null - 2>&1`,
+          { encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 }
+        );
+
+        const ptsMatches = sceneOutput.match(/pts_time:[\d.]+/g) || [];
+        timestamps = ptsMatches
+          .map(match => parseFloat(match.split(':')[1]))
+          .filter(ts => !isNaN(ts) && ts >= 0 && ts <= duration);
+
+        console.log(`[${jobId}] After retry: ${timestamps.length} timestamps`);
+      } catch (e) {
+        console.log(`[${jobId}] Retry failed: ${e.message}`);
+      }
     }
 
     // Add start if not present
@@ -1470,13 +1499,17 @@ app.post('/analyze-youtube-native', async (req, res) => {
       timestamps.unshift(0);
     }
 
-    // If not enough scenes, use interval
+    // Fallback: evenly distributed timestamps
     if (timestamps.length < minFrames) {
+      console.log(`[${jobId}] Falling back to interval extraction`);
+      timestamps = [];
       const interval = duration / minFrames;
-      timestamps = Array.from({ length: minFrames }, (_, i) => i * interval);
+      for (let i = 0; i < minFrames; i++) {
+        timestamps.push(i * interval);
+      }
     }
 
-    // Limit frames
+    // Limit frames (select evenly distributed)
     if (timestamps.length > maxFrames) {
       const step = timestamps.length / maxFrames;
       timestamps = timestamps.filter((_, i) => Math.floor(i % step) === 0).slice(0, maxFrames);
