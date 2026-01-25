@@ -15,6 +15,17 @@ interface APIKeysPageProps {
 }
 
 const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
+  // Email signup state
+  const [hasAccess, setHasAccess] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupName, setSignupName] = useState('');
+  const [signupCompany, setSignupCompany] = useState('');
+  const [signupUseCase, setSignupUseCase] = useState('');
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [signupError, setSignupError] = useState<string | null>(null);
+  const [signupSuccess, setSignupSuccess] = useState(false);
+
+  // API keys state
   const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showNewKeyModal, setShowNewKeyModal] = useState(false);
@@ -22,6 +33,14 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Check if user already has API access
+  useEffect(() => {
+    const savedAccess = localStorage.getItem('frameops_api_access');
+    if (savedAccess) {
+      setHasAccess(true);
+    }
+  }, []);
 
   // Load API keys
   useEffect(() => {
@@ -125,6 +144,222 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
     if (key.length <= 12) return key;
     return key.substring(0, 8) + '...' + key.substring(key.length - 4);
   };
+
+  // Handle email signup
+  const handleSignup = async () => {
+    if (!signupEmail.trim()) {
+      setSignupError('Ange din email');
+      return;
+    }
+
+    // Simple email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(signupEmail)) {
+      setSignupError('Ange en giltig email');
+      return;
+    }
+
+    setIsSigningUp(true);
+    setSignupError(null);
+
+    try {
+      // Save to Supabase if configured
+      if (isSupabaseConfigured() && supabase) {
+        await supabase.from('api_waitlist').insert({
+          email: signupEmail.trim(),
+          name: signupName.trim() || null,
+          company: signupCompany.trim() || null,
+          use_case: signupUseCase.trim() || null,
+        });
+      }
+
+      // Save access to localStorage
+      localStorage.setItem('frameops_api_access', JSON.stringify({
+        email: signupEmail.trim(),
+        name: signupName.trim(),
+        signedUpAt: new Date().toISOString()
+      }));
+
+      setSignupSuccess(true);
+      setTimeout(() => {
+        setHasAccess(true);
+      }, 2000);
+    } catch (err) {
+      console.error('Signup error:', err);
+      // Still grant access even if Supabase fails
+      localStorage.setItem('frameops_api_access', JSON.stringify({
+        email: signupEmail.trim(),
+        name: signupName.trim(),
+        signedUpAt: new Date().toISOString()
+      }));
+      setSignupSuccess(true);
+      setTimeout(() => {
+        setHasAccess(true);
+      }, 2000);
+    }
+
+    setIsSigningUp(false);
+  };
+
+  // Show signup form if no access
+  if (!hasAccess) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <div className="text-center mb-12">
+          <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-200">
+            <i className="fas fa-code text-3xl text-white"></i>
+          </div>
+          <h1 className="text-3xl font-black text-slate-900 mb-3">FrameOps API</h1>
+          <p className="text-lg text-slate-600 max-w-md mx-auto">
+            Integrera SOP-generering direkt i dina system. Få tillgång till vårt API.
+          </p>
+        </div>
+
+        {signupSuccess ? (
+          <div className="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-8 text-center animate-in zoom-in-95">
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i className="fas fa-check text-3xl text-emerald-600"></i>
+            </div>
+            <h2 className="text-2xl font-bold text-emerald-900 mb-2">Välkommen!</h2>
+            <p className="text-emerald-700">Du har nu tillgång till FrameOps API.</p>
+            <p className="text-emerald-600 text-sm mt-2">
+              <i className="fas fa-spinner fa-spin mr-2"></i>
+              Laddar API-sidan...
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
+            <h2 className="text-xl font-bold text-slate-900 mb-6 text-center">
+              <i className="fas fa-envelope text-indigo-500 mr-2"></i>
+              Registrera dig för API-åtkomst
+            </h2>
+
+            {signupError && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                <i className="fas fa-exclamation-circle mr-2"></i>
+                {signupError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                  placeholder="din@email.com"
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Namn <span className="text-slate-400 font-normal">(valfritt)</span>
+                </label>
+                <input
+                  type="text"
+                  value={signupName}
+                  onChange={(e) => setSignupName(e.target.value)}
+                  placeholder="Ditt namn"
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Företag <span className="text-slate-400 font-normal">(valfritt)</span>
+                </label>
+                <input
+                  type="text"
+                  value={signupCompany}
+                  onChange={(e) => setSignupCompany(e.target.value)}
+                  placeholder="Ditt företag"
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Hur vill du använda API:et? <span className="text-slate-400 font-normal">(valfritt)</span>
+                </label>
+                <textarea
+                  value={signupUseCase}
+                  onChange={(e) => setSignupUseCase(e.target.value)}
+                  placeholder="Beskriv kort hur du planerar att använda FrameOps API..."
+                  rows={3}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
+                />
+              </div>
+
+              <button
+                onClick={handleSignup}
+                disabled={isSigningUp}
+                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+              >
+                {isSigningUp ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin mr-2"></i>
+                    Registrerar...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-rocket mr-2"></i>
+                    Få API-åtkomst
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-slate-100">
+              <h3 className="text-sm font-bold text-slate-700 mb-4 text-center">Vad ingår?</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-check text-emerald-600 text-sm"></i>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900 text-sm">100 requests/mån</p>
+                    <p className="text-xs text-slate-500">Gratis att börja</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-check text-emerald-600 text-sm"></i>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900 text-sm">REST API</p>
+                    <p className="text-xs text-slate-500">Enkel integration</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-check text-emerald-600 text-sm"></i>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900 text-sm">YouTube & Upload</p>
+                    <p className="text-xs text-slate-500">Båda metoderna</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-check text-emerald-600 text-sm"></i>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900 text-sm">JSON Response</p>
+                    <p className="text-xs text-slate-500">Strukturerad data</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">

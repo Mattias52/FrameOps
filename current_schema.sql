@@ -30,6 +30,15 @@
 --   safety_warnings TEXT[]
 --   tools_required TEXT[]
 
+-- Table: api_waitlist
+-- Columns:
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+--   email TEXT NOT NULL UNIQUE
+--   name TEXT
+--   company TEXT
+--   use_case TEXT
+--   created_at TIMESTAMPTZ DEFAULT NOW()
+
 -- Storage:
 -- Bucket: thumbnails (PUBLIC)
 -- Structure: {sop_id}/{step_id}.jpg

@@ -10,6 +10,7 @@ interface StepEditorProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onImageReplace: (newImageUrl: string) => void;
+  onAddAfter: () => void;
   allFrames?: FrameOption[];
 }
 
@@ -22,6 +23,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
   onMoveUp,
   onMoveDown,
   onImageReplace,
+  onAddAfter,
   allFrames = [],
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -156,11 +158,19 @@ const StepEditor: React.FC<StepEditorProps> = ({
           )}
         </div>
 
-        {/* Expand/Collapse & Delete */}
-        <div className="flex items-center gap-2">
+        {/* Add, Delete & Expand/Collapse */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onAddAfter(); }}
+            className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+            title="Add step after"
+          >
+            <i className="fas fa-plus text-sm"></i>
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); if (confirm('Delete this step?')) onDelete(); }}
             className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+            title="Delete step"
           >
             <i className="fas fa-trash text-sm"></i>
           </button>

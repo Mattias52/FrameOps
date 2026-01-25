@@ -9,14 +9,14 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate }) => {
   // Calculate real stats from actual data
   const totalSteps = sops.reduce((sum, sop) => sum + sop.steps.length, 0);
-  const completedSOPs = sops.filter(s => s.status === 'completed').length;
-  const processingSOPs = sops.filter(s => s.status === 'processing').length;
+  const youtubeSOPs = sops.filter(s => s.source === 'youtube' || s.sourceType === 'youtube').length;
+  const uploadSOPs = sops.filter(s => s.source === 'upload' || s.sourceType === 'upload').length;
 
   const stats = [
     { label: 'Total SOPs', value: sops.length, icon: 'fa-file-lines', color: 'bg-indigo-500', trend: null },
     { label: 'Total Steps', value: totalSteps, icon: 'fa-list-check', color: 'bg-emerald-500', trend: null },
-    { label: 'Completed', value: completedSOPs, icon: 'fa-circle-check', color: 'bg-blue-500', trend: null },
-    { label: 'Processing', value: processingSOPs, icon: 'fa-spinner', color: 'bg-amber-500', trend: null },
+    { label: 'YouTube', value: youtubeSOPs, icon: 'fa-youtube', color: 'bg-rose-500', trend: null },
+    { label: 'Uploads', value: uploadSOPs, icon: 'fa-cloud-upload-alt', color: 'bg-blue-500', trend: null },
   ];
 
   const quickActions = [
@@ -57,7 +57,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate }) => {
           <div key={i} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
               <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center text-white text-lg shadow-lg`}>
-                <i className={`fas ${stat.icon}`}></i>
+                <i className={`${stat.icon === 'fa-youtube' ? 'fab' : 'fas'} ${stat.icon}`}></i>
               </div>
               <div>
                 <p className="text-2xl font-bold text-slate-900">{stat.value}</p>

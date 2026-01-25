@@ -34,6 +34,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
   const currentPreset = detailPresets[detailLevel];
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [pipelineStage, setPipelineStage] = useState<'idle' | 'extracting' | 'uploading' | 'analyzing' | 'generating'>('idle');
   const [log, setLog] = useState<string[]>([]);
   const [detectedTags, setDetectedTags] = useState<string[]>([]);
 
@@ -188,6 +189,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
         // CLEAN FLOW: FFmpeg for frames + Gemini native video for analysis
         // NO FALLBACKS - if something fails, it fails clearly
 
+        setPipelineStage('extracting');
         addLog(`Step 1: Extracting frames with FFmpeg...`);
         setProgress(10);
 
@@ -211,6 +213,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
         setProgress(30);
 
         // Step 2: Use Gemini native video analysis (watches video + listens to audio)
+        setPipelineStage('uploading');
         addLog(`Step 2: Uploading to Gemini for native video+audio analysis...`);
         const nativeResult = await analyzeVideoNative(
           videoFile,
@@ -220,13 +223,14 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
         );
 
         setProgress(90);
+        setPipelineStage('generating');
 
         // Build SOP from native result (steps already have matched thumbnails)
         const newSop: SOP = {
           id: crypto.randomUUID(),
           title: nativeResult.title || title || "New Procedure",
           description: nativeResult.description || `SOP for ${title}`,
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
           ppeRequirements: nativeResult.ppeRequirements || [],
           materialsRequired: nativeResult.materialsRequired || [],
           steps: nativeResult.steps.map((s, idx) => ({
@@ -238,8 +242,9 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
             toolsRequired: s.toolsRequired || [],
             thumbnail: s.thumbnail || extractedFrames[0]?.imageBase64 || ''
           })),
-          source: 'upload',
-          thumbnail: nativeResult.steps[0]?.thumbnail || extractedFrames[0]?.imageBase64 || '',
+          sourceType: 'upload',
+          status: 'completed',
+          thumbnail_url: nativeResult.steps[0]?.thumbnail || extractedFrames[0]?.imageBase64 || '',
           allFrames: nativeResult.allFrames || []
         };
 
@@ -256,6 +261,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
         // CLEAN FLOW: Same as upload - download video, upload to Gemini native
         // Gemini watches AND listens to the video for best quality
 
+        setPipelineStage('extracting');
         addLog(`Step 1: Downloading YouTube video and analyzing with Gemini native...`);
         setProgress(10);
 
@@ -271,13 +277,14 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
         );
 
         setProgress(90);
+        setPipelineStage('generating');
 
         // Build SOP from native result (steps already have matched thumbnails)
         const newSop: SOP = {
           id: crypto.randomUUID(),
           title: nativeResult.title || title || "YouTube Procedure",
           description: nativeResult.description || `SOP for ${title}`,
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
           ppeRequirements: nativeResult.ppeRequirements || [],
           materialsRequired: nativeResult.materialsRequired || [],
           steps: nativeResult.steps.map((s, idx) => ({
@@ -289,9 +296,10 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
             toolsRequired: s.toolsRequired || [],
             thumbnail: s.thumbnail || ''
           })),
-          source: 'youtube',
+          sourceType: 'youtube',
           sourceUrl: youtubeUrl,
-          thumbnail: nativeResult.steps[0]?.thumbnail || '',
+          status: 'completed',
+          thumbnail_url: nativeResult.steps[0]?.thumbnail || '',
           allFrames: nativeResult.allFrames || []
         };
 
@@ -308,6 +316,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
       console.error(err);
       addLog(`Pipeline Error: ${err.message}`);
       setIsProcessing(false);
+      setPipelineStage('idle');
     }
   };
 
@@ -351,7 +360,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
           </div>
           
           {/* Source Type Selection */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             {/* Live Recording Card */}
             <button
               type="button"
@@ -622,16 +631,53 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
             {/* Progress Section */}
             {isProcessing ? (
               <div className="text-center space-y-6">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="font-medium text-slate-600">Creating your SOP...</span>
-                    <span className="font-bold text-indigo-600">{progress}%</span>
+                {/* Pipeline Steps */}
+                <div className="space-y-3 text-left">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                      pipelineStage === 'extracting' ? 'bg-indigo-600 text-white' :
+                      ['uploading', 'analyzing', 'generating'].includes(pipelineStage) ? 'bg-emerald-500 text-white' :
+                      'bg-slate-200 text-slate-400'
+                    }`}>
+                      {['uploading', 'analyzing', 'generating'].includes(pipelineStage) ? <i className="fas fa-check"></i> : '1'}
+                    </div>
+                    <span className={`text-sm font-medium ${pipelineStage === 'extracting' ? 'text-indigo-600' : 'text-slate-500'}`}>
+                      Extraherar nyckelbilder...
+                      {pipelineStage === 'extracting' && <i className="fas fa-spinner fa-spin ml-2"></i>}
+                    </span>
                   </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700 rounded-full" style={{ width: `${progress}%` }}></div>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                      pipelineStage === 'uploading' ? 'bg-indigo-600 text-white' :
+                      ['analyzing', 'generating'].includes(pipelineStage) ? 'bg-emerald-500 text-white' :
+                      'bg-slate-200 text-slate-400'
+                    }`}>
+                      {['analyzing', 'generating'].includes(pipelineStage) ? <i className="fas fa-check"></i> : '2'}
+                    </div>
+                    <span className={`text-sm font-medium ${pipelineStage === 'uploading' ? 'text-indigo-600' : 'text-slate-500'}`}>
+                      Laddar upp till Gemini...
+                      {pipelineStage === 'uploading' && <i className="fas fa-spinner fa-spin ml-2"></i>}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                      pipelineStage === 'generating' ? 'bg-indigo-600 text-white' :
+                      'bg-slate-200 text-slate-400'
+                    }`}>
+                      3
+                    </div>
+                    <span className={`text-sm font-medium ${pipelineStage === 'generating' ? 'text-indigo-600' : 'text-slate-500'}`}>
+                      Genererar SOP-steg...
+                      {pipelineStage === 'generating' && <i className="fas fa-spinner fa-spin ml-2"></i>}
+                    </span>
                   </div>
                 </div>
-                <p className="text-slate-400 text-sm">This usually takes 30-60 seconds</p>
+                <div className="space-y-2">
+                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700 rounded-full" style={{ width: `${progress}%` }}></div>
+                  </div>
+                  <p className="text-slate-400 text-xs">Detta tar vanligtvis 30-60 sekunder</p>
+                </div>
               </div>
             ) : (
               <div className="text-center space-y-6">

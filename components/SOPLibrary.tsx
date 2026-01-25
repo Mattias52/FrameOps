@@ -174,8 +174,8 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
     setEditedSop({ ...editedSop, steps: newSteps });
   };
 
-  // Add new step
-  const addNewStep = () => {
+  // Add new step after a specific index
+  const addStepAfter = (index: number) => {
     if (!editedSop) return;
     const newStep: SOPStep = {
       id: `step_${Date.now()}`,
@@ -185,7 +185,9 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
       safetyWarnings: [],
       toolsRequired: [],
     };
-    setEditedSop({ ...editedSop, steps: [...editedSop.steps, newStep] });
+    const newSteps = [...editedSop.steps];
+    newSteps.splice(index + 1, 0, newStep);
+    setEditedSop({ ...editedSop, steps: newSteps });
   };
 
   // Update image for step
@@ -589,20 +591,11 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
 
             {/* Steps Editor */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
-                  <i className="fas fa-list-ol text-indigo-500 mr-3"></i>
-                  Edit Steps ({editedSop.steps.length})
-                </h3>
-                <button
-                  onClick={addNewStep}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"
-                >
-                  <i className="fas fa-plus mr-2"></i>
-                  Add Step
-                </button>
-              </div>
-              
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+                <i className="fas fa-list-ol text-indigo-500 mr-3"></i>
+                Edit Steps ({editedSop.steps.length})
+              </h3>
+
               <div className="space-y-4">
                 {editedSop.steps.map((step, idx) => (
                   <StepEditor
@@ -615,6 +608,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     onMoveUp={() => moveStepUp(idx)}
                     onMoveDown={() => moveStepDown(idx)}
                     onImageReplace={(url) => updateStepImage(idx, url)}
+                    onAddAfter={() => addStepAfter(idx)}
                     allFrames={editedSop.allFrames}
                   />
                 ))}
