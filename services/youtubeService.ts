@@ -578,3 +578,42 @@ export const enhanceStepText = async (
     return null;
   }
 };
+
+// ============================================
+// AI REVIEW - Check SOP quality
+// ============================================
+
+export interface SOPReview {
+  score: number;
+  issues: string[];
+  warnings: string[];
+  tips: string[];
+  summary: string;
+}
+
+export const reviewSOP = async (
+  title: string,
+  description: string,
+  steps: Array<{ title: string; description: string; thumbnail?: string; image_url?: string; toolsRequired?: string[]; safetyWarnings?: string[] }>
+): Promise<SOPReview | null> => {
+  try {
+    const response = await fetch(`${RAILWAY_URL}/review-sop`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, description, steps }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data.success && data.review) {
+      return data.review;
+    }
+    return null;
+  } catch (error) {
+    console.error('Review SOP error:', error);
+    return null;
+  }
+};

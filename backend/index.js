@@ -173,7 +173,7 @@ if (!hasYtDlp || !hasFfmpeg) {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '25.4.0' });
+  res.json({ status: 'ok', version: '25.5.0' });
 });
 
 // Get transcript from YouTube video - tries subtitles first, then audio transcription
@@ -2730,6 +2730,75 @@ Svara ENDAST med JSON:`;
 
   } catch (error) {
     console.error(`[ENH-${jobId}] Error:`, error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// AI REVIEW - Check SOP quality
+// ============================================
+
+app.post('/review-sop', async (req, res) => {
+  const { title, description, steps } = req.body;
+
+  if (!steps || !Array.isArray(steps) || steps.length === 0) {
+    return res.status(400).json({ error: 'Missing steps' });
+  }
+
+  const jobId = crypto.randomBytes(4).toString('hex');
+  console.log(`[REV-${jobId}] Reviewing SOP: "${title}" (${steps.length} steps)`);
+
+  try {
+    const genai = getGenAI();
+
+    const stepsText = steps.map((s, i) =>
+      `Steg ${i + 1}: ${s.title}\nBeskrivning: ${s.description}\nHar bild: ${s.thumbnail || s.image_url ? 'Ja' : 'Nej'}\nVerktyg: ${(s.toolsRequired || []).join(', ') || 'Inga'}\nVarningar: ${(s.safetyWarnings || []).join(', ') || 'Inga'}`
+    ).join('\n\n');
+
+    const prompt = `Du är en SOP-granskare. Analysera denna SOP och ge kort, konkret feedback.
+
+TITEL: ${title}
+BESKRIVNING: ${description}
+
+STEG:
+${stepsText}
+
+Ge feedback i följande kategorier:
+1. issues: Problem som MÅSTE fixas (saknad info, säkerhetsrisker, otydligheter)
+2. warnings: Saker som BÖR förbättras
+3. tips: Förslag för att göra SOP:en ännu bättre
+4. score: Betyg 1-10
+
+Var konkret och hänvisa till specifika steg. Max 3 punkter per kategori.
+Svara på SVENSKA.`;
+
+    const response = await genai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: { parts: [{ text: prompt }] },
+      config: {
+        temperature: 0.2,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            score: { type: Type.INTEGER },
+            issues: { type: Type.ARRAY, items: { type: Type.STRING } },
+            warnings: { type: Type.ARRAY, items: { type: Type.STRING } },
+            tips: { type: Type.ARRAY, items: { type: Type.STRING } },
+            summary: { type: Type.STRING }
+          },
+          required: ["score", "issues", "warnings", "tips", "summary"]
+        }
+      }
+    });
+
+    const result = JSON.parse(response.text);
+    console.log(`[REV-${jobId}] Score: ${result.score}/10, Issues: ${result.issues?.length || 0}`);
+
+    res.json({ success: true, review: result });
+
+  } catch (error) {
+    console.error(`[REV-${jobId}] Error:`, error.message);
     res.status(500).json({ error: error.message });
   }
 });

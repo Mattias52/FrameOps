@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SOP, SOPStep } from '../types';
 import { deleteSOP, updateSOP, isSupabaseConfigured } from '../services/supabaseService';
+import { reviewSOP, SOPReview } from '../services/youtubeService';
 import StepEditor from './StepEditor';
 
 // Preview mode: Free users see only first N steps
@@ -27,6 +28,11 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedSop, setEditedSop] = useState<SOP | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Review mode states
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [review, setReview] = useState<SOPReview | null>(null);
+  const [showReview, setShowReview] = useState(false);
   const [newPPE, setNewPPE] = useState('');
   const [newMaterial, setNewMaterial] = useState('');
   const refDocInputRef = useRef<HTMLInputElement>(null);
@@ -96,11 +102,29 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
     }
   };
 
+  // Review SOP with AI
+  const handleReview = async () => {
+    if (!selectedSop) return;
+    setIsReviewing(true);
+    setShowReview(true);
+    setReview(null);
+
+    const result = await reviewSOP(
+      selectedSop.title,
+      selectedSop.description,
+      selectedSop.steps
+    );
+
+    setReview(result);
+    setIsReviewing(false);
+  };
+
   // Enter edit mode
   const enterEditMode = () => {
     if (selectedSop) {
       setEditedSop(JSON.parse(JSON.stringify(selectedSop))); // Deep clone
       setIsEditMode(true);
+      setShowReview(false);
     }
   };
 
@@ -688,6 +712,116 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
             </div>
           )}
 
+          {/* AI Review Panel */}
+          {showReview && (
+            <div className="mx-10 mt-6 mb-0">
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                      <i className="fas fa-wand-magic-sparkles text-purple-600"></i>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-purple-900">AI Granskning</h3>
+                      {review && (
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-bold ${review.score >= 8 ? 'text-emerald-600' : review.score >= 6 ? 'text-amber-600' : 'text-red-600'}`}>
+                            {review.score}/10
+                          </span>
+                          <div className="flex">
+                            {[...Array(5)].map((_, i) => (
+                              <i key={i} className={`fas fa-star text-xs ${i < Math.round(review.score / 2) ? 'text-amber-400' : 'text-slate-300'}`}></i>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowReview(false)}
+                    className="w-8 h-8 flex items-center justify-center text-purple-400 hover:text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
+                  >
+                    <i className="fas fa-times"></i>
+                  </button>
+                </div>
+
+                {isReviewing ? (
+                  <div className="text-center py-8">
+                    <i className="fas fa-spinner fa-spin text-3xl text-purple-400 mb-3"></i>
+                    <p className="text-purple-600 font-medium">Analyserar din SOP...</p>
+                  </div>
+                ) : review ? (
+                  <div className="space-y-4">
+                    {/* Summary */}
+                    <p className="text-purple-800 font-medium">{review.summary}</p>
+
+                    {/* Issues */}
+                    {review.issues && review.issues.length > 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                        <h4 className="font-bold text-red-800 text-sm mb-2">
+                          <i className="fas fa-exclamation-circle mr-2"></i>Måste åtgärdas
+                        </h4>
+                        <ul className="space-y-1">
+                          {review.issues.map((issue, i) => (
+                            <li key={i} className="text-sm text-red-700 flex items-start gap-2">
+                              <span className="text-red-400">•</span>
+                              {issue}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Warnings */}
+                    {review.warnings && review.warnings.length > 0 && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <h4 className="font-bold text-amber-800 text-sm mb-2">
+                          <i className="fas fa-triangle-exclamation mr-2"></i>Bör förbättras
+                        </h4>
+                        <ul className="space-y-1">
+                          {review.warnings.map((warning, i) => (
+                            <li key={i} className="text-sm text-amber-700 flex items-start gap-2">
+                              <span className="text-amber-400">•</span>
+                              {warning}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Tips */}
+                    {review.tips && review.tips.length > 0 && (
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                        <h4 className="font-bold text-emerald-800 text-sm mb-2">
+                          <i className="fas fa-lightbulb mr-2"></i>Tips
+                        </h4>
+                        <ul className="space-y-1">
+                          {review.tips.map((tip, i) => (
+                            <li key={i} className="text-sm text-emerald-700 flex items-start gap-2">
+                              <span className="text-emerald-400">•</span>
+                              {tip}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Action button */}
+                    {(review.issues?.length > 0 || review.warnings?.length > 0) && (
+                      <button
+                        onClick={enterEditMode}
+                        className="w-full py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-colors"
+                      >
+                        <i className="fas fa-edit mr-2"></i>
+                        Redigera och förbättra
+                      </button>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
+
           <div className="p-10 grid grid-cols-1 lg:grid-cols-4 gap-12">
             {/* Left Content Area */}
             <div className="lg:col-span-3 space-y-16">
@@ -902,6 +1036,16 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                       </p>
                     </div>
                   )}
+
+                  {/* AI REVIEW BUTTON */}
+                  <button
+                    onClick={handleReview}
+                    disabled={isReviewing}
+                    className="w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:from-purple-600 hover:to-indigo-600 transition-all flex items-center justify-center gap-3 shadow-lg shadow-purple-500/30 disabled:opacity-50"
+                  >
+                    <i className={`fas ${isReviewing ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'} text-base`}></i>
+                    {isReviewing ? 'Granskar...' : '✨ AI Granska'}
+                  </button>
 
                   {/* EDIT BUTTON - Pro only */}
                   <button
