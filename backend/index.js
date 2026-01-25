@@ -173,7 +173,7 @@ if (!hasYtDlp || !hasFfmpeg) {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '25.5.0' });
+  res.json({ status: 'ok', version: '25.5.1' });
 });
 
 // Get transcript from YouTube video - tries subtitles first, then audio transcription
@@ -2751,30 +2751,64 @@ app.post('/review-sop', async (req, res) => {
   try {
     const genai = getGenAI();
 
-    const stepsText = steps.map((s, i) =>
-      `Steg ${i + 1}: ${s.title}\nBeskrivning: ${s.description}\nHar bild: ${s.thumbnail || s.image_url ? 'Ja' : 'Nej'}\nVerktyg: ${(s.toolsRequired || []).join(', ') || 'Inga'}\nVarningar: ${(s.safetyWarnings || []).join(', ') || 'Inga'}`
-    ).join('\n\n');
+    // Build parts array with images and text
+    const parts = [];
 
-    const prompt = `Du är en SOP-granskare. Analysera denna SOP och ge kort, konkret feedback.
+    // Add instruction
+    parts.push({ text: `Du är en expert SOP-granskare. Analysera denna SOP NOGGRANT.
 
 TITEL: ${title}
 BESKRIVNING: ${description}
 
-STEG:
-${stepsText}
+Nedan följer varje steg med sin tillhörande bild. KRITISKT: Kontrollera att varje bild MATCHAR texten.
+` });
 
-Ge feedback i följande kategorier:
-1. issues: Problem som MÅSTE fixas (saknad info, säkerhetsrisker, otydligheter)
-2. warnings: Saker som BÖR förbättras
-3. tips: Förslag för att göra SOP:en ännu bättre
-4. score: Betyg 1-10
+    // Add each step with its image
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      const stepText = `
+--- STEG ${i + 1} ---
+Titel: ${step.title}
+Beskrivning: ${step.description}
+Verktyg: ${(step.toolsRequired || []).join(', ') || 'Inga angivna'}
+Varningar: ${(step.safetyWarnings || []).join(', ') || 'Inga angivna'}
+Bild för steg ${i + 1}:`;
 
-Var konkret och hänvisa till specifika steg. Max 3 punkter per kategori.
-Svara på SVENSKA.`;
+      parts.push({ text: stepText });
+
+      // Add image if available
+      const imageData = step.thumbnail || step.image_url;
+      if (imageData && imageData.includes('base64')) {
+        const base64Data = imageData.split(',')[1] || imageData;
+        parts.push({
+          inlineData: {
+            mimeType: 'image/jpeg',
+            data: base64Data
+          }
+        });
+      } else {
+        parts.push({ text: '[BILD SAKNAS]' });
+      }
+    }
+
+    // Add final instructions
+    parts.push({ text: `
+
+GRANSKA NOGA:
+1. BILD-TEXT MATCHNING: Stämmer varje bild överens med vad texten beskriver? Om texten säger "stäng luckan" men bilden visar öppen lucka = KRITISKT FEL!
+2. SÄKERHET: Saknas viktiga säkerhetsvarningar?
+3. TYDLIGHET: Är instruktionerna tydliga och kompletta?
+4. ORDNING: Är stegen i logisk ordning?
+
+Ge KONKRET feedback. Hänvisa till specifika steg (t.ex. "Steg 5: bilden visar...").
+Max 3 punkter per kategori. Svara på SVENSKA.
+` });
+
+    console.log(`[REV-${jobId}] Sending ${parts.length} parts (${steps.filter(s => s.thumbnail || s.image_url).length} images)`);
 
     const response = await genai.models.generateContent({
       model: "gemini-2.0-flash",
-      contents: { parts: [{ text: prompt }] },
+      contents: { parts },
       config: {
         temperature: 0.2,
         responseMimeType: "application/json",

@@ -597,10 +597,19 @@ export const reviewSOP = async (
   steps: Array<{ title: string; description: string; thumbnail?: string; image_url?: string; toolsRequired?: string[]; safetyWarnings?: string[] }>
 ): Promise<SOPReview | null> => {
   try {
+    // Include images in the request for visual review
+    const stepsWithImages = steps.map(step => ({
+      title: step.title,
+      description: step.description,
+      thumbnail: step.thumbnail || step.image_url || null,
+      toolsRequired: step.toolsRequired || [],
+      safetyWarnings: step.safetyWarnings || []
+    }));
+
     const response = await fetch(`${RAILWAY_URL}/review-sop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, description, steps }),
+      body: JSON.stringify({ title, description, steps: stepsWithImages }),
     });
 
     if (!response.ok) {
