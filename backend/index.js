@@ -173,7 +173,7 @@ if (!hasYtDlp || !hasFfmpeg) {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '25.3.0' });
+  res.json({ status: 'ok', version: '25.3.1' });
 });
 
 // Get transcript from YouTube video - tries subtitles first, then audio transcription
@@ -1515,7 +1515,7 @@ app.post('/analyze-youtube-native', async (req, res) => {
     const videoPath = path.join(jobDir, 'video.mp4');
 
     execSync(
-      `yt-dlp --extractor-args "youtube:player_client=mweb" -f "bestvideo[height<=720]+bestaudio/best[height<=720]/best" --merge-output-format mp4 --no-check-certificates -o "${videoPath}" "${youtubeUrl}"`,
+      `yt-dlp -f "bestvideo[height<=720]+bestaudio/best[height<=720]/best" --merge-output-format mp4 --no-check-certificates -o "${videoPath}" "${youtubeUrl}"`,
       { timeout: 300000 }
     );
 
