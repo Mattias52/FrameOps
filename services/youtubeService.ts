@@ -597,14 +597,6 @@ export const reviewSOP = async (
   steps: Array<{ title: string; description: string; thumbnail?: string; image_url?: string; toolsRequired?: string[]; safetyWarnings?: string[] }>
 ): Promise<SOPReview | null> => {
   try {
-    // Debug: log what images we have
-    console.log('[reviewSOP] Steps received:', steps.length);
-    steps.forEach((step, i) => {
-      const hasThumb = step.thumbnail ? `thumbnail(${step.thumbnail.substring(0, 30)}...)` : 'no thumbnail';
-      const hasImg = step.image_url ? `image_url(${step.image_url.substring(0, 30)}...)` : 'no image_url';
-      console.log(`[reviewSOP] Step ${i + 1}: ${hasThumb}, ${hasImg}`);
-    });
-
     // Include images in the request for visual review
     const stepsWithImages = steps.map(step => ({
       title: step.title,

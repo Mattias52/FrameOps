@@ -173,7 +173,7 @@ if (!hasYtDlp || !hasFfmpeg) {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '25.5.1' });
+  res.json({ status: 'ok', version: '25.5.2' });
 });
 
 // Get transcript from YouTube video - tries subtitles first, then audio transcription
@@ -2754,93 +2754,47 @@ app.post('/review-sop', async (req, res) => {
     // Build parts array with images and text
     const parts = [];
 
-    // Add instruction
-    parts.push({ text: `Du är en expert SOP-granskare. Analysera denna SOP NOGGRANT.
+    // Add instruction at the start
+    parts.push({ text: `Granska denna SOP: "${title}"
 
-TITEL: ${title}
-BESKRIVNING: ${description}
+Du får nu se ${steps.length} bilder med tillhörande stegbeskrivningar.
+Analysera VARJE bild och kontrollera att bilden visar det som texten beskriver.
 
-Nedan följer varje steg med sin tillhörande bild. KRITISKT: Kontrollera att varje bild MATCHAR texten.
 ` });
 
     // Add each step with its image
-    let imagesFound = 0;
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
-      const stepText = `
---- STEG ${i + 1} ---
-Titel: ${step.title}
-Beskrivning: ${step.description}
-Verktyg: ${(step.toolsRequired || []).join(', ') || 'Inga angivna'}
-Varningar: ${(step.safetyWarnings || []).join(', ') || 'Inga angivna'}
-Bild för steg ${i + 1}:`;
 
-      parts.push({ text: stepText });
-
-      // Add image if available - check multiple possible fields
-      const imageData = step.thumbnail || step.image_url || step.imageBase64;
-
-      if (imageData) {
-        // Check if it's base64 data
-        if (imageData.includes('base64,')) {
-          const base64Data = imageData.split('base64,')[1];
-          parts.push({
-            inlineData: {
-              mimeType: 'image/jpeg',
-              data: base64Data
-            }
-          });
-          imagesFound++;
-        } else if (imageData.startsWith('data:')) {
-          // Handle data: URLs without base64 marker
-          const base64Data = imageData.split(',')[1];
-          if (base64Data) {
-            parts.push({
-              inlineData: {
-                mimeType: 'image/jpeg',
-                data: base64Data
-              }
-            });
-            imagesFound++;
-          } else {
-            parts.push({ text: '[BILD: kunde inte parsa data-URL]' });
+      // Add image first, then text describing it
+      const imageData = step.thumbnail || step.image_url;
+      if (imageData && imageData.includes('base64')) {
+        const base64Data = imageData.split('base64,')[1] || imageData;
+        parts.push({
+          inlineData: {
+            mimeType: 'image/jpeg',
+            data: base64Data
           }
-        } else if (imageData.length > 1000) {
-          // Likely raw base64 without prefix
-          parts.push({
-            inlineData: {
-              mimeType: 'image/jpeg',
-              data: imageData
-            }
-          });
-          imagesFound++;
-        } else {
-          // URL or something else
-          console.log(`[REV-${jobId}] Step ${i+1} image is URL or unknown: ${imageData.substring(0, 50)}...`);
-          parts.push({ text: `[BILD: extern URL - kan ej analyseras]` });
-        }
-      } else {
-        console.log(`[REV-${jobId}] Step ${i+1} has no image data. Keys: ${Object.keys(step).join(', ')}`);
-        parts.push({ text: '[BILD SAKNAS]' });
+        });
       }
-    }
 
-    console.log(`[REV-${jobId}] Found ${imagesFound}/${steps.length} images to analyze`);
+      // Add step text after image
+      parts.push({ text: `STEG ${i + 1}: "${step.title}" - ${step.description}` });
+    }
 
     // Add final instructions
     parts.push({ text: `
 
-GRANSKA NOGA:
-1. BILD-TEXT MATCHNING: Stämmer varje bild överens med vad texten beskriver? Om texten säger "stäng luckan" men bilden visar öppen lucka = KRITISKT FEL!
-2. SÄKERHET: Saknas viktiga säkerhetsvarningar?
-3. TYDLIGHET: Är instruktionerna tydliga och kompletta?
-4. ORDNING: Är stegen i logisk ordning?
+Baserat på bilderna och texten ovan, ge feedback:
 
-Ge KONKRET feedback. Hänvisa till specifika steg (t.ex. "Steg 5: bilden visar...").
-Max 3 punkter per kategori. Svara på SVENSKA.
+1. BILD-TEXT MATCHNING: Finns det steg där bilden INTE matchar texten? T.ex. text säger "stäng" men bilden visar "öppen"?
+2. SÄKERHET: Saknas varningar för farliga moment?
+3. TYDLIGHET: Är något steg otydligt?
+
+Var KONKRET - ange stegnummer. Max 3 punkter per kategori. Svara på SVENSKA.
 ` });
 
-    console.log(`[REV-${jobId}] Sending ${parts.length} parts (${steps.filter(s => s.thumbnail || s.image_url).length} images)`);
+    console.log(`[REV-${jobId}] Sending ${steps.length} steps with images to Gemini`);
 
     const response = await genai.models.generateContent({
       model: "gemini-2.0-flash",
