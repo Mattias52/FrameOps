@@ -1,6 +1,6 @@
 {
   "name": "frameops-backend",
-  "version": "25.3.2",
+  "version": "25.3.3",
   "description": "FrameOps Railway backend - Two-pass: Gemini identifies timestamps, FFmpeg extracts frames",
   "main": "index.js",
   "scripts": {

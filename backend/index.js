@@ -173,7 +173,7 @@ if (!hasYtDlp || !hasFfmpeg) {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '25.3.2' });
+  res.json({ status: 'ok', version: '25.3.3' });
 });
 
 // Get transcript from YouTube video - tries subtitles first, then audio transcription
@@ -1385,6 +1385,7 @@ CRITICAL REQUIREMENTS:
       model: "gemini-2.0-flash",
       contents: { parts },
       config: {
+        temperature: 0,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -1729,6 +1730,7 @@ CRITICAL REQUIREMENTS:
       model: "gemini-2.0-flash",
       contents: { parts },
       config: {
+        temperature: 0,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,

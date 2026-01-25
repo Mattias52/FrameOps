@@ -24,6 +24,7 @@ const App: React.FC = () => {
   const [sops, setSops] = useState<SOP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [selectedSopId, setSelectedSopId] = useState<string | null>(null);
 
   // Start with sidebar closed on mobile
   const [isSidebarOpen, setSidebarOpen] = useState(() => {
@@ -127,6 +128,10 @@ const App: React.FC = () => {
               onComplete={handleAddSOP}
               onLiveMode={() => setCurrentView(AppView.LIVE_GENERATOR)}
               onNavigateToLibrary={() => setCurrentView(AppView.LIBRARY)}
+              onOpenSOP={(sopId) => {
+                setSelectedSopId(sopId);
+                setCurrentView(AppView.LIBRARY);
+              }}
             />
           </ErrorBoundary>
         );
@@ -149,6 +154,8 @@ const App: React.FC = () => {
             onDelete={(sopId) => setSops(prev => prev.filter(s => s.id !== sopId))}
             onUpdate={(updatedSop) => setSops(prev => prev.map(s => s.id === updatedSop.id ? updatedSop : s))}
             isPro={true} // Beta: full access for everyone
+            initialSelectedId={selectedSopId}
+            onSelectionCleared={() => setSelectedSopId(null)}
           />
         );
       case AppView.SUBSCRIPTION:

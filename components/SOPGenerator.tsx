@@ -9,10 +9,12 @@ interface SOPGeneratorProps {
   onComplete: (sop: SOP) => void;
   onLiveMode?: () => void;
   onNavigateToLibrary?: () => void;
+  onOpenSOP?: (sopId: string) => void;
 }
 
-const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onNavigateToLibrary }) => {
+const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onNavigateToLibrary, onOpenSOP }) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [createdSopId, setCreatedSopId] = useState<string | null>(null);
   const [sourceType, setSourceType] = useState<'live' | 'upload' | 'youtube' | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>('');
@@ -55,15 +57,19 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
     setLog(prev => [msg, ...prev].slice(0, 5));
   };
 
-  // Auto-navigate to library after SOP completion
+  // Auto-navigate to created SOP after completion
   useEffect(() => {
-    if (step === 3 && onNavigateToLibrary) {
+    if (step === 3 && createdSopId) {
       const timer = setTimeout(() => {
-        onNavigateToLibrary();
-      }, 2500); // 2.5 second delay to show success message
+        if (onOpenSOP) {
+          onOpenSOP(createdSopId);
+        } else if (onNavigateToLibrary) {
+          onNavigateToLibrary();
+        }
+      }, 2000); // 2 second delay to show success message
       return () => clearTimeout(timer);
     }
-  }, [step, onNavigateToLibrary]);
+  }, [step, createdSopId, onOpenSOP, onNavigateToLibrary]);
 
   useEffect(() => {
     const id = extractYoutubeId(youtubeUrl);
@@ -240,7 +246,9 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
         addLog(`SOP generated: ${newSop.steps.length} steps with Gemini native video understanding`);
         setProgress(100);
         onComplete(newSop);
+        setCreatedSopId(newSop.id);
         setIsProcessing(false);
+        setStep(3);
         return;
       }
 
@@ -290,7 +298,9 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
         addLog(`SOP generated: ${newSop.steps.length} steps with Gemini native video+audio understanding`);
         setProgress(100);
         onComplete(newSop);
+        setCreatedSopId(newSop.id);
         setIsProcessing(false);
+        setStep(3);
         return;
       }
 
@@ -648,18 +658,18 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
           <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
             <i className="fas fa-check-double text-3xl"></i>
           </div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2 uppercase">Analysis Successful</h2>
-          <p className="text-slate-500 font-medium mb-6 max-w-sm mx-auto">Procedural mapping complete. Documentation stored in library.</p>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2 uppercase">Finished!</h2>
+          <p className="text-slate-500 font-medium mb-6 max-w-sm mx-auto">Your SOP has been created and saved to the library.</p>
           <p className="text-indigo-600 font-bold text-sm mb-8">
-            <i className="fas fa-arrow-right mr-2 animate-pulse"></i>
-            Taking you to your SOP...
+            <i className="fas fa-spinner fa-spin mr-2"></i>
+            Opening your SOP...
           </p>
           <div className="flex justify-center gap-4">
-            <button onClick={() => setStep(1)} className="px-8 py-4 bg-slate-100 text-slate-700 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-200 transition-colors">
+            <button onClick={() => { setStep(1); setCreatedSopId(null); }} className="px-8 py-4 bg-slate-100 text-slate-700 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-200 transition-colors">
               <i className="fas fa-plus mr-2"></i>New Procedure
             </button>
-            <button onClick={onNavigateToLibrary} className="px-8 py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-colors">
-              <i className="fas fa-book-open mr-2"></i>View Now
+            <button onClick={() => createdSopId && onOpenSOP ? onOpenSOP(createdSopId) : onNavigateToLibrary?.()} className="px-8 py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-colors">
+              <i className="fas fa-eye mr-2"></i>View Now
             </button>
           </div>
         </div>

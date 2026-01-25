@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { SOP, SOPStep } from '../types';
 import { deleteSOP, updateSOP, isSupabaseConfigured } from '../services/supabaseService';
 import StepEditor from './StepEditor';
@@ -12,9 +12,11 @@ interface SOPLibraryProps {
   onDelete?: (sopId: string) => void;
   onUpdate?: (sop: SOP) => void;
   isPro?: boolean; // TODO: Connect to actual subscription state
+  initialSelectedId?: string | null;
+  onSelectionCleared?: () => void;
 }
 
-const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro = false }) => {
+const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro = false, initialSelectedId, onSelectionCleared }) => {
   const [selectedSop, setSelectedSop] = useState<SOP | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
@@ -32,6 +34,20 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
 
   // Video player ref for Live SOPs
   const videoPlayerRef = useRef<HTMLVideoElement>(null);
+
+  // Auto-select SOP when initialSelectedId is provided
+  useEffect(() => {
+    if (initialSelectedId && sops.length > 0) {
+      const sop = sops.find(s => s.id === initialSelectedId);
+      if (sop) {
+        setSelectedSop(sop);
+        // Clear the selection ID after opening
+        if (onSelectionCleared) {
+          onSelectionCleared();
+        }
+      }
+    }
+  }, [initialSelectedId, sops, onSelectionCleared]);
 
   // Seek video to specific timestamp
   const seekToTimestamp = (timestamp: string) => {
