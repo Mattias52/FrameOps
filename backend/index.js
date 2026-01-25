@@ -2764,6 +2764,7 @@ Nedan följer varje steg med sin tillhörande bild. KRITISKT: Kontrollera att va
 ` });
 
     // Add each step with its image
+    let imagesFound = 0;
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
       const stepText = `
@@ -2776,20 +2777,55 @@ Bild för steg ${i + 1}:`;
 
       parts.push({ text: stepText });
 
-      // Add image if available
-      const imageData = step.thumbnail || step.image_url;
-      if (imageData && imageData.includes('base64')) {
-        const base64Data = imageData.split(',')[1] || imageData;
-        parts.push({
-          inlineData: {
-            mimeType: 'image/jpeg',
-            data: base64Data
+      // Add image if available - check multiple possible fields
+      const imageData = step.thumbnail || step.image_url || step.imageBase64;
+
+      if (imageData) {
+        // Check if it's base64 data
+        if (imageData.includes('base64,')) {
+          const base64Data = imageData.split('base64,')[1];
+          parts.push({
+            inlineData: {
+              mimeType: 'image/jpeg',
+              data: base64Data
+            }
+          });
+          imagesFound++;
+        } else if (imageData.startsWith('data:')) {
+          // Handle data: URLs without base64 marker
+          const base64Data = imageData.split(',')[1];
+          if (base64Data) {
+            parts.push({
+              inlineData: {
+                mimeType: 'image/jpeg',
+                data: base64Data
+              }
+            });
+            imagesFound++;
+          } else {
+            parts.push({ text: '[BILD: kunde inte parsa data-URL]' });
           }
-        });
+        } else if (imageData.length > 1000) {
+          // Likely raw base64 without prefix
+          parts.push({
+            inlineData: {
+              mimeType: 'image/jpeg',
+              data: imageData
+            }
+          });
+          imagesFound++;
+        } else {
+          // URL or something else
+          console.log(`[REV-${jobId}] Step ${i+1} image is URL or unknown: ${imageData.substring(0, 50)}...`);
+          parts.push({ text: `[BILD: extern URL - kan ej analyseras]` });
+        }
       } else {
+        console.log(`[REV-${jobId}] Step ${i+1} has no image data. Keys: ${Object.keys(step).join(', ')}`);
         parts.push({ text: '[BILD SAKNAS]' });
       }
     }
+
+    console.log(`[REV-${jobId}] Found ${imagesFound}/${steps.length} images to analyze`);
 
     // Add final instructions
     parts.push({ text: `
