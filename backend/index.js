@@ -173,7 +173,7 @@ if (!hasYtDlp || !hasFfmpeg) {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '25.3.1' });
+  res.json({ status: 'ok', version: '25.3.2' });
 });
 
 // Get transcript from YouTube video - tries subtitles first, then audio transcription
@@ -1232,7 +1232,7 @@ app.post('/analyze-video-native', async (req, res) => {
 
       try {
         execSync(
-          `${FFMPEG_BIN} -ss ${ts} -i "${videoPath}" -vframes 1 -q:v 2 -vf "scale=640:-1" "${framePath}" -y`,
+          `${FFMPEG_BIN} -hide_banner -loglevel error -ss ${ts} -i "${videoPath}" -vframes 1 -q:v 2 -vf "scale=640:-1" "${framePath}" -y`,
           { timeout: 10000 }
         );
 
@@ -1593,7 +1593,7 @@ app.post('/analyze-youtube-native', async (req, res) => {
 
       try {
         execSync(
-          `${FFMPEG_BIN} -ss ${ts} -i "${videoPath}" -vframes 1 -q:v 2 -vf "scale=640:-1" "${framePath}" -y`,
+          `${FFMPEG_BIN} -hide_banner -loglevel error -ss ${ts} -i "${videoPath}" -vframes 1 -q:v 2 -vf "scale=640:-1" "${framePath}" -y`,
           { timeout: 10000 }
         );
 
@@ -2671,9 +2671,19 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`FrameOps Backend running on port ${PORT}`);
-  console.log('=== VERSION 21: MORE FRAMES (min 20, threshold 0.1, retry) ===');
   console.log(`Gemini API Key: ${GEMINI_API_KEY ? 'configured' : 'MISSING!'}`);
-  console.log(`API Docs: http://localhost:${PORT}/api/docs`);
+
+  // Auto-update yt-dlp on startup to handle YouTube changes
+  try {
+    const updateResult = execSync('yt-dlp -U 2>&1', { encoding: 'utf8', timeout: 60000 });
+    if (updateResult.includes('Updated')) {
+      console.log('yt-dlp: Updated to latest version');
+    } else {
+      console.log('yt-dlp: Already up to date');
+    }
+  } catch (e) {
+    console.log('yt-dlp: Update check completed');
+  }
 });
 
 // If running standalone, log UI URL
