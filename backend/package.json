@@ -1,7 +1,7 @@
 {
   "name": "frameops-backend",
-  "version": "12.0.0",
-  "description": "FrameOps Railway backend - YouTube video processing with FFmpeg scene detection",
+  "version": "25.3.0",
+  "description": "FrameOps Railway backend - Two-pass: Gemini identifies timestamps, FFmpeg extracts frames",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

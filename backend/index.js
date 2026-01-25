@@ -173,7 +173,7 @@ if (!hasYtDlp || !hasFfmpeg) {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '17.0.0' });
+  res.json({ status: 'ok', version: '25.3.0' });
 });
 
 // Get transcript from YouTube video - tries subtitles first, then audio transcription
@@ -1143,9 +1143,9 @@ function getGenAI() {
 }
 
 // ============================================
-// NATIVE VIDEO SOP ANALYSIS (Gemini File API)
+// NATIVE VIDEO SOP ANALYSIS v25.2 (Gemini File API)
 // Uses Gemini's native video understanding for audio+video context
-// FFmpeg frames are provided separately and matched by timestamp
+// v25.2: Extracts frames on backend (scene detection + intervals) like YouTube endpoint
 // ============================================
 app.post('/analyze-video-native', async (req, res) => {
   if (!req.files || !req.files.video) {
@@ -1154,18 +1154,108 @@ app.post('/analyze-video-native', async (req, res) => {
 
   const videoFile = req.files.video;
   const title = req.body.title || 'Procedure';
-  // FFmpeg frames with timestamps (provided by frontend)
-  const ffmpegFrames = req.body.ffmpegFrames ? JSON.parse(req.body.ffmpegFrames) : [];
   const jobId = crypto.randomBytes(8).toString('hex');
+  const jobDir = path.join(TEMP_DIR, `upload_${jobId}`);
 
-  console.log(`[${jobId}] Native video analysis: "${title}" (${(videoFile.size / 1024 / 1024).toFixed(1)}MB)`);
-  console.log(`[${jobId}] FFmpeg frames provided: ${ffmpegFrames.length}`);
+  console.log(`[${jobId}] Native video analysis v25.2: "${title}" (${(videoFile.size / 1024 / 1024).toFixed(1)}MB)`);
 
   try {
+    fs.mkdirSync(jobDir, { recursive: true });
     const fetch = require('node-fetch');
     const genai = getGenAI();
+    const videoPath = videoFile.tempFilePath;
 
-    // Step 1: Upload video to Gemini File API using REST
+    // Step 1: Get video duration
+    let duration = 60;
+    try {
+      const ffmpegInfo = execSync(`${FFMPEG_BIN} -i "${videoPath}" 2>&1 || true`, { encoding: 'utf8' });
+      const durationMatch = ffmpegInfo.match(/Duration:\s*(\d+):(\d+):(\d+\.?\d*)/);
+      if (durationMatch) {
+        duration = parseFloat(durationMatch[1]) * 3600 + parseFloat(durationMatch[2]) * 60 + parseFloat(durationMatch[3]);
+      }
+    } catch (e) {}
+    console.log(`[${jobId}] Video duration: ${duration}s`);
+
+    // Step 2: Extract frames with scene detection + intervals (same as YouTube v25)
+    console.log(`[${jobId}] Extracting frames with scene detection...`);
+
+    let timestamps = [];
+    const sceneThreshold = 0.08; // Low threshold = more scenes detected
+
+    // Try scene detection first
+    try {
+      const sceneOutput = execSync(
+        `${FFMPEG_BIN} -i "${videoPath}" -vf "select='gt(scene,${sceneThreshold})',showinfo" -f null - 2>&1`,
+        { encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 }
+      );
+
+      const regex = /pts_time:([\d.]+)/g;
+      let match;
+      while ((match = regex.exec(sceneOutput)) !== null) {
+        timestamps.push(parseFloat(match[1]));
+      }
+      console.log(`[${jobId}] Scene detection found ${timestamps.length} scenes`);
+    } catch (e) {
+      console.log(`[${jobId}] Scene detection failed: ${e.message}`);
+    }
+
+    // Also add interval-based frames (every 2 seconds) to fill gaps
+    const intervalFrames = [];
+    for (let t = 0; t < duration; t += 2) {
+      intervalFrames.push(t);
+    }
+
+    // Merge and deduplicate (keep frames that are at least 1 second apart)
+    const allTimestamps = [...new Set([...timestamps, ...intervalFrames])].sort((a, b) => a - b);
+    timestamps = [];
+    let lastTs = -2;
+    for (const ts of allTimestamps) {
+      if (ts - lastTs >= 1) {
+        timestamps.push(ts);
+        lastTs = ts;
+      }
+    }
+
+    // Limit to max 150 frames
+    if (timestamps.length > 150) {
+      const step = timestamps.length / 150;
+      timestamps = timestamps.filter((_, i) => Math.floor(i % step) === 0).slice(0, 150);
+    }
+
+    console.log(`[${jobId}] Will extract ${timestamps.length} frames`);
+
+    // Extract frames
+    const ffmpegFrames = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      const ts = timestamps[i];
+      const framePath = path.join(jobDir, `frame_${i}.jpg`);
+
+      try {
+        execSync(
+          `${FFMPEG_BIN} -ss ${ts} -i "${videoPath}" -vframes 1 -q:v 2 -vf "scale=640:-1" "${framePath}" -y`,
+          { timeout: 10000 }
+        );
+
+        if (fs.existsSync(framePath)) {
+          const frameData = fs.readFileSync(framePath);
+          if (frameData.length > 5000) { // Skip tiny/empty frames
+            const base64 = `data:image/jpeg;base64,${frameData.toString('base64')}`;
+            const mins = Math.floor(ts / 60);
+            const secs = Math.floor(ts % 60);
+            ffmpegFrames.push({
+              index: ffmpegFrames.length,
+              timestamp: `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`,
+              timestampSeconds: ts,
+              imageBase64: base64
+            });
+          }
+        }
+      } catch (e) {}
+    }
+
+    console.log(`[${jobId}] Extracted ${ffmpegFrames.length} quality frames`);
+
+    // Step 3: Upload video to Gemini File API using REST
     console.log(`[${jobId}] Uploading video to Gemini File API...`);
 
     const videoData = fs.readFileSync(videoFile.tempFilePath);
@@ -1232,62 +1322,68 @@ app.post('/analyze-video-native', async (req, res) => {
 
     console.log(`[${jobId}] Video ready: ${fileUri}`);
 
-    // Build frame list for Gemini to select from
-    const frameListForPrompt = ffmpegFrames.map((f, idx) =>
-      `Frame ${idx}: timestamp ${f.timestamp}`
-    ).join('\n');
+    // Step 3: Build prompt with LABELED frames (same approach as YouTube v25)
+    console.log(`[${jobId}] Building prompt with ${ffmpegFrames.length} labeled frames...`);
 
-    console.log(`[${jobId}] Sending ${ffmpegFrames.length} frames for Gemini to select from`);
+    const parts = [];
 
-    // Step 3: Generate SOP using native video understanding + frame selection
-    const prompt = `
-      You are an expert technical writer creating a Standard Operating Procedure (SOP).
+    // Video first
+    parts.push({ fileData: { fileUri: fileUri, mimeType: mimeType } });
 
-      WATCH THIS ENTIRE VIDEO carefully. Pay attention to BOTH:
-      - AUDIO: What the presenter/narrator is SAYING - use their EXACT words!
-      - VISUAL: What actions are being performed on screen
+    // Prompt with frame explanation
+    parts.push({ text: `
+You are an expert technical writer creating a Standard Operating Procedure (SOP).
 
-      Create a detailed SOP for: "${title}"
+WATCH THIS ENTIRE VIDEO carefully. Pay attention to BOTH:
+- AUDIO: What the presenter/narrator is SAYING - use their EXACT words!
+- VISUAL: What actions are being performed on screen
 
-      CRITICAL REQUIREMENTS:
-      1. Use the presenter's EXACT words and terminology from the audio
-      2. Include ALL steps mentioned or shown, even brief ones like:
-         - "Remove the screw with a Phillips head screwdriver"
-         - "Lift the bracket"
-         - "Set aside the component"
-      3. Note ALL tools or equipment mentioned (screwdrivers, wipes, alcohol, etc.)
-      4. Provide accurate timestamps (MM:SS) for when each step STARTS
-      5. Do NOT summarize or skip steps - document EVERY action
-      6. If the presenter says "be careful" or gives a warning, include it
-      7. ALWAYS write in ENGLISH
+I have extracted ${ffmpegFrames.length} frames from this video. They are labeled Frame_0 through Frame_${ffmpegFrames.length - 1}.
+Each frame is shown below with its label and timestamp.
 
-      IMPORTANT - FRAME SELECTION:
-      I have extracted the following frames from the video. For EACH step, you MUST select
-      the frame that BEST shows the action being described. Choose the frame where the
-      action is VISIBLE - not where it's being discussed, but where it's actually SHOWN.
+LOOK AT EACH FRAME CAREFULLY. For each step in your SOP, you must select the frameIndex that BEST shows that action.
 
-      Available frames:
-      ${frameListForPrompt}
+` });
 
-      For each step provide:
-      - timestamp: When this step starts (MM:SS format, e.g., "00:45")
-      - title: Short action title
-      - description: Detailed instructions using presenter's actual words
-      - frameIndex: The frame number (0-${ffmpegFrames.length - 1}) that BEST shows this action visually
-      - safetyWarnings: Array of warnings mentioned (or empty)
-      - toolsRequired: Array of tools needed for this step (or empty)
-    `;
+    // Add each frame with label (like YouTube v25)
+    for (let i = 0; i < ffmpegFrames.length; i++) {
+      const frame = ffmpegFrames[i];
+      parts.push({ text: `\nFrame_${i} (${frame.timestamp}):` });
 
-    console.log(`[${jobId}] Generating SOP with native video understanding...`);
+      // Extract base64 data (remove data:image/jpeg;base64, prefix if present)
+      const base64Data = frame.imageBase64.includes(',')
+        ? frame.imageBase64.split(',')[1]
+        : frame.imageBase64;
+
+      parts.push({
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: base64Data
+        }
+      });
+    }
+
+    // Final instructions
+    parts.push({ text: `
+
+Now create the SOP for: "${title}"
+
+CRITICAL REQUIREMENTS:
+1. Use the presenter's EXACT words and terminology from the audio
+2. Include ALL steps mentioned or shown - do NOT skip any actions
+3. Note ALL tools or equipment mentioned (screwdrivers, wipes, alcohol, etc.)
+4. For EACH step, select the frameIndex (0-${ffmpegFrames.length - 1}) that BEST SHOWS that action
+5. LOOK at the frames above and pick the one that VISUALLY MATCHES the content
+6. If the presenter says "be careful" or gives a warning, include it as safetyWarnings
+7. TERMINOLOGY CONSISTENCY: If the video uses multiple names for the same part/tool/component (e.g., "plunger" and "solenoid" for the same part), pick ONE term and use it consistently throughout the entire SOP
+8. ALWAYS write in ENGLISH
+` });
+
+    console.log(`[${jobId}] Sending to Gemini with ${parts.length} parts...`);
 
     const response = await genai.models.generateContent({
       model: "gemini-2.0-flash",
-      contents: {
-        parts: [
-          { fileData: { fileUri: fileUri, mimeType: mimeType } },
-          { text: prompt }
-        ]
-      },
+      contents: { parts },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -1308,7 +1404,6 @@ app.post('/analyze-video-native', async (req, res) => {
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  id: { type: Type.STRING },
                   timestamp: { type: Type.STRING },
                   title: { type: Type.STRING },
                   description: { type: Type.STRING },
@@ -1322,7 +1417,7 @@ app.post('/analyze-video-native', async (req, res) => {
                     items: { type: Type.STRING }
                   }
                 },
-                required: ["id", "timestamp", "title", "description", "frameIndex"]
+                required: ["timestamp", "title", "description", "frameIndex"]
               }
             }
           },
@@ -1335,34 +1430,27 @@ app.post('/analyze-video-native', async (req, res) => {
     const result = JSON.parse(resultText);
 
     console.log(`[${jobId}] Gemini generated ${result.steps?.length || 0} steps`);
-    // Log first 3 steps with frame selection
-    result.steps?.slice(0, 3).forEach((s, i) => {
-      console.log(`[${jobId}] Step ${i+1}: [${s.timestamp}] ${s.title} → Frame ${s.frameIndex}`);
-    });
 
-    // Step 4: Use Gemini's frame selection (no more timestamp matching!)
+    // Step 4: Map frameIndex to frames (like YouTube v25)
     const stepsWithFrames = result.steps.map((step, idx) => {
-      if (ffmpegFrames.length === 0) {
-        return { ...step, id: `step-${idx + 1}` };
-      }
-
-      // Use Gemini's selected frame, with bounds checking
       const frameIdx = Math.max(0, Math.min(step.frameIndex || 0, ffmpegFrames.length - 1));
       const selectedFrame = ffmpegFrames[frameIdx];
 
-      console.log(`[${jobId}] Step ${idx + 1}: Gemini selected frame ${frameIdx} (${selectedFrame.timestamp})`);
+      console.log(`[${jobId}]   Step ${idx + 1}: "${step.title}" → Frame_${frameIdx} (${selectedFrame?.timestamp || 'N/A'})`);
 
       return {
         ...step,
         id: `step-${idx + 1}`,
-        thumbnail: selectedFrame.imageBase64
+        timestamp: selectedFrame?.timestamp || step.timestamp,
+        thumbnail: selectedFrame?.imageBase64 || null
       };
     });
 
-    // Cleanup video temp file
+    // Cleanup video temp file and job directory
     if (videoFile.tempFilePath) {
       try { fs.unlinkSync(videoFile.tempFilePath); } catch (e) {}
     }
+    cleanup(jobDir);
 
     // Delete file from Gemini using REST API
     try {
@@ -1390,20 +1478,22 @@ app.post('/analyze-video-native', async (req, res) => {
 
   } catch (error) {
     console.error(`[${jobId}] Native video analysis error:`, error.message);
-    // Cleanup temp file on error
+    // Cleanup temp file and job directory on error
     if (videoFile && videoFile.tempFilePath) {
       try { fs.unlinkSync(videoFile.tempFilePath); } catch (e) {}
     }
+    cleanup(jobDir);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================
-// YOUTUBE NATIVE VIDEO ANALYSIS (Same as upload)
-// Downloads YouTube video, uploads to Gemini, uses native video understanding
+// YOUTUBE NATIVE VIDEO ANALYSIS - v25 (back to v23 logic with MORE frames)
+// Simple approach: FFmpeg scene detection + Gemini picks frameIndex
+// This worked better than the complex 3-phase approach
 // ============================================
 app.post('/analyze-youtube-native', async (req, res) => {
-  const { youtubeUrl, title, sceneThreshold = 0.2, maxFrames = 30, minFrames = 10 } = req.body;
+  const { youtubeUrl, title } = req.body;
 
   if (!youtubeUrl) {
     return res.status(400).json({ error: 'Missing youtubeUrl' });
@@ -1412,7 +1502,7 @@ app.post('/analyze-youtube-native', async (req, res) => {
   const jobId = crypto.randomBytes(8).toString('hex');
   const jobDir = path.join(TEMP_DIR, `yt_native_${jobId}`);
 
-  console.log(`[${jobId}] YouTube NATIVE analysis: ${youtubeUrl}`);
+  console.log(`[${jobId}] YouTube v25 (simple + more frames): ${youtubeUrl}`);
   console.log(`[${jobId}] Title: "${title}"`);
 
   try {
@@ -1425,8 +1515,8 @@ app.post('/analyze-youtube-native', async (req, res) => {
     const videoPath = path.join(jobDir, 'video.mp4');
 
     execSync(
-      `yt-dlp -f "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" --merge-output-format mp4 -o "${videoPath}" "${youtubeUrl}"`,
-      { timeout: 300000 } // 5 min timeout for download
+      `yt-dlp --extractor-args "youtube:player_client=mweb" -f "bestvideo[height<=720]+bestaudio/best[height<=720]/best" --merge-output-format mp4 --no-check-certificates -o "${videoPath}" "${youtubeUrl}"`,
+      { timeout: 300000 }
     );
 
     if (!fs.existsSync(videoPath)) {
@@ -1436,86 +1526,64 @@ app.post('/analyze-youtube-native', async (req, res) => {
     const videoStats = fs.statSync(videoPath);
     console.log(`[${jobId}] Downloaded: ${(videoStats.size / 1024 / 1024).toFixed(1)}MB`);
 
-    // Step 2: Extract frames with FFmpeg scene detection (same as regular flow)
-    console.log(`[${jobId}] Extracting frames with FFmpeg...`);
-
-    // Get video duration using ffprobe (more reliable)
+    // Step 2: Get video duration
     let duration = 60;
     try {
-      const durationOutput = execSync(
-        `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`,
-        { encoding: 'utf8' }
-      ).trim();
-      duration = parseFloat(durationOutput);
-    } catch (e) {
-      console.log(`[${jobId}] Could not parse duration, using default 60s`);
-    }
+      const ffmpegInfo = execSync(`${FFMPEG_BIN} -i "${videoPath}" 2>&1 || true`, { encoding: 'utf8' });
+      const durationMatch = ffmpegInfo.match(/Duration:\s*(\d+):(\d+):(\d+\.?\d*)/);
+      if (durationMatch) {
+        duration = parseFloat(durationMatch[1]) * 3600 + parseFloat(durationMatch[2]) * 60 + parseFloat(durationMatch[3]);
+      }
+    } catch (e) {}
     console.log(`[${jobId}] Video duration: ${duration}s`);
 
-    // Scene detection with format=yuv420p (same as upload endpoint)
-    let timestamps = [];
-    console.log(`[${jobId}] Running scene detection with threshold ${sceneThreshold}...`);
+    // Step 3: Extract MANY frames - scene detection + interval fallback
+    console.log(`[${jobId}] Extracting frames with scene detection...`);
 
+    let timestamps = [];
+    const sceneThreshold = 0.08; // Low threshold = more scenes detected
+
+    // Try scene detection first
     try {
       const sceneOutput = execSync(
-        `${FFMPEG_BIN} -hide_banner -loglevel info -nostats -i "${videoPath}" -vf "format=yuv420p,select='gt(scene,${sceneThreshold})',showinfo" -f null - 2>&1`,
+        `${FFMPEG_BIN} -i "${videoPath}" -vf "select='gt(scene,${sceneThreshold})',showinfo" -f null - 2>&1`,
         { encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 }
       );
 
-      const ptsMatches = sceneOutput.match(/pts_time:[\d.]+/g) || [];
-      timestamps = ptsMatches
-        .map(match => parseFloat(match.split(':')[1]))
-        .filter(ts => !isNaN(ts) && ts >= 0 && ts <= duration);
-
-      console.log(`[${jobId}] Found ${timestamps.length} scene timestamps from FFmpeg`);
+      const regex = /pts_time:([\d.]+)/g;
+      let match;
+      while ((match = regex.exec(sceneOutput)) !== null) {
+        timestamps.push(parseFloat(match[1]));
+      }
+      console.log(`[${jobId}] Scene detection found ${timestamps.length} scenes`);
     } catch (e) {
       console.log(`[${jobId}] Scene detection failed: ${e.message}`);
     }
 
-    // If too few scenes, try lower threshold (same as upload endpoint)
-    if (timestamps.length < minFrames) {
-      const lowerThreshold = sceneThreshold * 0.5;
-      console.log(`[${jobId}] Too few scenes (${timestamps.length}), retrying with threshold ${lowerThreshold}`);
+    // Also add interval-based frames (every 2 seconds) to fill gaps
+    const intervalFrames = [];
+    for (let t = 0; t < duration; t += 2) {
+      intervalFrames.push(t);
+    }
 
-      try {
-        const sceneOutput = execSync(
-          `${FFMPEG_BIN} -hide_banner -loglevel info -nostats -i "${videoPath}" -vf "format=yuv420p,select='gt(scene,${lowerThreshold})',showinfo" -f null - 2>&1`,
-          { encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 }
-        );
-
-        const ptsMatches = sceneOutput.match(/pts_time:[\d.]+/g) || [];
-        timestamps = ptsMatches
-          .map(match => parseFloat(match.split(':')[1]))
-          .filter(ts => !isNaN(ts) && ts >= 0 && ts <= duration);
-
-        console.log(`[${jobId}] After retry: ${timestamps.length} timestamps`);
-      } catch (e) {
-        console.log(`[${jobId}] Retry failed: ${e.message}`);
+    // Merge and deduplicate (keep frames that are at least 1 second apart)
+    const allTimestamps = [...new Set([...timestamps, ...intervalFrames])].sort((a, b) => a - b);
+    timestamps = [];
+    let lastTs = -2;
+    for (const ts of allTimestamps) {
+      if (ts - lastTs >= 1) {
+        timestamps.push(ts);
+        lastTs = ts;
       }
     }
 
-    // Add start if not present
-    if (timestamps.length === 0 || timestamps[0] > 2) {
-      timestamps.unshift(0);
+    // Limit to max 150 frames
+    if (timestamps.length > 150) {
+      const step = timestamps.length / 150;
+      timestamps = timestamps.filter((_, i) => Math.floor(i % step) === 0).slice(0, 150);
     }
 
-    // Fallback: evenly distributed timestamps
-    if (timestamps.length < minFrames) {
-      console.log(`[${jobId}] Falling back to interval extraction`);
-      timestamps = [];
-      const interval = duration / minFrames;
-      for (let i = 0; i < minFrames; i++) {
-        timestamps.push(i * interval);
-      }
-    }
-
-    // Limit frames (select evenly distributed)
-    if (timestamps.length > maxFrames) {
-      const step = timestamps.length / maxFrames;
-      timestamps = timestamps.filter((_, i) => Math.floor(i % step) === 0).slice(0, maxFrames);
-    }
-
-    console.log(`[${jobId}] Extracting ${timestamps.length} frames...`);
+    console.log(`[${jobId}] Will extract ${timestamps.length} frames`);
 
     // Extract frames
     const ffmpegFrames = [];
@@ -1523,37 +1591,32 @@ app.post('/analyze-youtube-native', async (req, res) => {
       const ts = timestamps[i];
       const framePath = path.join(jobDir, `frame_${i}.jpg`);
 
-      execSync(
-        `${FFMPEG_BIN} -ss ${ts} -i "${videoPath}" -vframes 1 -q:v 2 -vf "scale=1280:-1" "${framePath}" -y`,
-        { timeout: 10000 }
-      );
+      try {
+        execSync(
+          `${FFMPEG_BIN} -ss ${ts} -i "${videoPath}" -vframes 1 -q:v 2 -vf "scale=640:-1" "${framePath}" -y`,
+          { timeout: 10000 }
+        );
 
-      if (fs.existsSync(framePath)) {
-        const frameData = fs.readFileSync(framePath);
-        const fileSize = frameData.length;
-
-        // Filter out "empty" frames - very small files are usually just solid colors/backgrounds
-        // A 1280px wide JPEG with actual content should be at least 15KB
-        const MIN_FRAME_SIZE = 15000;
-        if (fileSize < MIN_FRAME_SIZE) {
-          console.log(`[${jobId}] Skipping low-quality frame at ${ts}s (${(fileSize/1024).toFixed(1)}KB)`);
-          continue;
+        if (fs.existsSync(framePath)) {
+          const frameData = fs.readFileSync(framePath);
+          if (frameData.length > 5000) { // Skip tiny/empty frames
+            const base64 = `data:image/jpeg;base64,${frameData.toString('base64')}`;
+            const mins = Math.floor(ts / 60);
+            const secs = Math.floor(ts % 60);
+            ffmpegFrames.push({
+              index: ffmpegFrames.length,
+              timestamp: `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`,
+              timestampSeconds: ts,
+              imageBase64: base64
+            });
+          }
         }
-
-        const base64 = `data:image/jpeg;base64,${frameData.toString('base64')}`;
-        const mins = Math.floor(ts / 60);
-        const secs = Math.floor(ts % 60);
-        ffmpegFrames.push({
-          timestamp: `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`,
-          timestampSeconds: ts,
-          imageBase64: base64
-        });
-      }
+      } catch (e) {}
     }
 
-    console.log(`[${jobId}] Extracted ${ffmpegFrames.length} quality frames (filtered low-quality)`);
+    console.log(`[${jobId}] Extracted ${ffmpegFrames.length} quality frames`);
 
-    // Step 3: Upload video to Gemini File API
+    // Step 4: Upload video to Gemini
     console.log(`[${jobId}] Uploading to Gemini File API...`);
 
     const videoData = fs.readFileSync(videoPath);
@@ -1578,8 +1641,6 @@ app.post('/analyze-youtube-native', async (req, res) => {
       throw new Error('Failed to get upload URL from Gemini');
     }
 
-    console.log(`[${jobId}] Uploading ${(numBytes / 1024 / 1024).toFixed(1)}MB to Gemini...`);
-
     const uploadResponse = await fetch(uploadUrl, {
       method: 'PUT',
       headers: {
@@ -1599,13 +1660,9 @@ app.post('/analyze-youtube-native', async (req, res) => {
     let fileName = uploadResult.file.name;
     let fileState = uploadResult.file.state;
 
-    console.log(`[${jobId}] File uploaded: ${fileName}, state: ${fileState}`);
-
-    // Wait for processing
     while (fileState === 'PROCESSING') {
       console.log(`[${jobId}] Waiting for Gemini to process video...`);
       await new Promise(resolve => setTimeout(resolve, 2000));
-
       const statusResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GEMINI_API_KEY}`);
       const statusResult = await statusResponse.json();
       fileState = statusResult.state;
@@ -1616,60 +1673,61 @@ app.post('/analyze-youtube-native', async (req, res) => {
       throw new Error('Gemini video processing failed');
     }
 
-    console.log(`[${jobId}] Video ready, generating SOP...`);
+    console.log(`[${jobId}] Video ready. Building prompt with ${ffmpegFrames.length} labeled frames...`);
 
-    // Build frame list for Gemini to select from
-    const frameListForPrompt = ffmpegFrames.map((f, idx) =>
-      `Frame ${idx}: timestamp ${f.timestamp}`
-    ).join('\n');
+    // Step 5: Build prompt with LABELED frames
+    // Each frame gets a clear label so Gemini knows which is which
+    const parts = [];
 
-    console.log(`[${jobId}] Sending ${ffmpegFrames.length} frames for Gemini to select from`);
+    // Video first
+    parts.push({ fileData: { fileUri: fileUri, mimeType: mimeType } });
 
-    // Step 4: Generate SOP with native video understanding + frame selection
-    const prompt = `
-      You are an expert technical writer creating a Standard Operating Procedure (SOP).
+    // Prompt
+    parts.push({ text: `
+You are an expert technical writer creating a Standard Operating Procedure (SOP).
 
-      WATCH THIS ENTIRE VIDEO carefully from start to finish. Pay attention to BOTH:
-      - AUDIO: What is being SAID (narration, speech, instructions)
-      - VISUAL: What ACTIONS are being performed on screen
+WATCH THIS ENTIRE VIDEO carefully. Pay attention to BOTH:
+- AUDIO: What is being SAID (narration, instructions, tips)
+- VISUAL: What ACTIONS are being shown
 
-      Create a detailed SOP for: "${title || 'Procedure'}"
+I have extracted ${ffmpegFrames.length} frames from this video. They are labeled Frame_0 through Frame_${ffmpegFrames.length - 1}.
+Each frame is shown below with its label and timestamp.
 
-      CRITICAL REQUIREMENTS:
-      1. If the video has narration/speech, use the presenter's EXACT words
-      2. If the video has NO narration (silent/music only), describe the VISUAL actions clearly
-      3. Each step should describe ONE specific action shown in the video
-      4. Provide accurate timestamps (MM:SS) for when each action STARTS
-      5. Do NOT skip any actions - document EVERY distinct action
-      6. Use clear, actionable language: "Remove the screw", "Cut along the line", "Insert the tool"
-      7. ALWAYS write in ENGLISH
-      8. Note ALL tools, materials, or equipment visible/mentioned
+LOOK AT EACH FRAME CAREFULLY. For each step in your SOP, you must select the frameIndex that BEST shows that action.
 
-      IMPORTANT - FRAME SELECTION:
-      I have extracted the following frames from the video. For EACH step, you MUST select
-      the frame that BEST shows the action being described. Choose the frame where the
-      action is VISIBLE - not where it's being discussed, but where it's actually SHOWN.
+` });
 
-      Available frames:
-      ${frameListForPrompt}
+    // Add each frame with label
+    for (const frame of ffmpegFrames) {
+      parts.push({ text: `\nFrame_${frame.index} (${frame.timestamp}):` });
+      parts.push({
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: frame.imageBase64.split(',')[1]
+        }
+      });
+    }
 
-      For each step provide:
-      - timestamp: When this action starts (MM:SS format, e.g., "00:45")
-      - title: Short action title (2-5 words, starts with verb)
-      - description: Clear step-by-step instructions for this specific action
-      - frameIndex: The frame number (0-${ffmpegFrames.length - 1}) that BEST shows this action visually
-      - safetyWarnings: Array of any safety concerns (or empty array)
-      - toolsRequired: Array of tools/materials used in this step (or empty array)
-    `;
+    // Final instructions
+    parts.push({ text: `
+
+Now create the SOP for: "${title || 'Procedure'}"
+
+CRITICAL REQUIREMENTS:
+1. Document EVERY tip, instruction, or action - DO NOT SKIP ANY
+2. If the video says "15 tips" or "21 hacks", you MUST find ALL of them
+3. Use the presenter's EXACT words when possible
+4. For EACH step, select the frameIndex (0-${ffmpegFrames.length - 1}) that BEST SHOWS that tip/action
+5. LOOK at the frames above and pick the one that VISUALLY MATCHES the content
+6. TERMINOLOGY CONSISTENCY: If the video uses multiple names for the same part/tool/component, pick ONE term and use it consistently throughout the entire SOP
+7. ALWAYS write in ENGLISH
+` });
+
+    console.log(`[${jobId}] Sending to Gemini...`);
 
     const response = await genai.models.generateContent({
       model: "gemini-2.0-flash",
-      contents: {
-        parts: [
-          { fileData: { fileUri: fileUri, mimeType: mimeType } },
-          { text: prompt }
-        ]
-      },
+      contents: { parts },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -1677,92 +1735,67 @@ app.post('/analyze-youtube-native', async (req, res) => {
           properties: {
             title: { type: Type.STRING },
             description: { type: Type.STRING },
-            ppeRequirements: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            },
-            materialsRequired: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            },
+            ppeRequirements: { type: Type.ARRAY, items: { type: Type.STRING } },
+            materialsRequired: { type: Type.ARRAY, items: { type: Type.STRING } },
             steps: {
               type: Type.ARRAY,
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  id: { type: Type.STRING },
                   timestamp: { type: Type.STRING },
                   title: { type: Type.STRING },
                   description: { type: Type.STRING },
                   frameIndex: { type: Type.NUMBER },
-                  safetyWarnings: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
-                  },
-                  toolsRequired: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
-                  }
+                  safetyWarnings: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  toolsRequired: { type: Type.ARRAY, items: { type: Type.STRING } }
                 },
-                required: ["id", "timestamp", "title", "description", "frameIndex"]
+                required: ["timestamp", "title", "description", "frameIndex"]
               }
             }
           },
-          required: ["title", "description", "steps", "ppeRequirements", "materialsRequired"]
+          required: ["title", "description", "steps"]
         }
       }
     });
 
-    const resultText = response.text;
-    const result = JSON.parse(resultText);
-
+    const result = JSON.parse(response.text);
     console.log(`[${jobId}] Gemini generated ${result.steps?.length || 0} steps`);
-    console.log(`[${jobId}] SOP Title: "${result.title}"`);
-    console.log(`[${jobId}] Materials: ${result.materialsRequired?.join(', ') || 'none'}`);
-    // Log first 3 steps for debugging (now with frame selection)
-    result.steps?.slice(0, 3).forEach((s, i) => {
-      console.log(`[${jobId}] Step ${i+1}: [${s.timestamp}] ${s.title} → Frame ${s.frameIndex}`);
-    });
 
-    // Step 5: Use Gemini's frame selection (no more timestamp matching!)
+    // Step 6: Match frames to steps
     const stepsWithFrames = result.steps.map((step, idx) => {
-      if (ffmpegFrames.length === 0) {
-        return { ...step, id: `step-${idx + 1}` };
-      }
-
-      // Use Gemini's selected frame, with bounds checking
       const frameIdx = Math.max(0, Math.min(step.frameIndex || 0, ffmpegFrames.length - 1));
       const selectedFrame = ffmpegFrames[frameIdx];
 
-      console.log(`[${jobId}] Step ${idx + 1}: Gemini selected frame ${frameIdx} (${selectedFrame.timestamp})`);
+      console.log(`[${jobId}]   Step ${idx + 1}: "${step.title}" → Frame_${frameIdx} (${selectedFrame?.timestamp || 'N/A'})`);
 
       return {
         ...step,
         id: `step-${idx + 1}`,
-        thumbnail: selectedFrame.imageBase64
+        thumbnail: selectedFrame?.imageBase64 || null
       };
     });
 
     // Cleanup
     try {
       await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GEMINI_API_KEY}`, { method: 'DELETE' });
-      console.log(`[${jobId}] Deleted video from Gemini`);
     } catch (e) {}
 
     cleanup(jobDir);
+
+    console.log(`[${jobId}] SUCCESS: Generated SOP with ${stepsWithFrames.length} steps (v25)`);
 
     res.json({
       success: true,
       title: result.title,
       description: result.description,
-      ppeRequirements: result.ppeRequirements,
-      materialsRequired: result.materialsRequired,
+      ppeRequirements: result.ppeRequirements || [],
+      materialsRequired: result.materialsRequired || [],
       steps: stepsWithFrames,
       allFrames: ffmpegFrames.map(f => ({
         timestamp: f.timestamp,
         imageBase64: f.imageBase64
       })),
-      source: 'gemini-native-youtube'
+      source: 'gemini-native-youtube-v25'
     });
 
   } catch (error) {
@@ -2638,7 +2671,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`FrameOps Backend running on port ${PORT}`);
-  console.log('=== VERSION 18: GEMINI SELECTS FRAMES DIRECTLY ===');
+  console.log('=== VERSION 21: MORE FRAMES (min 20, threshold 0.1, retry) ===');
   console.log(`Gemini API Key: ${GEMINI_API_KEY ? 'configured' : 'MISSING!'}`);
   console.log(`API Docs: http://localhost:${PORT}/api/docs`);
 });
