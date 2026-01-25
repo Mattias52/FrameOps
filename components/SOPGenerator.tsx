@@ -700,22 +700,42 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({ onComplete, onLiveMode, onN
       )}
 
       {step === 3 && (
-        <div className="text-center bg-white p-16 rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-700">
-          <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
-            <i className="fas fa-check-double text-3xl"></i>
+        <div className="bg-white p-10 rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-700">
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <i className="fas fa-check-double text-3xl"></i>
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2 uppercase">SOP Skapad!</h2>
+            <p className="text-slate-500 font-medium max-w-sm mx-auto">Din SOP är redo. Granska och förbättra den för bästa resultat.</p>
           </div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2 uppercase">Finished!</h2>
-          <p className="text-slate-500 font-medium mb-6 max-w-sm mx-auto">Your SOP has been created and saved to the library.</p>
-          <p className="text-indigo-600 font-bold text-sm mb-8">
-            <i className="fas fa-spinner fa-spin mr-2"></i>
-            Opening your SOP...
-          </p>
-          <div className="flex justify-center gap-4">
-            <button onClick={() => { setStep(1); setCreatedSopId(null); }} className="px-8 py-4 bg-slate-100 text-slate-700 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-200 transition-colors">
-              <i className="fas fa-plus mr-2"></i>New Procedure
+
+          {/* Tip box */}
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 mb-8">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-lightbulb text-amber-600"></i>
+              </div>
+              <div>
+                <h3 className="font-bold text-amber-900 mb-1">Tips: Gör din SOP perfekt</h3>
+                <ul className="text-sm text-amber-800 space-y-1">
+                  <li><i className="fas fa-check text-amber-600 mr-2"></i>Granska att alla steg är korrekta</li>
+                  <li><i className="fas fa-check text-amber-600 mr-2"></i>Byt ut bilder som inte matchar</li>
+                  <li><i className="fas fa-check text-amber-600 mr-2"></i>Använd <strong>✨ AI Förbättra</strong> för professionell text</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <button onClick={() => { setStep(1); setCreatedSopId(null); setPipelineStage('idle'); }} className="px-6 py-4 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors order-3 sm:order-1">
+              <i className="fas fa-plus mr-2"></i>Ny SOP
             </button>
-            <button onClick={() => createdSopId && onOpenSOP ? onOpenSOP(createdSopId) : onNavigateToLibrary?.()} className="px-8 py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-colors">
-              <i className="fas fa-eye mr-2"></i>View Now
+            <button onClick={() => createdSopId && onOpenSOP ? onOpenSOP(createdSopId) : onNavigateToLibrary?.()} className="px-6 py-4 bg-slate-200 text-slate-800 font-bold rounded-xl hover:bg-slate-300 transition-colors order-2">
+              <i className="fas fa-eye mr-2"></i>Visa SOP
+            </button>
+            <button onClick={() => createdSopId && onOpenSOP ? onOpenSOP(createdSopId) : onNavigateToLibrary?.()} className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-wider text-sm rounded-xl shadow-xl shadow-indigo-600/30 hover:from-indigo-700 hover:to-purple-700 transition-all order-1 sm:order-3">
+              <i className="fas fa-edit mr-2"></i>Redigera & Förbättra
             </button>
           </div>
         </div>

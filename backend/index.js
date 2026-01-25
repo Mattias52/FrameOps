@@ -173,7 +173,7 @@ if (!hasYtDlp || !hasFfmpeg) {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '25.3.3' });
+  res.json({ status: 'ok', version: '25.4.0' });
 });
 
 // Get transcript from YouTube video - tries subtitles first, then audio transcription
@@ -2660,6 +2660,79 @@ app.locals.analyzeFrames = async ({ frames, title, additionalContext }) => {
     created_at: new Date().toISOString()
   };
 };
+
+// ============================================
+// AI ENHANCEMENT - Improve step text
+// ============================================
+
+app.post('/enhance-step', async (req, res) => {
+  const { title, description, context = '' } = req.body;
+
+  if (!title && !description) {
+    return res.status(400).json({ error: 'Missing title or description' });
+  }
+
+  const jobId = crypto.randomBytes(4).toString('hex');
+  console.log(`[ENH-${jobId}] Enhancing step: "${title?.substring(0, 30)}..."`);
+
+  try {
+    const genai = getGenAI();
+
+    const prompt = `Du är en teknisk skribent som förbättrar SOP-texter (Standard Operating Procedures).
+
+Din uppgift: Förbättra följande steg så det blir tydligare, mer professionellt och lättare att följa.
+
+AKTUELLT STEG:
+Titel: ${title || 'Ej angiven'}
+Beskrivning: ${description || 'Ej angiven'}
+${context ? `Kontext: ${context}` : ''}
+
+REGLER:
+1. Behåll samma språk (svenska om input är svenska, annars engelska)
+2. Gör beskrivningen mer detaljerad och handlingsinriktad
+3. Använd aktiv form ("Skruva loss..." istället för "Skruven ska lossas...")
+4. Lägg till viktiga detaljer som kan saknas
+5. Max 2-3 meningar för beskrivningen
+6. Titeln ska vara kort och tydlig (max 6 ord)
+7. Om säkerhetsvarningar behövs, lägg till dem
+
+Svara ENDAST med JSON:`;
+
+    const response = await genai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: { parts: [{ text: prompt }] },
+      config: {
+        temperature: 0.3,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            safetyWarnings: { type: Type.ARRAY, items: { type: Type.STRING } }
+          },
+          required: ["title", "description"]
+        }
+      }
+    });
+
+    const result = JSON.parse(response.text);
+    console.log(`[ENH-${jobId}] Enhanced: "${result.title?.substring(0, 30)}..."`);
+
+    res.json({
+      success: true,
+      enhanced: {
+        title: result.title || title,
+        description: result.description || description,
+        safetyWarnings: result.safetyWarnings || []
+      }
+    });
+
+  } catch (error) {
+    console.error(`[ENH-${jobId}] Error:`, error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Global Express error handler - catches any unhandled errors in routes
 app.use((err, req, res, next) => {
