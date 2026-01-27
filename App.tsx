@@ -8,7 +8,6 @@ import SOPGenerator from './components/SOPGenerator';
 import LiveSOPGenerator from './components/LiveSOPGenerator';
 import SOPLibrary from './components/SOPLibrary';
 import SubscriptionPlans from './components/SubscriptionPlans';
-import Transcripts from './components/Transcripts';
 import ErrorBoundary from './components/ErrorBoundary';
 import LandingPage from './components/LandingPage';
 import CreatorLandingPage from './components/CreatorLandingPage';
@@ -160,8 +159,6 @@ const App: React.FC = () => {
         );
       case AppView.SUBSCRIPTION:
         return <SubscriptionPlans />;
-      case AppView.TRANSCRIPTS:
-        return <Transcripts />;
       case AppView.API_KEYS:
         return <APIKeysPage />;
       default:

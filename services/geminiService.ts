@@ -56,12 +56,6 @@ export const analyzeSOPFrames = async (
   }
 };
 
-export const transcribeAudio = async (textInput: string): Promise<string> => {
-  // This function is used for cleaning up transcripts - just return the input for now
-  // Could be moved to backend if needed
-  return textInput;
-};
-
 // Transcribe audio file using Whisper (OpenAI) via Railway backend - used by LiveSOPGenerator
 export const transcribeAudioFile = async (audioBlob: Blob): Promise<string> => {
   try {

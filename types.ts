@@ -6,7 +6,6 @@ export enum AppView {
   GENERATOR = 'generator',
   LIVE_GENERATOR = 'live_generator',
   LIBRARY = 'library',
-  TRANSCRIPTS = 'transcripts',
   SETTINGS = 'settings',
   SUBSCRIPTION = 'subscription',
   API_KEYS = 'api_keys',
