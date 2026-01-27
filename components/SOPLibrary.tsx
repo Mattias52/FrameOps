@@ -108,6 +108,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
     setIsReviewing(true);
     setShowReview(true);
     setReview(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     const result = await reviewSOP(
       selectedSop.title,
@@ -125,6 +126,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
       setEditedSop(JSON.parse(JSON.stringify(selectedSop))); // Deep clone
       setIsEditMode(true);
       setShowReview(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
