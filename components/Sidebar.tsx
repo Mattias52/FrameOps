@@ -48,8 +48,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
         <aside className={`fixed top-0 left-0 h-full bg-slate-900 text-white transition-transform duration-300 flex flex-col w-64 z-50 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="p-6 flex items-center justify-between h-16 border-b border-slate-800 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0">
-                <img src="/logo.png" alt="FrameOps" className="w-14 h-14" />
+              <div className="w-20 h-20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <img src="/logo.png" alt="FrameOps" className="w-20 h-20" />
               </div>
               <span className="font-bold text-xl tracking-tight">FrameOps</span>
             </div>
