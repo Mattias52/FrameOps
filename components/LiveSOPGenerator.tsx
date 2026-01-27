@@ -991,20 +991,20 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 <div className="w-28 h-28 bg-amber-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
                   <i className="fas fa-crown text-amber-400 text-4xl"></i>
                 </div>
-                <h2 className="text-white text-2xl font-bold mb-2">Du har använt dina 3 gratis SOPs</h2>
-                <p className="text-slate-400 mb-8">Uppgradera till Pro för obegränsade SOPs.</p>
+                <h2 className="text-white text-2xl font-bold mb-2">You've used your 3 free SOPs</h2>
+                <p className="text-slate-400 mb-8">Upgrade to Pro for unlimited SOPs.</p>
                 <button
                   onClick={onUpgrade}
                   className="px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-500 transition-colors mb-4"
                 >
                   <i className="fas fa-rocket mr-2"></i>
-                  Uppgradera till Pro
+                  Upgrade to Pro
                 </button>
                 <button
                   onClick={onCancel}
                   className="block mx-auto text-slate-400 hover:text-white transition-colors"
                 >
-                  Tillbaka
+                  Go Back
                 </button>
               </>
             ) : (
@@ -1018,15 +1018,15 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 >
                   <i className="fas fa-video text-white text-4xl"></i>
                 </button>
-                <h2 className="text-white text-2xl font-bold mb-2">Starta kamera</h2>
-                <p className="text-slate-400 mb-4">Tryck för att börja filma din SOP</p>
+                <h2 className="text-white text-2xl font-bold mb-2">Start Camera</h2>
+                <p className="text-slate-400 mb-4">Tap to start recording your SOP</p>
 
                 {/* Free SOPs remaining */}
                 {!isPro && (
                   <div className="mb-6">
                     <span className="px-3 py-1.5 bg-indigo-600/30 text-indigo-300 rounded-full text-xs font-bold">
                       <i className="fas fa-gift mr-1.5"></i>
-                      {freeSOPsRemaining} gratis SOP{freeSOPsRemaining !== 1 ? 's' : ''} kvar
+                      {freeSOPsRemaining} free SOP{freeSOPsRemaining !== 1 ? 's' : ''} remaining
                     </span>
                   </div>
                 )}

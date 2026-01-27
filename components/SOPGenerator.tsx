@@ -379,14 +379,14 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                   <i className="fas fa-crown text-amber-600 text-xl"></i>
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-slate-900 mb-1">Du har använt dina 3 gratis SOPs</h3>
-                  <p className="text-slate-600 text-sm mb-4">Uppgradera till Pro för obegränsade SOPs, PDF-export och mer.</p>
+                  <h3 className="font-bold text-slate-900 mb-1">You've used your 3 free SOPs</h3>
+                  <p className="text-slate-600 text-sm mb-4">Upgrade to Pro for unlimited SOPs, PDF export and more.</p>
                   <button
                     onClick={onUpgrade}
                     className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors"
                   >
                     <i className="fas fa-rocket mr-2"></i>
-                    Uppgradera till Pro
+                    Upgrade to Pro
                   </button>
                 </div>
               </div>
@@ -398,7 +398,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
             <div className="mb-6 flex items-center gap-2">
               <span className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
                 <i className="fas fa-gift mr-1.5"></i>
-                {freeSOPsRemaining} gratis SOP{freeSOPsRemaining !== 1 ? 's' : ''} kvar
+                {freeSOPsRemaining} free SOP{freeSOPsRemaining !== 1 ? 's' : ''} remaining
               </span>
             </div>
           )}
@@ -646,7 +646,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
           </div>
 
           <button disabled={!canCreate || (!videoUrl && !youtubeUrl) || isProcessing} onClick={() => setStep(2)} className="w-full py-5 bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-indigo-700 disabled:opacity-30 shadow-xl shadow-indigo-600/30 transition-all active:scale-[0.98]">
-            {canCreate ? 'Start Multimodal Analysis' : 'Uppgradera för att fortsätta'}
+            {canCreate ? 'Start Multimodal Analysis' : 'Upgrade to Continue'}
           </button>
         </div>
       )}

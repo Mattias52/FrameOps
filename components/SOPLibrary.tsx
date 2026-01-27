@@ -933,10 +933,10 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                                     className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
                                   >
                                     <i className="fas fa-crown mr-2"></i>
-                                    Uppgradera till Pro
+                                    Upgrade to Pro
                                   </button>
                                   <p className="text-xs text-slate-400 mt-3">
-                                    Från $19/månad
+                                    Starting at $19/month
                                   </p>
                                 </div>
                               </div>
@@ -1087,7 +1087,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                       className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:from-indigo-500 hover:to-purple-500 transition-all flex items-center justify-center gap-3 shadow-lg"
                     >
                       <i className="fas fa-crown text-amber-300 text-base"></i>
-                      Uppgradera till Pro
+                      Upgrade to Pro
                     </button>
                   )}
 

@@ -38,19 +38,19 @@ const SubscriptionPlans: React.FC = () => {
 
   const plans = [
     {
-      name: 'Beta Gratis',
+      name: 'Beta Free',
       monthlyPrice: '0',
       yearlyPrice: '0',
-      description: 'Prova FrameOps under beta',
+      description: 'Try FrameOps during beta',
       features: [
-        '3 SOPs totalt',
-        'YouTube, uppladdning & live',
-        'AI-genererade instruktioner',
-        'PDF-export',
-        'SOP-redigering'
+        '3 SOPs total',
+        'YouTube, upload & live recording',
+        'AI-generated instructions',
+        'PDF export',
+        'SOP editing'
       ],
       limitations: [],
-      buttonText: 'Nuvarande plan',
+      buttonText: 'Current Plan',
       popular: false,
       color: 'slate'
     },
@@ -58,17 +58,17 @@ const SubscriptionPlans: React.FC = () => {
       name: 'Pro',
       monthlyPrice: '19',
       yearlyPrice: '190',
-      description: 'För proffs som behöver obegränsat',
+      description: 'For professionals who need unlimited',
       features: [
-        'Obegränsade SOPs',
-        'YouTube, uppladdning & live',
-        'AI-granskning av SOPs',
-        'Manuellt frame-val',
-        'PDF-export',
-        'Prioriterad support'
+        'Unlimited SOPs',
+        'YouTube, upload & live recording',
+        'AI review of SOPs',
+        'Manual frame selection',
+        'PDF export',
+        'Priority support'
       ],
       limitations: [],
-      buttonText: 'Uppgradera till Pro',
+      buttonText: 'Upgrade to Pro',
       popular: true,
       color: 'indigo'
     },
@@ -76,16 +76,16 @@ const SubscriptionPlans: React.FC = () => {
       name: 'API Access',
       monthlyPrice: '99',
       yearlyPrice: '990',
-      description: 'Integrera i dina system',
+      description: 'Integrate into your systems',
       features: [
-        'Allt i Pro',
-        'REST API-åtkomst',
-        'Webhook-notifieringar',
-        'Programmatisk SOP-generering',
-        'Teknisk support'
+        'Everything in Pro',
+        'REST API access',
+        'Webhook notifications',
+        'Programmatic SOP generation',
+        'Technical support'
       ],
       limitations: [],
-      buttonText: 'Kontakta oss',
+      buttonText: 'Contact Us',
       popular: false,
       color: 'slate'
     }
@@ -93,20 +93,20 @@ const SubscriptionPlans: React.FC = () => {
 
   const faqs = [
     {
-      question: 'Vad räknas som en SOP?',
-      answer: 'En SOP är en video som processas till ett instruktionsdokument, oavsett längd eller antal steg.'
+      question: 'What counts as one SOP?',
+      answer: 'One SOP is a single video processed into a procedure document, regardless of length or number of steps.'
     },
     {
-      question: 'Kan jag uppgradera när som helst?',
-      answer: 'Ja! Du kan uppgradera din plan när som helst och får omedelbar tillgång till alla Pro-funktioner.'
+      question: 'Can I upgrade anytime?',
+      answer: 'Yes! You can upgrade your plan at any time and get immediate access to all Pro features.'
     },
     {
-      question: 'Hur länge varar beta-perioden?',
-      answer: 'Beta-perioden pågår tills vidare. Under beta får du 3 gratis SOPs att prova produkten med.'
+      question: 'How long does the beta period last?',
+      answer: 'The beta period is ongoing. During beta you get 3 free SOPs to try the product.'
     },
     {
-      question: 'Vilka betalmetoder accepteras?',
-      answer: 'Vi accepterar alla större kreditkort (Visa, Mastercard, Amex) via Stripe.'
+      question: 'What payment methods are accepted?',
+      answer: 'We accept all major credit cards (Visa, Mastercard, Amex) via Stripe.'
     }
   ];
 
@@ -114,9 +114,9 @@ const SubscriptionPlans: React.FC = () => {
     <div className="py-8 animate-in fade-in duration-500">
       {/* Header */}
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-extrabold text-slate-900 mb-4">Välj din plan</h1>
+        <h1 className="text-4xl font-extrabold text-slate-900 mb-4">Choose Your Plan</h1>
         <p className="text-lg text-slate-500 max-w-2xl mx-auto">
-          Börja gratis under beta, uppgradera när du behöver mer.
+          Start free during beta, upgrade when you need more.
         </p>
 
         {/* Billing Toggle */}
@@ -129,7 +129,7 @@ const SubscriptionPlans: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Månadsvis
+            Monthly
           </button>
           <button
             onClick={() => setBillingPeriod('yearly')}
@@ -139,9 +139,9 @@ const SubscriptionPlans: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Årsvis
+            Yearly
             <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">
-              Spara 17%
+              Save 17%
             </span>
           </button>
         </div>
@@ -210,50 +210,50 @@ const SubscriptionPlans: React.FC = () => {
 
       {/* Feature Comparison */}
       <div className="max-w-4xl mx-auto mb-20">
-        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Jämför funktioner</h2>
+        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Compare Features</h2>
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100">
-                <th className="text-left p-4 font-semibold text-slate-900">Funktion</th>
-                <th className="p-4 font-semibold text-slate-900 text-center">Beta Gratis</th>
+                <th className="text-left p-4 font-semibold text-slate-900">Feature</th>
+                <th className="p-4 font-semibold text-slate-900 text-center">Beta Free</th>
                 <th className="p-4 font-semibold text-indigo-600 text-center bg-indigo-50">Pro</th>
                 <th className="p-4 font-semibold text-slate-900 text-center">API</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">Antal SOPs</td>
-                <td className="p-4 text-center text-slate-600">3 totalt</td>
-                <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">Obegränsat</td>
-                <td className="p-4 text-center text-slate-600">Obegränsat</td>
+                <td className="p-4 text-slate-700">Number of SOPs</td>
+                <td className="p-4 text-center text-slate-600">3 total</td>
+                <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">Unlimited</td>
+                <td className="p-4 text-center text-slate-600">Unlimited</td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">YouTube-videos</td>
+                <td className="p-4 text-slate-700">YouTube videos</td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">Video-uppladdning</td>
+                <td className="p-4 text-slate-700">Video upload</td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">Live-inspelning</td>
+                <td className="p-4 text-slate-700">Live recording</td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">PDF-export</td>
+                <td className="p-4 text-slate-700">PDF export</td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">AI-granskning</td>
+                <td className="p-4 text-slate-700">AI review</td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
@@ -268,7 +268,7 @@ const SubscriptionPlans: React.FC = () => {
                 <td className="p-4 text-slate-700">Support</td>
                 <td className="p-4 text-center text-slate-600">Community</td>
                 <td className="p-4 text-center bg-indigo-50 text-slate-600">Email</td>
-                <td className="p-4 text-center text-slate-600">Prioriterad</td>
+                <td className="p-4 text-center text-slate-600">Priority</td>
               </tr>
             </tbody>
           </table>
@@ -282,8 +282,8 @@ const SubscriptionPlans: React.FC = () => {
             <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-3">
               <i className="fas fa-gift text-indigo-600 text-xl"></i>
             </div>
-            <h3 className="text-lg font-bold text-slate-900">Har du en kampanjkod?</h3>
-            <p className="text-sm text-slate-500 mt-1">Ange din kod för att låsa upp specialåtkomst</p>
+            <h3 className="text-lg font-bold text-slate-900">Have a promo code?</h3>
+            <p className="text-sm text-slate-500 mt-1">Enter your code to unlock special access</p>
           </div>
 
           <div className="flex gap-3">
@@ -294,7 +294,7 @@ const SubscriptionPlans: React.FC = () => {
                 setPromoCode(e.target.value);
                 setPromoStatus('idle');
               }}
-              placeholder="Ange kampanjkod..."
+              placeholder="Enter promo code..."
               className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm font-medium uppercase"
             />
             <button
@@ -302,7 +302,7 @@ const SubscriptionPlans: React.FC = () => {
               disabled={!promoCode.trim()}
               className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Aktivera
+              Apply
             </button>
           </div>
 
@@ -325,14 +325,14 @@ const SubscriptionPlans: React.FC = () => {
           )}
 
           <p className="text-xs text-slate-400 text-center mt-4">
-            Influencer? Creator? <a href="mailto:partners@frameops.ai" className="text-indigo-600 hover:underline">Kontakta oss</a> för en gratis provkod.
+            Influencer? Creator? <a href="mailto:partners@frameops.ai" className="text-indigo-600 hover:underline">Contact us</a> for a free trial code.
           </p>
         </div>
       </div>
 
       {/* FAQ Section */}
       <div className="max-w-3xl mx-auto mb-16">
-        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Vanliga frågor</h2>
+        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Frequently Asked Questions</h2>
         <div className="space-y-4">
           {faqs.map((faq, i) => (
             <div key={i} className="bg-white rounded-xl border border-slate-100 p-6">
@@ -352,13 +352,13 @@ const SubscriptionPlans: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <i className="fas fa-credit-card"></i>
-            <span>Säkra betalningar via Stripe</span>
+            <span>Secure payments via Stripe</span>
           </div>
         </div>
         <p className="text-slate-400 text-sm mt-4">
-          Frågor?
+          Questions?
           <a href="mailto:support@frameops.ai" className="text-indigo-600 font-semibold ml-1 hover:underline">
-            Kontakta support
+            Contact support
           </a>
         </p>
       </div>
