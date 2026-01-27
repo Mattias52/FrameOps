@@ -79,8 +79,8 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
               className="flex items-center gap-3 cursor-pointer"
               onClick={() => onNavigate(AppView.LANDING)}
             >
-              <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
-                <i className="fas fa-film text-white text-lg"></i>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center">
+                <img src="/logo.png" alt="FrameOps" className="w-9 h-9" />
               </div>
               <span className="font-bold text-xl">FrameOps</span>
               <span className="px-2 py-0.5 bg-amber-500 text-slate-900 text-[10px] font-bold rounded-full uppercase">
@@ -421,8 +421,8 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
       <footer className="py-8 px-4 border-t border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <i className="fas fa-film text-white"></i>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+              <img src="/logo.png" alt="FrameOps" className="w-8 h-8" />
             </div>
             <span className="font-bold">FrameOps</span>
           </div>

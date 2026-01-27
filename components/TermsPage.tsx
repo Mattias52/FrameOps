@@ -16,8 +16,8 @@ const TermsPage: React.FC<TermsPageProps> = ({ onNavigate }) => {
               className="flex items-center gap-3 cursor-pointer"
               onClick={() => onNavigate(AppView.LANDING)}
             >
-              <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
-                <i className="fas fa-film text-white text-lg"></i>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center">
+                <img src="/logo.png" alt="FrameOps" className="w-9 h-9" />
               </div>
               <span className="font-bold text-xl text-slate-900">FrameOps</span>
             </div>

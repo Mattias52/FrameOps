@@ -18,7 +18,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
           <i className="fas fa-bars"></i>
         </button>
         <div className="hidden md:flex items-center gap-2 text-slate-400 text-sm">
-          <i className="fas fa-film text-indigo-500"></i>
+          <img src="/logo.png" alt="FrameOps" className="w-5 h-5" />
           <span className="font-semibold text-slate-700">FrameOps</span>
           <span className="text-slate-300">|</span>
           <span>AI-Powered SOP Generator</span>
