@@ -46,7 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
 
         {/* Sidebar */}
         <aside className={`fixed top-0 left-0 h-full bg-slate-900 text-white transition-transform duration-300 flex flex-col w-64 z-50 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="p-6 flex items-center justify-between h-16 border-b border-slate-800 shrink-0">
+          <div className="p-4 flex items-center justify-between h-24 border-b border-slate-800 shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-20 h-20 rounded-lg flex items-center justify-center flex-shrink-0">
                 <img src="/logo.png" alt="FrameOps" className="w-20 h-20" />
@@ -101,9 +101,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
   // Desktop: standard sidebar
   return (
     <aside className={`bg-slate-900 text-white transition-all duration-300 flex flex-col ${isOpen ? 'w-64' : 'w-20'}`}>
-      <div className="p-6 flex items-center gap-3 h-16 border-b border-slate-800 shrink-0">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
-          <img src="/logo.png" alt="FrameOps" className="w-10 h-10" />
+      <div className="p-4 flex items-center gap-3 h-24 border-b border-slate-800 shrink-0">
+        <div className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0">
+          <img src="/logo.png" alt="FrameOps" className="w-16 h-16" />
         </div>
         {isOpen && <span className="font-bold text-xl tracking-tight">FrameOps</span>}
       </div>
