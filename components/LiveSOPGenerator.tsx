@@ -5,6 +5,9 @@ import { analyzeSOPFrames, transcribeAudioFile } from '../services/geminiService
 interface LiveSOPGeneratorProps {
   onComplete: (sop: SOP) => void;
   onCancel: () => void;
+  freeSOPsRemaining?: number;
+  isPro?: boolean;
+  onUpgrade?: () => void;
 }
 
 interface LiveStep {
@@ -17,7 +20,15 @@ interface LiveStep {
   status: 'capturing' | 'analyzing' | 'complete';
 }
 
-const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCancel }) => {
+const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
+  onComplete,
+  onCancel,
+  freeSOPsRemaining = 3,
+  isPro = false,
+  onUpgrade
+}) => {
+  const canCreate = isPro || freeSOPsRemaining > 0;
+
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -974,39 +985,75 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({ onComplete, onCance
       {!cameraStarted && (
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900/90 to-black/95 flex flex-col items-center justify-center z-30 p-6">
           <div className="text-center max-w-sm">
-            <button
-              className="w-28 h-28 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 hover:bg-indigo-500 active:scale-95 transition-all shadow-2xl shadow-indigo-500/30"
-              onClick={(e) => {
-                e.preventDefault();
-                startCamera();
-              }}
-            >
-              <i className="fas fa-video text-white text-4xl"></i>
-            </button>
-            <h2 className="text-white text-2xl font-bold mb-2">Starta kamera</h2>
-            <p className="text-slate-400 mb-8">Tryck för att börja filma din SOP</p>
+            {!canCreate ? (
+              <>
+                {/* Upgrade prompt when limit reached */}
+                <div className="w-28 h-28 bg-amber-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <i className="fas fa-crown text-amber-400 text-4xl"></i>
+                </div>
+                <h2 className="text-white text-2xl font-bold mb-2">Du har använt dina 3 gratis SOPs</h2>
+                <p className="text-slate-400 mb-8">Uppgradera till Pro för obegränsade SOPs.</p>
+                <button
+                  onClick={onUpgrade}
+                  className="px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-500 transition-colors mb-4"
+                >
+                  <i className="fas fa-rocket mr-2"></i>
+                  Uppgradera till Pro
+                </button>
+                <button
+                  onClick={onCancel}
+                  className="block mx-auto text-slate-400 hover:text-white transition-colors"
+                >
+                  Tillbaka
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="w-28 h-28 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 hover:bg-indigo-500 active:scale-95 transition-all shadow-2xl shadow-indigo-500/30"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    startCamera();
+                  }}
+                >
+                  <i className="fas fa-video text-white text-4xl"></i>
+                </button>
+                <h2 className="text-white text-2xl font-bold mb-2">Starta kamera</h2>
+                <p className="text-slate-400 mb-4">Tryck för att börja filma din SOP</p>
 
-            {/* Quick settings preview */}
-            <div className="flex items-center justify-center gap-4 text-sm">
-              <button
-                onClick={() => setShowSettings(true)}
-                className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-              >
-                <i className="fas fa-sliders-h"></i>
-                <span>Inställningar</span>
-              </button>
-              {directorMode && (
-                <span className="flex items-center gap-2 text-indigo-400">
-                  <i className="fas fa-film"></i>
-                  <span>AI Director på</span>
-                </span>
-              )}
-            </div>
+                {/* Free SOPs remaining */}
+                {!isPro && (
+                  <div className="mb-6">
+                    <span className="px-3 py-1.5 bg-indigo-600/30 text-indigo-300 rounded-full text-xs font-bold">
+                      <i className="fas fa-gift mr-1.5"></i>
+                      {freeSOPsRemaining} gratis SOP{freeSOPsRemaining !== 1 ? 's' : ''} kvar
+                    </span>
+                  </div>
+                )}
 
-            {cameraError && (
-              <div className="mt-6 bg-red-600/20 border border-red-500/50 rounded-xl p-4">
-                <p className="text-red-400 text-sm">{cameraError}</p>
-              </div>
+                {/* Quick settings preview */}
+                <div className="flex items-center justify-center gap-4 text-sm">
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                  >
+                    <i className="fas fa-sliders-h"></i>
+                    <span>Inställningar</span>
+                  </button>
+                  {directorMode && (
+                    <span className="flex items-center gap-2 text-indigo-400">
+                      <i className="fas fa-film"></i>
+                      <span>AI Director på</span>
+                    </span>
+                  )}
+                </div>
+
+                {cameraError && (
+                  <div className="mt-6 bg-red-600/20 border border-red-500/50 rounded-xl p-4">
+                    <p className="text-red-400 text-sm">{cameraError}</p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

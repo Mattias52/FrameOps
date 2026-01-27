@@ -16,9 +16,21 @@ import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
 import { fetchSOPs, saveSOP, isSupabaseConfigured } from './services/supabaseService';
 
+const FREE_SOP_LIMIT = 3;
+
 const App: React.FC = () => {
   // Check if user has entered the app before
   const hasVisited = typeof window !== 'undefined' && window.localStorage.getItem('frameops_visited');
+
+  // Track free SOPs used
+  const getUsedSOPs = () => {
+    if (typeof window === 'undefined') return 0;
+    return parseInt(localStorage.getItem('frameops_sops_used') || '0', 10);
+  };
+
+  const [sopsUsed, setSopsUsed] = useState(getUsedSOPs);
+  const freeSOPsRemaining = Math.max(0, FREE_SOP_LIMIT - sopsUsed);
+  const isPro = false; // TODO: Check actual subscription status from Supabase/Stripe
   const [currentView, setCurrentView] = useState<AppView>(hasVisited ? AppView.DASHBOARD : AppView.LANDING);
   const [sops, setSops] = useState<SOP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,6 +73,13 @@ const App: React.FC = () => {
   }, []);
 
   const handleAddSOP = async (newSop: SOP) => {
+    // Track free SOP usage (only if not Pro)
+    if (!isPro) {
+      const newCount = sopsUsed + 1;
+      setSopsUsed(newCount);
+      localStorage.setItem('frameops_sops_used', newCount.toString());
+    }
+
     // Extract video blob before adding to state (blob is only for upload)
     const videoBlob = newSop.videoBlob;
     const sopWithoutBlob = { ...newSop, videoBlob: undefined };
@@ -131,6 +150,9 @@ const App: React.FC = () => {
                 setSelectedSopId(sopId);
                 setCurrentView(AppView.LIBRARY);
               }}
+              freeSOPsRemaining={freeSOPsRemaining}
+              isPro={isPro}
+              onUpgrade={() => setCurrentView(AppView.SUBSCRIPTION)}
             />
           </ErrorBoundary>
         );
@@ -143,6 +165,9 @@ const App: React.FC = () => {
                 setCurrentView(AppView.LIBRARY);
               }}
               onCancel={() => setCurrentView(AppView.GENERATOR)}
+              freeSOPsRemaining={freeSOPsRemaining}
+              isPro={isPro}
+              onUpgrade={() => setCurrentView(AppView.SUBSCRIPTION)}
             />
           </ErrorBoundary>
         );
@@ -152,9 +177,10 @@ const App: React.FC = () => {
             sops={sops}
             onDelete={(sopId) => setSops(prev => prev.filter(s => s.id !== sopId))}
             onUpdate={(updatedSop) => setSops(prev => prev.map(s => s.id === updatedSop.id ? updatedSop : s))}
-            isPro={true} // Beta: full access for everyone
+            isPro={isPro}
             initialSelectedId={selectedSopId}
             onSelectionCleared={() => setSelectedSopId(null)}
+            onUpgrade={() => setCurrentView(AppView.SUBSCRIPTION)}
           />
         );
       case AppView.SUBSCRIPTION:

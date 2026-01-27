@@ -12,12 +12,13 @@ interface SOPLibraryProps {
   sops: SOP[];
   onDelete?: (sopId: string) => void;
   onUpdate?: (sop: SOP) => void;
-  isPro?: boolean; // TODO: Connect to actual subscription state
+  isPro?: boolean;
   initialSelectedId?: string | null;
   onSelectionCleared?: () => void;
+  onUpgrade?: () => void;
 }
 
-const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro = false, initialSelectedId, onSelectionCleared }) => {
+const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro = false, initialSelectedId, onSelectionCleared, onUpgrade }) => {
   const [selectedSop, setSelectedSop] = useState<SOP | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
@@ -927,12 +928,15 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                                   <p className="text-slate-500 text-sm mb-6">
                                     Upgrade to Pro to unlock all steps, PDF export, and editing.
                                   </p>
-                                  <button className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">
+                                  <button
+                                    onClick={onUpgrade}
+                                    className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                                  >
                                     <i className="fas fa-crown mr-2"></i>
-                                    Upgrade to Pro
+                                    Uppgradera till Pro
                                   </button>
                                   <p className="text-xs text-slate-400 mt-3">
-                                    Starting at $19/month
+                                    Från $19/månad
                                   </p>
                                 </div>
                               </div>
@@ -1079,10 +1083,11 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                   {/* Upgrade CTA for Free Users */}
                   {!isPro && (
                     <button
+                      onClick={onUpgrade}
                       className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:from-indigo-500 hover:to-purple-500 transition-all flex items-center justify-center gap-3 shadow-lg"
                     >
                       <i className="fas fa-crown text-amber-300 text-base"></i>
-                      Upgrade to Pro
+                      Uppgradera till Pro
                     </button>
                   )}
 

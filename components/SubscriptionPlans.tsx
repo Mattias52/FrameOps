@@ -38,19 +38,19 @@ const SubscriptionPlans: React.FC = () => {
 
   const plans = [
     {
-      name: 'Free Preview',
+      name: 'Beta Gratis',
       monthlyPrice: '0',
       yearlyPrice: '0',
-      description: 'Preview any video before you buy',
+      description: 'Prova FrameOps under beta',
       features: [
-        'Unlimited video previews',
-        'See first 3 steps of any SOP',
-        'Test with your own videos',
-        'No credit card required',
-        'Basic AI analysis'
+        '3 SOPs totalt',
+        'YouTube, uppladdning & live',
+        'AI-genererade instruktioner',
+        'PDF-export',
+        'SOP-redigering'
       ],
       limitations: [],
-      buttonText: 'Current Plan',
+      buttonText: 'Nuvarande plan',
       popular: false,
       color: 'slate'
     },
@@ -58,54 +58,34 @@ const SubscriptionPlans: React.FC = () => {
       name: 'Pro',
       monthlyPrice: '19',
       yearlyPrice: '190',
-      description: 'For professionals who need more power',
+      description: 'För proffs som behöver obegränsat',
       features: [
-        'Unlimited SOPs',
-        'HD frame extraction',
-        'No watermark on exports',
-        'Priority AI processing',
-        'Custom branding on PDFs',
-        'Email support'
+        'Obegränsade SOPs',
+        'YouTube, uppladdning & live',
+        'AI-granskning av SOPs',
+        'Manuellt frame-val',
+        'PDF-export',
+        'Prioriterad support'
       ],
       limitations: [],
-      buttonText: 'Upgrade to Pro',
+      buttonText: 'Uppgradera till Pro',
       popular: true,
       color: 'indigo'
     },
     {
-      name: 'Team',
-      monthlyPrice: '49',
-      yearlyPrice: '490',
-      description: 'Collaboration for growing teams',
+      name: 'API Access',
+      monthlyPrice: '99',
+      yearlyPrice: '990',
+      description: 'Integrera i dina system',
       features: [
-        'Everything in Pro',
-        '5 team members included',
-        'Shared SOP library',
-        'Team branding templates',
-        'Analytics dashboard',
-        'Priority support'
+        'Allt i Pro',
+        'REST API-åtkomst',
+        'Webhook-notifieringar',
+        'Programmatisk SOP-generering',
+        'Teknisk support'
       ],
       limitations: [],
-      buttonText: 'Start Team Trial',
-      popular: false,
-      color: 'slate'
-    },
-    {
-      name: 'Enterprise',
-      monthlyPrice: 'Custom',
-      yearlyPrice: 'Custom',
-      description: 'For large organizations',
-      features: [
-        'Unlimited team members',
-        'SSO / SAML integration',
-        'API access',
-        'Dedicated account manager',
-        'Custom integrations',
-        'On-premise deployment option',
-        'SLA guarantee'
-      ],
-      limitations: [],
-      buttonText: 'Contact Sales',
+      buttonText: 'Kontakta oss',
       popular: false,
       color: 'slate'
     }
@@ -113,20 +93,20 @@ const SubscriptionPlans: React.FC = () => {
 
   const faqs = [
     {
-      question: 'What counts as one SOP?',
-      answer: 'One SOP is a single video processed into a procedure document, regardless of length or number of steps extracted.'
+      question: 'Vad räknas som en SOP?',
+      answer: 'En SOP är en video som processas till ett instruktionsdokument, oavsett längd eller antal steg.'
     },
     {
-      question: 'Can I upgrade or downgrade anytime?',
-      answer: 'Yes! You can change your plan at any time. Upgrades are immediate, and downgrades take effect at the next billing cycle.'
+      question: 'Kan jag uppgradera när som helst?',
+      answer: 'Ja! Du kan uppgradera din plan när som helst och får omedelbar tillgång till alla Pro-funktioner.'
     },
     {
-      question: 'Is there a free trial for paid plans?',
-      answer: 'Yes, Pro and Team plans come with a 14-day free trial. No credit card required to start.'
+      question: 'Hur länge varar beta-perioden?',
+      answer: 'Beta-perioden pågår tills vidare. Under beta får du 3 gratis SOPs att prova produkten med.'
     },
     {
-      question: 'What payment methods do you accept?',
-      answer: 'We accept all major credit cards (Visa, Mastercard, Amex) and can arrange invoicing for Enterprise customers.'
+      question: 'Vilka betalmetoder accepteras?',
+      answer: 'Vi accepterar alla större kreditkort (Visa, Mastercard, Amex) via Stripe.'
     }
   ];
 
@@ -134,9 +114,9 @@ const SubscriptionPlans: React.FC = () => {
     <div className="py-8 animate-in fade-in duration-500">
       {/* Header */}
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-extrabold text-slate-900 mb-4">Choose Your Plan</h1>
+        <h1 className="text-4xl font-extrabold text-slate-900 mb-4">Välj din plan</h1>
         <p className="text-lg text-slate-500 max-w-2xl mx-auto">
-          Start free, upgrade as you grow. All plans include our core AI-powered SOP generation.
+          Börja gratis under beta, uppgradera när du behöver mer.
         </p>
 
         {/* Billing Toggle */}
@@ -149,7 +129,7 @@ const SubscriptionPlans: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Monthly
+            Månadsvis
           </button>
           <button
             onClick={() => setBillingPeriod('yearly')}
@@ -159,16 +139,16 @@ const SubscriptionPlans: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Yearly
+            Årsvis
             <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">
-              Save 17%
+              Spara 17%
             </span>
           </button>
         </div>
       </div>
 
       {/* Pricing Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto mb-20">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-20">
         {plans.map((plan, i) => (
           <div
             key={i}
@@ -229,68 +209,66 @@ const SubscriptionPlans: React.FC = () => {
       </div>
 
       {/* Feature Comparison */}
-      <div className="max-w-5xl mx-auto mb-20">
-        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Compare Features</h2>
+      <div className="max-w-4xl mx-auto mb-20">
+        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Jämför funktioner</h2>
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100">
-                <th className="text-left p-4 font-semibold text-slate-900">Feature</th>
-                <th className="p-4 font-semibold text-slate-900 text-center">Free</th>
+                <th className="text-left p-4 font-semibold text-slate-900">Funktion</th>
+                <th className="p-4 font-semibold text-slate-900 text-center">Beta Gratis</th>
                 <th className="p-4 font-semibold text-indigo-600 text-center bg-indigo-50">Pro</th>
-                <th className="p-4 font-semibold text-slate-900 text-center">Team</th>
-                <th className="p-4 font-semibold text-slate-900 text-center">Enterprise</th>
+                <th className="p-4 font-semibold text-slate-900 text-center">API</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">Full SOPs</td>
-                <td className="p-4 text-center text-slate-600">Preview only</td>
-                <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">Unlimited</td>
-                <td className="p-4 text-center text-slate-600">Unlimited</td>
-                <td className="p-4 text-center text-slate-600">Unlimited</td>
+                <td className="p-4 text-slate-700">Antal SOPs</td>
+                <td className="p-4 text-center text-slate-600">3 totalt</td>
+                <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">Obegränsat</td>
+                <td className="p-4 text-center text-slate-600">Obegränsat</td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">Video quality</td>
-                <td className="p-4 text-center text-slate-600">720p</td>
-                <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">1080p HD</td>
-                <td className="p-4 text-center text-slate-600">1080p HD</td>
-                <td className="p-4 text-center text-slate-600">4K</td>
-              </tr>
-              <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">PDF watermark</td>
-                <td className="p-4 text-center"><i className="fas fa-check text-slate-400"></i></td>
-                <td className="p-4 text-center bg-indigo-50"><i className="fas fa-times text-slate-300"></i></td>
-                <td className="p-4 text-center"><i className="fas fa-times text-slate-300"></i></td>
-                <td className="p-4 text-center"><i className="fas fa-times text-slate-300"></i></td>
-              </tr>
-              <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">Custom branding</td>
-                <td className="p-4 text-center"><i className="fas fa-times text-slate-300"></i></td>
-                <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-indigo-600"></i></td>
+                <td className="p-4 text-slate-700">YouTube-videos</td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">Team members</td>
-                <td className="p-4 text-center text-slate-600">1</td>
-                <td className="p-4 text-center bg-indigo-50 text-slate-600">1</td>
-                <td className="p-4 text-center text-slate-600">5</td>
-                <td className="p-4 text-center text-slate-600">Unlimited</td>
+                <td className="p-4 text-slate-700">Video-uppladdning</td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">API access</td>
+                <td className="p-4 text-slate-700">Live-inspelning</td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
+              </tr>
+              <tr className="border-b border-slate-50">
+                <td className="p-4 text-slate-700">PDF-export</td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
+              </tr>
+              <tr className="border-b border-slate-50">
+                <td className="p-4 text-slate-700">AI-granskning</td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
+              </tr>
+              <tr className="border-b border-slate-50">
+                <td className="p-4 text-slate-700">REST API</td>
                 <td className="p-4 text-center"><i className="fas fa-times text-slate-300"></i></td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-times text-slate-300"></i></td>
-                <td className="p-4 text-center"><i className="fas fa-times text-slate-300"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr>
                 <td className="p-4 text-slate-700">Support</td>
                 <td className="p-4 text-center text-slate-600">Community</td>
                 <td className="p-4 text-center bg-indigo-50 text-slate-600">Email</td>
-                <td className="p-4 text-center text-slate-600">Priority</td>
-                <td className="p-4 text-center text-slate-600">Dedicated</td>
+                <td className="p-4 text-center text-slate-600">Prioriterad</td>
               </tr>
             </tbody>
           </table>
@@ -304,8 +282,8 @@ const SubscriptionPlans: React.FC = () => {
             <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-3">
               <i className="fas fa-gift text-indigo-600 text-xl"></i>
             </div>
-            <h3 className="text-lg font-bold text-slate-900">Have a promo code?</h3>
-            <p className="text-sm text-slate-500 mt-1">Enter your code to unlock special access</p>
+            <h3 className="text-lg font-bold text-slate-900">Har du en kampanjkod?</h3>
+            <p className="text-sm text-slate-500 mt-1">Ange din kod för att låsa upp specialåtkomst</p>
           </div>
 
           <div className="flex gap-3">
@@ -316,7 +294,7 @@ const SubscriptionPlans: React.FC = () => {
                 setPromoCode(e.target.value);
                 setPromoStatus('idle');
               }}
-              placeholder="Enter promo code..."
+              placeholder="Ange kampanjkod..."
               className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm font-medium uppercase"
             />
             <button
@@ -324,7 +302,7 @@ const SubscriptionPlans: React.FC = () => {
               disabled={!promoCode.trim()}
               className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Apply
+              Aktivera
             </button>
           </div>
 
@@ -347,14 +325,14 @@ const SubscriptionPlans: React.FC = () => {
           )}
 
           <p className="text-xs text-slate-400 text-center mt-4">
-            Influencer? Creator? <a href="mailto:partners@frameops.ai" className="text-indigo-600 hover:underline">Contact us</a> for a free trial code.
+            Influencer? Creator? <a href="mailto:partners@frameops.ai" className="text-indigo-600 hover:underline">Kontakta oss</a> för en gratis provkod.
           </p>
         </div>
       </div>
 
       {/* FAQ Section */}
       <div className="max-w-3xl mx-auto mb-16">
-        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Frequently Asked Questions</h2>
+        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Vanliga frågor</h2>
         <div className="space-y-4">
           {faqs.map((faq, i) => (
             <div key={i} className="bg-white rounded-xl border border-slate-100 p-6">
@@ -373,18 +351,14 @@ const SubscriptionPlans: React.FC = () => {
             <span>256-bit SSL</span>
           </div>
           <div className="flex items-center gap-2">
-            <i className="fas fa-shield-halved"></i>
-            <span>SOC 2 Compliant</span>
-          </div>
-          <div className="flex items-center gap-2">
             <i className="fas fa-credit-card"></i>
-            <span>Secure Payments</span>
+            <span>Säkra betalningar via Stripe</span>
           </div>
         </div>
         <p className="text-slate-400 text-sm mt-4">
-          Need a custom solution?
-          <a href="mailto:sales@frameops.ai" className="text-indigo-600 font-semibold ml-1 hover:underline">
-            Contact our sales team
+          Frågor?
+          <a href="mailto:support@frameops.ai" className="text-indigo-600 font-semibold ml-1 hover:underline">
+            Kontakta support
           </a>
         </p>
       </div>
