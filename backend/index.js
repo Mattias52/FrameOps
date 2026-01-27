@@ -2785,13 +2785,19 @@ Analysera VARJE bild och kontrollera att bilden visar det som texten beskriver.
     // Add final instructions
     parts.push({ text: `
 
-Baserat på bilderna och texten ovan, ge feedback:
+Granska SOP:en och ge KORT feedback. Var INTE överkritisk.
 
-1. BILD-TEXT MATCHNING: Finns det steg där bilden INTE matchar texten? T.ex. text säger "stäng" men bilden visar "öppen"?
-2. SÄKERHET: Saknas varningar för farliga moment?
-3. TYDLIGHET: Är något steg otydligt?
+FOKUSERA PÅ:
+1. BILD-TEXT MATCHNING: Visar bilden något ANNAT än vad texten beskriver? (T.ex. "stäng luckan" men bilden visar öppen lucka)
+2. SAKNAD INFO: Fattas viktiga steg eller detaljer?
 
-Var KONKRET - ange stegnummer. Max 3 punkter per kategori. Svara på SVENSKA.
+IGNORERA:
+- Generella säkerhetsråd (användaren vet att de ska vara försiktiga)
+- Småsaker som "kunde vara tydligare"
+- Saker som fungerar ok
+
+Ge score 7-10 om SOP:en är användbar. Endast lägre om det finns FAKTISKA fel.
+Max 2 punkter per kategori. Svara på SVENSKA.
 ` });
 
     console.log(`[REV-${jobId}] Sending ${steps.length} steps with images to Gemini`);

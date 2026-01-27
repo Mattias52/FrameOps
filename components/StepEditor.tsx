@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { SOPStep, FrameOption } from '../types';
-import { enhanceStepText } from '../services/youtubeService';
 
 interface StepEditorProps {
   step: SOPStep;
@@ -32,31 +31,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
   const [newWarning, setNewWarning] = useState('');
   const [newTool, setNewTool] = useState('');
   const [showFramePicker, setShowFramePicker] = useState(false);
-  const [isEnhancing, setIsEnhancing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // AI Enhancement handler
-  const handleEnhance = async () => {
-    setIsEnhancing(true);
-    try {
-      const result = await enhanceStepText(localStep.title, localStep.description);
-      if (result) {
-        const updated = {
-          ...localStep,
-          title: result.title,
-          description: result.description,
-          safetyWarnings: result.safetyWarnings && result.safetyWarnings.length > 0
-            ? [...(localStep.safetyWarnings || []), ...result.safetyWarnings]
-            : localStep.safetyWarnings
-        };
-        setLocalStep(updated);
-        onUpdate(updated);
-      }
-    } catch (error) {
-      console.error('Enhancement failed:', error);
-    }
-    setIsEnhancing(false);
-  };
 
   const handleFrameSelect = (frame: FrameOption) => {
     handleChange('thumbnail', frame.imageBase64);
@@ -237,24 +212,6 @@ const StepEditor: React.FC<StepEditorProps> = ({
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
                   placeholder="Describe this step in detail..."
                 />
-                {/* AI Enhance Button */}
-                <button
-                  onClick={handleEnhance}
-                  disabled={isEnhancing}
-                  className="mt-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-bold rounded-lg hover:from-purple-600 hover:to-indigo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-purple-200"
-                >
-                  {isEnhancing ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin mr-2"></i>
-                      Förbättrar...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-wand-magic-sparkles mr-2"></i>
-                      ✨ AI Förbättra
-                    </>
-                  )}
-                </button>
               </div>
 
               {/* Timestamp */}
