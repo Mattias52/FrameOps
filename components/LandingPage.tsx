@@ -94,8 +94,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center">
-                <img src="/logo.png" alt="FrameOps" className="w-11 h-11" />
+              <div className="w-16 h-16 rounded-xl flex items-center justify-center">
+                <img src="/logo.png" alt="FrameOps" className="w-16 h-16" />
               </div>
               <span className="font-bold text-xl text-slate-900">FrameOps</span>
             </div>
@@ -500,8 +500,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center">
-                <img src="/logo.png" alt="FrameOps" className="w-10 h-10" />
+              <div className="w-14 h-14 rounded-lg flex items-center justify-center">
+                <img src="/logo.png" alt="FrameOps" className="w-14 h-14" />
               </div>
               <span className="font-bold text-white">FrameOps</span>
             </div>

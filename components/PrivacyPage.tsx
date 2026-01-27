@@ -16,8 +16,8 @@ const PrivacyPage: React.FC<PrivacyPageProps> = ({ onNavigate }) => {
               className="flex items-center gap-3 cursor-pointer"
               onClick={() => onNavigate(AppView.LANDING)}
             >
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center">
-                <img src="/logo.png" alt="FrameOps" className="w-11 h-11" />
+              <div className="w-16 h-16 rounded-xl flex items-center justify-center">
+                <img src="/logo.png" alt="FrameOps" className="w-16 h-16" />
               </div>
               <span className="font-bold text-xl text-slate-900">FrameOps</span>
             </div>
