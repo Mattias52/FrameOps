@@ -1,8 +1,18 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import * as Sentry from '@sentry/react';
 import App from './App';
 import './index.css';
+
+// Initialize Sentry for error tracking
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    environment: import.meta.env.MODE,
+    enabled: import.meta.env.PROD, // Only track errors in production
+  });
+}
 
 // Fix: Reference document via window with type assertion to bypass missing DOM types in the current environment
 const rootElement = (window as any).document.getElementById('root');
