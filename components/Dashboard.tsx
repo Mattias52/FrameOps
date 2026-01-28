@@ -7,8 +7,8 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate }) => {
-  // Calculate real stats from actual data
-  const totalSteps = sops.reduce((sum, sop) => sum + sop.steps.length, 0);
+  // Calculate real stats from actual data (use numSteps for lazy loaded SOPs)
+  const totalSteps = sops.reduce((sum, sop) => sum + (sop.numSteps || sop.steps?.length || 0), 0);
   const youtubeSOPs = sops.filter(s => s.source === 'youtube' || s.sourceType === 'youtube').length;
   const uploadSOPs = sops.filter(s => s.source === 'upload' || s.sourceType === 'upload').length;
 
@@ -130,7 +130,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate }) => {
                 >
                   <div className="w-20 h-14 bg-slate-100 rounded-xl shrink-0 overflow-hidden">
                     <img
-                      src={sop.thumbnail_url || sop.steps[Math.floor(sop.steps.length / 3)]?.image_url || sop.steps[0]?.image_url || sop.steps[0]?.thumbnail}
+                      src={sop.thumbnail_url || (sop.steps?.length > 0 ? (sop.steps[Math.floor(sop.steps.length / 3)]?.image_url || sop.steps[0]?.image_url || sop.steps[0]?.thumbnail) : undefined)}
                       alt=""
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       crossOrigin="anonymous"
@@ -147,7 +147,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate }) => {
                       </span>
                       <span className="text-xs text-slate-500">
                         <i className="fas fa-list mr-1"></i>
-                        {sop.steps.length} steps
+                        {sop.numSteps || sop.steps?.length || 0} steps
                       </span>
                     </div>
                   </div>

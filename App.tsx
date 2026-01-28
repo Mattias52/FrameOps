@@ -14,7 +14,7 @@ import CreatorLandingPage from './components/CreatorLandingPage';
 import APIKeysPage from './components/APIKeysPage';
 import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
-import { fetchSOPs, saveSOP, isSupabaseConfigured } from './services/supabaseService';
+import { fetchSOPsList, fetchSOPSteps, saveSOP, isSupabaseConfigured } from './services/supabaseService';
 
 const FREE_SOP_LIMIT = 3;
 
@@ -30,7 +30,7 @@ const App: React.FC = () => {
 
   const [sopsUsed, setSopsUsed] = useState(getUsedSOPs);
   const freeSOPsRemaining = Math.max(0, FREE_SOP_LIMIT - sopsUsed);
-  const isPro = false; // TODO: Check actual subscription status from Supabase/Stripe
+  const isPro = true; // Beta: Everyone gets Pro access. TODO: Check Stripe subscription status
   const [currentView, setCurrentView] = useState<AppView>(hasVisited ? AppView.DASHBOARD : AppView.LANDING);
   const [sops, setSops] = useState<SOP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,18 +45,22 @@ const App: React.FC = () => {
     return true;
   });
 
-  // Load SOPs from Supabase (or localStorage fallback)
+  // Load SOPs from Supabase (or localStorage fallback) - LAZY LOADING
+  const [totalSops, setTotalSops] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const INITIAL_LOAD = 20;
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
 
       if (isSupabaseConfigured()) {
-        // Load from Supabase
-        console.log('Loading from Supabase...');
-        const cloudSops = await fetchSOPs();
-        if (cloudSops.length > 0) {
-          setSops(cloudSops);
-        }
+        // Load from Supabase - only metadata first (no steps)
+        console.log('Loading SOPs from Supabase (lazy)...');
+        const { sops: cloudSops, total } = await fetchSOPsList(INITIAL_LOAD, 0);
+        setSops(cloudSops);
+        setTotalSops(total);
+        setHasMore(cloudSops.length < total);
       } else {
         // Fallback to localStorage
         console.log('Supabase not configured, using localStorage');
@@ -71,6 +75,15 @@ const App: React.FC = () => {
 
     loadData();
   }, []);
+
+  // Load more SOPs (pagination)
+  const loadMoreSOPs = async () => {
+    if (!hasMore || isLoading) return;
+
+    const { sops: moreSops, total } = await fetchSOPsList(INITIAL_LOAD, sops.length);
+    setSops(prev => [...prev, ...moreSops]);
+    setHasMore(sops.length + moreSops.length < total);
+  };
 
   const handleAddSOP = async (newSop: SOP) => {
     // Track free SOP usage (only if not Pro)
@@ -181,6 +194,9 @@ const App: React.FC = () => {
             initialSelectedId={selectedSopId}
             onSelectionCleared={() => setSelectedSopId(null)}
             onUpgrade={() => setCurrentView(AppView.SUBSCRIPTION)}
+            onLoadMore={loadMoreSOPs}
+            hasMore={hasMore}
+            fetchSteps={fetchSOPSteps}
           />
         );
       case AppView.SUBSCRIPTION:

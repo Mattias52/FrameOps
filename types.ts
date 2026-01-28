@@ -37,6 +37,7 @@ export interface SOP {
   sourceType: 'upload' | 'youtube' | 'live';
   sourceUrl?: string;
   steps: SOPStep[];
+  numSteps?: number; // From database - used when steps not yet loaded (lazy loading)
   status: 'processing' | 'completed' | 'failed';
   equipmentInfo?: string;
   ppeRequirements?: string[];

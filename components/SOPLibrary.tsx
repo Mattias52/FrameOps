@@ -16,10 +16,14 @@ interface SOPLibraryProps {
   initialSelectedId?: string | null;
   onSelectionCleared?: () => void;
   onUpgrade?: () => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  fetchSteps?: (sopId: string) => Promise<SOPStep[]>;
 }
 
-const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro = false, initialSelectedId, onSelectionCleared, onUpgrade }) => {
+const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro = false, initialSelectedId, onSelectionCleared, onUpgrade, onLoadMore, hasMore = false, fetchSteps }) => {
   const [selectedSop, setSelectedSop] = useState<SOP | null>(null);
+  const [isLoadingSteps, setIsLoadingSteps] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
@@ -42,12 +46,37 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
   // Video player ref for Live SOPs
   const videoPlayerRef = useRef<HTMLVideoElement>(null);
 
+  // Select SOP and fetch steps on demand (lazy loading)
+  const selectSopWithSteps = async (sop: SOP) => {
+    // If steps already loaded, just select
+    if (sop.steps && sop.steps.length > 0) {
+      setSelectedSop(sop);
+      return;
+    }
+
+    // Fetch steps on demand
+    if (fetchSteps) {
+      setIsLoadingSteps(true);
+      try {
+        const steps = await fetchSteps(sop.id);
+        const sopWithSteps = { ...sop, steps };
+        setSelectedSop(sopWithSteps);
+      } catch (err) {
+        console.error('Error loading steps:', err);
+        setSelectedSop(sop); // Show SOP anyway
+      }
+      setIsLoadingSteps(false);
+    } else {
+      setSelectedSop(sop);
+    }
+  };
+
   // Auto-select SOP when initialSelectedId is provided
   useEffect(() => {
     if (initialSelectedId && sops.length > 0) {
       const sop = sops.find(s => s.id === initialSelectedId);
       if (sop) {
-        setSelectedSop(sop);
+        selectSopWithSteps(sop);
         // Clear the selection ID after opening
         if (onSelectionCleared) {
           onSelectionCleared();
@@ -1179,14 +1208,14 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
           </div>
         ) : (
           filteredSops.map((sop) => (
-            <div 
-              key={sop.id} 
-              onClick={() => setSelectedSop(sop)}
+            <div
+              key={sop.id}
+              onClick={() => selectSopWithSteps(sop)}
               className="group bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer flex flex-col h-full"
             >
               <div className="relative h-56 overflow-hidden shrink-0">
-                <img 
-                  src={sop.thumbnail_url || sop.steps[Math.floor(sop.steps.length / 3)]?.image_url || sop.steps[0]?.image_url || sop.steps[0]?.thumbnail} 
+                <img
+                  src={sop.thumbnail_url || (sop.steps?.length > 0 ? (sop.steps[Math.floor(sop.steps.length / 3)]?.image_url || sop.steps[0]?.image_url || sop.steps[0]?.thumbnail) : undefined)}
                   alt={sop.title}
                   className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-1000"
                   crossOrigin="anonymous"
@@ -1200,7 +1229,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                 </div>
                 <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0">
                   <div className="p-3 bg-white rounded-2xl text-slate-900 font-black text-[10px] shadow-2xl">
-                    {sop.steps.length} STEPS
+                    {sop.numSteps || sop.steps?.length || 0} STEPS
                   </div>
                 </div>
               </div>
@@ -1225,6 +1254,28 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
           ))
         )}
       </div>
+
+      {/* Load more button */}
+      {hasMore && onLoadMore && (
+        <div className="flex justify-center py-8">
+          <button
+            onClick={onLoadMore}
+            className="px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-colors"
+          >
+            Load More SOPs
+          </button>
+        </div>
+      )}
+
+      {/* Loading steps indicator */}
+      {isLoadingSteps && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl text-center">
+            <i className="fas fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
+            <p className="text-slate-700 font-medium">Loading SOP details...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

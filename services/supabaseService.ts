@@ -83,6 +83,7 @@ const dbToSOP = (dbSop: DbSOP, steps: DbStep[]): SOP => ({
   materialsRequired: dbSop.materials_required || [],
   thumbnail_url: dbSop.thumbnail_url || undefined,
   videoUrl: dbSop.video_url || undefined,
+  numSteps: dbSop.num_steps || steps.length, // For lazy loading
   steps: steps
     .sort((a, b) => (a.step_order ?? a.step_number) - (b.step_order ?? b.step_number))
     .map(s => ({
@@ -187,7 +188,74 @@ export const deleteVideo = async (sopId: string): Promise<boolean> => {
   }
 };
 
-// Fetch all SOPs
+// Fetch SOPs list (metadata only, no steps) - for fast initial load
+export const fetchSOPsList = async (limit: number = 20, offset: number = 0): Promise<{ sops: SOP[]; total: number }> => {
+  if (!isSupabaseConfigured() || !supabase) return { sops: [], total: 0 };
+
+  try {
+    // Get total count
+    const { count } = await supabase
+      .from('sops')
+      .select('*', { count: 'exact', head: true });
+
+    // Fetch SOPs (metadata only)
+    const { data: sops, error: sopError } = await supabase
+      .from('sops')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (sopError) {
+      console.error('Error fetching SOPs:', sopError);
+      return { sops: [], total: 0 };
+    }
+
+    if (!sops || sops.length === 0) return { sops: [], total: count || 0 };
+
+    // Convert to app format WITHOUT steps (steps loaded on demand)
+    const sopList = sops.map(sop => dbToSOP(sop, []));
+
+    console.log(`Loaded ${sopList.length} SOPs (offset: ${offset}, total: ${count})`);
+    return { sops: sopList, total: count || 0 };
+  } catch (err) {
+    console.error('Error fetching SOPs:', err);
+    return { sops: [], total: 0 };
+  }
+};
+
+// Fetch steps for a specific SOP (on demand)
+export const fetchSOPSteps = async (sopId: string): Promise<SOPStep[]> => {
+  if (!isSupabaseConfigured() || !supabase) return [];
+
+  try {
+    const { data: steps, error } = await supabase
+      .from('sop_sections')
+      .select('*')
+      .eq('sop_id', sopId)
+      .order('step_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching steps:', error);
+      return [];
+    }
+
+    return (steps || []).map(s => ({
+      id: s.id,
+      timestamp: s.timestamp || '',
+      title: s.title || s.heading || '',
+      description: s.description || s.content || '',
+      thumbnail: s.thumbnail_url || s.image_path || undefined,
+      image_url: s.thumbnail_url || s.image_path || undefined,
+      safetyWarnings: s.safety_warnings || undefined,
+      toolsRequired: s.tools_required || undefined,
+    }));
+  } catch (err) {
+    console.error('Error fetching steps:', err);
+    return [];
+  }
+};
+
+// Fetch all SOPs (legacy - for backwards compatibility, but consider using fetchSOPsList)
 export const fetchSOPs = async (): Promise<SOP[]> => {
   if (!isSupabaseConfigured() || !supabase) return [];
 
