@@ -106,7 +106,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const recordedChunksRef = useRef<Blob[]>([]);
   const lastFrameRef = useRef<string | null>(null);
   const frameIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const allFramesRef = useRef<{ timestamp: number; image: string }[]>([]);
+  const allFramesRef = useRef<{ timestamp: number; image: string; shotIndex: number; instruction: string }[]>([]);
   const recordingTimeRef = useRef(0);
   const speechRecognitionRef = useRef<any>(null);
   const transcriptRef = useRef<string>('');
@@ -503,10 +503,15 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     const timestamp = recordingTimeRef.current;
     lastCaptureTimeRef.current = timestamp; // Track when we captured
 
-    console.log(`Captured frame #${allFramesRef.current.length + 1} at ${timestamp}s (diff: ${diff.toFixed(3)}, minInterval: ${minInterval}s)`);
+    console.log(`Captured frame #${allFramesRef.current.length + 1} at ${timestamp}s (diff: ${diff.toFixed(3)}, minInterval: ${minInterval}s, shot: ${currentShotIndex + 1})`);
 
-    // Store frame for later batch analysis
-    allFramesRef.current.push({ timestamp, image: frame });
+    // Store frame for later batch analysis - include shot context
+    allFramesRef.current.push({
+      timestamp,
+      image: frame,
+      shotIndex: currentShotIndex,
+      instruction: shotList[currentShotIndex]?.instruction || ''
+    });
 
     // Add placeholder step to UI
     const stepId = `step-${Date.now()}`;
@@ -881,12 +886,36 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         alert('No spoken instructions were captured. The AI will only use visual analysis.');
       }
 
-      // Call Gemini to generate descriptions for all frames
-      // Include spoken transcript as context
-      const contextWithTranscript = finalTranscript
-        ? `EXPERT TRANSCRIPT:\n"""\n${finalTranscript}\n"""\n\nINSTRUCTION: Convert this transcript into a formal step-by-step manual. Each step must be a direct command. Do not describe the video; write the manual for the person who will do the work.`
-        : '';
-      const result = await analyzeSOPFrames(frames, title, contextWithTranscript, []);
+      // Build shot context from AI Guide (if used)
+      const shotContext = shotList.length > 0
+        ? allFramesRef.current.map(f => ({
+            shotIndex: f.shotIndex,
+            instruction: f.instruction
+          }))
+        : [];
+
+      // Create structured context for Gemini
+      let contextWithTranscript = '';
+
+      if (shotList.length > 0) {
+        // We have AI Guide structure - use it!
+        const shotSummary = shotList.map((shot, idx) => {
+          const framesForShot = shotContext.filter(f => f.shotIndex === idx).length;
+          return `Step ${idx + 1}: "${shot.instruction}" (${framesForShot} frames)`;
+        }).join('\n');
+
+        contextWithTranscript = `AI GUIDE STRUCTURE (follow this exactly):\n${shotSummary}\n\n`;
+
+        if (finalTranscript) {
+          contextWithTranscript += `EXPERT NARRATION:\n"""\n${finalTranscript}\n"""\n\n`;
+        }
+
+        contextWithTranscript += `INSTRUCTION: Create the SOP following the AI Guide structure above. Each step in the guide = one step in the SOP. Match frames to their intended step. Write professional instructions for each step.`;
+      } else if (finalTranscript) {
+        contextWithTranscript = `EXPERT TRANSCRIPT:\n"""\n${finalTranscript}\n"""\n\nINSTRUCTION: Convert this transcript into a formal step-by-step manual. Each step must be a direct command. Do not describe the video; write the manual for the person who will do the work.`;
+      }
+
+      const result = await analyzeSOPFrames(frames, title, contextWithTranscript, [], shotContext);
       console.log('Gemini returned steps:', result.steps.length);
 
       // Map Gemini results to our steps

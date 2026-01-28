@@ -6,7 +6,8 @@ export const analyzeSOPFrames = async (
   frames: string[],
   title: string,
   additionalContext: string = "",
-  vitTags: string[] = []
+  vitTags: string[] = [],
+  shotContext: { shotIndex: number; instruction: string }[] = []
 ): Promise<{
   title: string;
   description: string;
@@ -21,6 +22,9 @@ export const analyzeSOPFrames = async (
   }
 
   console.log(`Sending ${frames.length} frames to Railway for Gemini analysis...`);
+  if (shotContext.length > 0) {
+    console.log(`Including shot context for ${new Set(shotContext.map(s => s.shotIndex)).size} shots`);
+  }
 
   try {
     const response = await fetch(`${RAILWAY_URL}/analyze-sop`, {
@@ -32,7 +36,8 @@ export const analyzeSOPFrames = async (
         frames,
         title,
         additionalContext,
-        vitTags
+        vitTags,
+        shotContext
       }),
     });
 

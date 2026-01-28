@@ -2047,7 +2047,7 @@ Eller: "Försök zooma in lite mer på detaljerna."`;
 });
 
 app.post('/analyze-sop', async (req, res) => {
-  const { frames, title, additionalContext = '', vitTags = [] } = req.body;
+  const { frames, title, additionalContext = '', vitTags = [], shotContext = [] } = req.body;
 
   if (!frames || !Array.isArray(frames) || frames.length === 0) {
     return res.status(400).json({ error: 'Missing or empty frames array' });
@@ -2055,6 +2055,13 @@ app.post('/analyze-sop', async (req, res) => {
 
   const jobId = crypto.randomBytes(8).toString('hex');
   console.log(`[${jobId}] Analyzing ${frames.length} frames for SOP: "${title}"`);
+
+  // Log if AI Guide shot context was provided
+  const hasShotContext = shotContext && shotContext.length > 0;
+  if (hasShotContext) {
+    const uniqueShots = [...new Set(shotContext.map(s => s.shotIndex))];
+    console.log(`[${jobId}] AI Guide context: ${uniqueShots.length} shots, ${shotContext.length} frame mappings`);
+  }
 
   // Log if transcript was provided
   const hasTranscript = additionalContext && additionalContext.length > 50;
@@ -2153,22 +2160,68 @@ app.post('/analyze-sop', async (req, res) => {
       ? `PRECISION VISION TAGS (Detected via ViT): ${vitTags.join(", ")}. These items are positively identified in the video.`
       : "";
 
+    // Build shot context instructions if AI Guide was used
+    let shotContextInstructions = '';
+    if (hasShotContext) {
+      // Group frames by shot index
+      const shotGroups = {};
+      shotContext.forEach((ctx, frameIdx) => {
+        if (!shotGroups[ctx.shotIndex]) {
+          shotGroups[ctx.shotIndex] = { instruction: ctx.instruction, frames: [] };
+        }
+        shotGroups[ctx.shotIndex].frames.push(frameIdx);
+      });
+
+      const shotMapping = Object.entries(shotGroups)
+        .sort((a, b) => Number(a[0]) - Number(b[0]))
+        .map(([shotIdx, data]) => {
+          const frameRange = data.frames.length === 1
+            ? `Frame ${data.frames[0] + 1}`
+            : `Frames ${data.frames[0] + 1}-${data.frames[data.frames.length - 1] + 1}`;
+          return `Shot ${Number(shotIdx) + 1}: "${data.instruction}" → ${frameRange}`;
+        })
+        .join('\n      ');
+
+      shotContextInstructions = `
+
+      AI GUIDE SHOT MAPPING (CRITICAL - FOLLOW THIS EXACTLY):
+      The user followed an AI Guide with specific instructions for each shot.
+      You MUST organize the SOP to match this structure:
+
+      ${shotMapping}
+
+      RULES:
+      - Create ONE step for each shot (not one step per frame)
+      - Group multiple frames from the same shot into ONE step
+      - Use the shot instruction as the basis for the step title
+      - The step description should describe what's shown across all frames in that shot
+      - Total steps should equal the number of shots (${Object.keys(shotGroups).length}), NOT the number of frames (${frames.length})
+      `;
+    }
+
     const prompt = `
       You are an expert technical writer creating a Standard Operating Procedure (SOP).
       You write as THE INSTRUCTOR - as if you are the expert teaching someone how to perform this task.
 
       IMPORTANT: You are given exactly ${validImageParts.length} frames in chronological order from a procedure video titled: "${title}".
+      ${shotContextInstructions}
       ${transcriptInstructions}
       ${additionalContext ? `\nCONTEXT AND TRANSCRIPT:\n${additionalContext}` : ''}
       ${vitContext}
 
       YOUR TASK:
+      ${hasShotContext ? `
+      Generate steps following the AI GUIDE SHOT MAPPING above.
+      - Create ONE step per shot (group frames from the same shot together)
+      - Use the shot instruction as basis for step title
+      - Describe the complete action shown across all frames in that shot
+      ` : `
       Generate EXACTLY ${validImageParts.length} steps - one step for each frame, in the same order.
-
       - Step 1 describes what to DO based on Frame 1
       - Step 2 describes what to DO based on Frame 2
       - Step 3 describes what to DO based on Frame 3
       ... and so on for all ${validImageParts.length} frames.
+      `}
 
       WRITING RULES (CRITICAL):
       - Write in IMPERATIVE form - direct instructions to the reader
@@ -2185,7 +2238,9 @@ app.post('/analyze-sop', async (req, res) => {
       - Include specific visual details (hand positions, component alignment)
       - Add safety warnings where appropriate
 
-      You MUST return exactly ${validImageParts.length} steps. No more, no less.
+      ${hasShotContext
+        ? `You MUST return exactly the number of steps matching the AI Guide shots above.`
+        : `You MUST return exactly ${validImageParts.length} steps. No more, no less.`}
 
       THUMBNAIL SELECTION:
       Also select the BEST frame to use as the cover image/thumbnail for this SOP.
