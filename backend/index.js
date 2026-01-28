@@ -1899,6 +1899,153 @@ Respond in JSON format:
   }
 });
 
+// AI Guide: Generate shot list from user description
+app.post('/generate-shot-list', async (req, res) => {
+  const { description } = req.body;
+
+  if (!description) {
+    return res.status(400).json({ error: 'Missing description' });
+  }
+
+  const jobId = crypto.randomBytes(4).toString('hex');
+  console.log(`[GUIDE-${jobId}] Generating shot list for: "${description.substring(0, 50)}..."`);
+
+  try {
+    const genai = getGenAI();
+
+    const prompt = `Du är en erfaren regissör som hjälper någon filma en instruktionsvideo.
+
+ANVÄNDAREN VILL DOKUMENTERA: "${description}"
+
+Skapa en steg-för-steg guide med 5-8 "shots" (inspelningsmoment) som användaren ska filma.
+
+För varje shot, ge:
+1. En tydlig instruktion om VAD de ska visa/göra
+2. Ett kort filmningstips om HUR de ska filma det
+
+Svara i JSON-format:
+{
+  "title": "Kort titel för SOP:en (max 50 tecken)",
+  "shotList": [
+    {
+      "instruction": "Visa alla verktyg och material som behövs",
+      "filmingTip": "Lägg ut allt på en plan yta med bra ljus"
+    },
+    {
+      "instruction": "...",
+      "filmingTip": "..."
+    }
+  ]
+}
+
+Viktigt:
+- Instruktioner på svenska
+- Börja med att visa verktyg/material
+- Avsluta med att visa slutresultatet
+- Filmningstips ska vara praktiska och korta`;
+
+    const response = await genai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1000
+      }
+    });
+
+    const responseText = response.text.trim();
+    console.log(`[GUIDE-${jobId}] Response length: ${responseText.length}`);
+
+    // Parse JSON response
+    let result;
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      result = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    } catch (e) {
+      console.error(`[GUIDE-${jobId}] JSON parse error:`, e.message);
+      result = null;
+    }
+
+    if (result && result.shotList) {
+      res.json({
+        success: true,
+        title: result.title || description.substring(0, 50),
+        shotList: result.shotList
+      });
+    } else {
+      res.json({
+        success: false,
+        error: 'Could not generate shot list'
+      });
+    }
+
+  } catch (error) {
+    console.error(`[GUIDE-${jobId}] Error:`, error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// AI Guide: Get feedback when paused
+app.post('/pause-feedback', async (req, res) => {
+  const { frame, currentInstruction, stepNumber, totalSteps } = req.body;
+
+  if (!frame) {
+    return res.status(400).json({ error: 'Missing frame' });
+  }
+
+  const jobId = crypto.randomBytes(4).toString('hex');
+  console.log(`[PAUSE-${jobId}] Feedback for step ${stepNumber}/${totalSteps}`);
+
+  try {
+    const genai = getGenAI();
+
+    const prompt = `Du är en AI-assistent som ger feedback på en inspelning.
+
+NUVARANDE INSTRUKTION: "${currentInstruction || 'Okänd'}"
+STEG: ${stepNumber} av ${totalSteps}
+
+Titta på denna bild från inspelningen och ge kort feedback:
+1. Har användaren följt instruktionen?
+2. Är bilden tydlig och användbar?
+3. Något som kan förbättras?
+
+Svara med EN mening på svenska (max 20 ord) som är uppmuntrande men konstruktiv.
+Exempel: "Bra jobbat! Bilden är tydlig och visar verktyget bra."
+Eller: "Försök zooma in lite mer på detaljerna."`;
+
+    const imageData = frame.includes(',') ? frame.split(',')[1] : frame;
+
+    const response = await genai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{
+        parts: [
+          { inlineData: { mimeType: 'image/jpeg', data: imageData } },
+          { text: prompt }
+        ]
+      }],
+      generationConfig: {
+        temperature: 0.5,
+        maxOutputTokens: 100
+      }
+    });
+
+    const feedback = response.text.trim().replace(/^["']|["']$/g, '');
+    console.log(`[PAUSE-${jobId}] Feedback: ${feedback}`);
+
+    res.json({
+      success: true,
+      feedback
+    });
+
+  } catch (error) {
+    console.error(`[PAUSE-${jobId}] Error:`, error.message);
+    res.json({
+      success: true,
+      feedback: 'Bra jobbat! Fortsätt till nästa steg.'
+    });
+  }
+});
+
 app.post('/analyze-sop', async (req, res) => {
   const { frames, title, additionalContext = '', vitTags = [] } = req.body;
 

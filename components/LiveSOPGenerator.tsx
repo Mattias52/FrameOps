@@ -20,6 +20,18 @@ interface LiveStep {
   status: 'capturing' | 'analyzing' | 'complete';
 }
 
+interface ShotInstruction {
+  step: number;
+  instruction: string;
+  filmingTip?: string;
+  completed: boolean;
+}
+
+interface ChatMessage {
+  role: 'user' | 'ai';
+  content: string;
+}
+
 const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   onComplete,
   onCancel,
@@ -28,6 +40,19 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   onUpgrade
 }) => {
   const canCreate = isPro || freeSOPsRemaining > 0;
+
+  // Phase state: planning -> ready -> recording -> finishing
+  const [phase, setPhase] = useState<'planning' | 'ready' | 'recording' | 'finishing'>('planning');
+
+  // AI Guide state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    { role: 'ai', content: 'Hej! Vad ska du dokumentera idag? Beskriv kort vad du ska göra så skapar jag en guide åt dig.' }
+  ]);
+  const [userInput, setUserInput] = useState('');
+  const [shotList, setShotList] = useState<ShotInstruction[]>([]);
+  const [currentShotIndex, setCurrentShotIndex] = useState(0);
+  const [isGeneratingGuide, setIsGeneratingGuide] = useState(false);
+  const [pauseFeedback, setPauseFeedback] = useState<string | null>(null);
 
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -60,16 +85,6 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   // Scene detection settings (user-controllable)
   const [sceneSensitivity, setSceneSensitivity] = useState(50); // 0-100, 50 = balanced
   const [showSettings, setShowSettings] = useState(false);
-
-  // AI Director state
-  const [directorMode, setDirectorMode] = useState(false);
-  const [directorTip, setDirectorTip] = useState<string | null>(null);
-  const [directorIssue, setDirectorIssue] = useState<string | null>(null);
-  const [directorSeverity, setDirectorSeverity] = useState<'low' | 'medium' | 'high' | null>(null);
-  const [directorLoading, setDirectorLoading] = useState(false);
-  const previousTipsRef = useRef<string[]>([]);
-  const lastProactiveCheckRef = useRef<number>(0);
-  const PROACTIVE_CHECK_INTERVAL = 5000; // Check every 5 seconds in proactive mode
 
   // Detect mobile
   useEffect(() => {
@@ -666,6 +681,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         setTimeout(captureAndAnalyze, 500);
 
         setIsRecording(true);
+        setPhase('recording');
         if (!title) setTitle(`Live SOP ${new Date().toLocaleTimeString()}`);
     } catch (e: any) {
         console.error("Failed to start recording:", e);
@@ -673,20 +689,65 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     }
   };
 
-  // AI Director: Request feedback on current frame
-  const requestDirectorFeedback = async (mode: 'on_demand' | 'proactive') => {
-    if (!videoRef.current || !canvasRef.current || directorLoading) return;
+  // AI Guide: Generate shot list from user description
+  const generateShotList = async (description: string) => {
+    setIsGeneratingGuide(true);
+    setChatMessages(prev => [...prev, { role: 'user', content: description }]);
 
-    // Don't spam proactive checks
-    if (mode === 'proactive') {
-      const now = Date.now();
-      if (now - lastProactiveCheckRef.current < PROACTIVE_CHECK_INTERVAL) return;
-      lastProactiveCheckRef.current = now;
-    }
-
-    setDirectorLoading(true);
     try {
-      // Capture current frame
+      const response = await fetch('https://frameops-production.up.railway.app/generate-shot-list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.shotList) {
+        setShotList(data.shotList.map((item: any, idx: number) => ({
+          step: idx + 1,
+          instruction: item.instruction,
+          filmingTip: item.filmingTip,
+          completed: false
+        })));
+        setTitle(data.title || description.slice(0, 50));
+        setChatMessages(prev => [...prev, {
+          role: 'ai',
+          content: `Perfekt! Jag har skapat en guide med ${data.shotList.length} steg. Tryck "Starta inspelning" när du är redo.`
+        }]);
+        setPhase('ready');
+      } else {
+        // Fallback: create simple shot list
+        const simpleList = [
+          { step: 1, instruction: 'Visa verktygen och materialet som behövs', filmingTip: 'Lägg ut allt på en plan yta', completed: false },
+          { step: 2, instruction: 'Börja med första steget', filmingTip: 'Berätta vad du gör medan du gör det', completed: false },
+          { step: 3, instruction: 'Fortsätt med resten av processen', filmingTip: 'Pausa mellan varje moment', completed: false },
+          { step: 4, instruction: 'Visa slutresultatet', filmingTip: 'Zooma in på det färdiga arbetet', completed: false }
+        ];
+        setShotList(simpleList);
+        setTitle(description.slice(0, 50));
+        setChatMessages(prev => [...prev, {
+          role: 'ai',
+          content: `Jag skapade en enkel guide med ${simpleList.length} steg. Du kan börja spela in!`
+        }]);
+        setPhase('ready');
+      }
+    } catch (error) {
+      console.error('Error generating shot list:', error);
+      setChatMessages(prev => [...prev, {
+        role: 'ai',
+        content: 'Något gick fel. Beskriv igen vad du ska göra.'
+      }]);
+    } finally {
+      setIsGeneratingGuide(false);
+    }
+  };
+
+  // AI Guide: Get feedback when paused
+  const getPauseFeedback = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    try {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       canvas.width = video.videoWidth || 640;
@@ -696,63 +757,39 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       ctx.drawImage(video, 0, 0);
       const frame = canvas.toDataURL('image/jpeg', 0.7);
 
-      const response = await fetch('https://frameops-production.up.railway.app/director-feedback', {
+      const currentShot = shotList[currentShotIndex];
+
+      const response = await fetch('https://frameops-production.up.railway.app/pause-feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           frame,
-          context: title || 'instructional video',
-          currentStep: liveSteps.length > 0 ? `Step ${liveSteps.length + 1}` : 'Getting started',
-          previousTips: previousTipsRef.current.slice(-3),
-          mode
+          currentInstruction: currentShot?.instruction || '',
+          stepNumber: currentShotIndex + 1,
+          totalSteps: shotList.length
         })
       });
 
       const data = await response.json();
-
-      if (data.success && data.needsFeedback && data.tip) {
-        setDirectorTip(data.tip);
-        setDirectorIssue(data.issue);
-        setDirectorSeverity(data.severity);
-        previousTipsRef.current.push(data.tip);
-
-        // Auto-hide tip after 8 seconds
-        setTimeout(() => {
-          setDirectorTip(null);
-          setDirectorIssue(null);
-          setDirectorSeverity(null);
-        }, 8000);
-      } else if (mode === 'on_demand' && !data.needsFeedback) {
-        // On demand but no issues - show positive feedback
-        setDirectorTip('Ser bra ut! Fortsätt filma.');
-        setDirectorSeverity('low');
-        setTimeout(() => {
-          setDirectorTip(null);
-          setDirectorSeverity(null);
-        }, 3000);
+      if (data.success) {
+        setPauseFeedback(data.feedback || 'Bra jobbat! Fortsätt till nästa steg.');
       }
     } catch (error) {
-      console.error('Director feedback error:', error);
-      if (mode === 'on_demand') {
-        setDirectorTip('Kunde inte analysera bilden just nu');
-        setDirectorSeverity('low');
-        setTimeout(() => setDirectorTip(null), 3000);
-      }
-    } finally {
-      setDirectorLoading(false);
+      console.error('Error getting pause feedback:', error);
+      setPauseFeedback('Fortsätt till nästa steg när du är redo.');
     }
   };
 
-  // Proactive director check during recording
-  useEffect(() => {
-    if (!isRecording || !directorMode || isPaused) return;
-
-    const interval = setInterval(() => {
-      requestDirectorFeedback('proactive');
-    }, PROACTIVE_CHECK_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, [isRecording, directorMode, isPaused, title, liveSteps.length]);
+  // Mark current shot as completed and move to next
+  const completeCurrentShot = () => {
+    setShotList(prev => prev.map((shot, idx) =>
+      idx === currentShotIndex ? { ...shot, completed: true } : shot
+    ));
+    if (currentShotIndex < shotList.length - 1) {
+      setCurrentShotIndex(prev => prev + 1);
+    }
+    setPauseFeedback(null);
+  };
 
   // Stop recording and finalize SOP
   const handleStopRecording = async () => {
@@ -910,14 +947,18 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const togglePause = () => {
     console.log('Toggling pause. Current state:', isPaused);
     if (isPaused) {
+      // Resuming - clear feedback and move to next shot
+      setPauseFeedback(null);
       mediaRecorderRef.current?.resume();
       frameIntervalRef.current = setInterval(captureAndAnalyze, FRAME_INTERVAL_MS);
     } else {
+      // Pausing - get AI feedback
       mediaRecorderRef.current?.pause();
       if (frameIntervalRef.current) {
         clearInterval(frameIntervalRef.current);
         frameIntervalRef.current = null;
       }
+      getPauseFeedback();
     }
     setIsPaused(!isPaused);
   };
@@ -990,80 +1031,158 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         ) : <div className="w-10" />}
       </div>
 
-      {/* Start overlay - clean and minimal */}
-      {!cameraStarted && (
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/90 to-black/95 flex flex-col items-center justify-center z-30 p-6">
-          <div className="text-center max-w-sm">
-            {!canCreate ? (
-              <>
-                {/* Upgrade prompt when limit reached */}
-                <div className="w-28 h-28 bg-amber-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <i className="fas fa-crown text-amber-400 text-4xl"></i>
+      {/* Planning phase - AI Guide chat */}
+      {phase === 'planning' && (
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-black flex flex-col z-30">
+          {/* Header */}
+          <div className="p-4 flex items-center justify-between border-b border-slate-800">
+            <button onClick={handleCancel} className="text-slate-400 hover:text-white">
+              <i className="fas fa-times text-xl"></i>
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                <i className="fas fa-robot text-white text-sm"></i>
+              </div>
+              <span className="text-white font-bold">AI Guide</span>
+            </div>
+            <div className="w-8"></div>
+          </div>
+
+          {/* Chat messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {chatMessages.map((msg, idx) => (
+              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] p-4 rounded-2xl ${
+                  msg.role === 'user'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-800 text-slate-100'
+                }`}>
+                  {msg.content}
                 </div>
-                <h2 className="text-white text-2xl font-bold mb-2">You've used your 3 free SOPs</h2>
-                <p className="text-slate-400 mb-8">Upgrade to Pro for unlimited SOPs.</p>
-                <button
-                  onClick={onUpgrade}
-                  className="px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-500 transition-colors mb-4"
-                >
-                  <i className="fas fa-rocket mr-2"></i>
-                  Upgrade to Pro
-                </button>
-                <button
-                  onClick={onCancel}
-                  className="block mx-auto text-slate-400 hover:text-white transition-colors"
-                >
-                  Go Back
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  className="w-28 h-28 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 hover:bg-indigo-500 active:scale-95 transition-all shadow-2xl shadow-indigo-500/30"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    startCamera();
-                  }}
-                >
-                  <i className="fas fa-video text-white text-4xl"></i>
-                </button>
-                <h2 className="text-white text-2xl font-bold mb-2">Start Camera</h2>
-                <p className="text-slate-400 mb-4">Tap to start recording your SOP</p>
-
-                {/* Free SOPs remaining */}
-                {!isPro && (
-                  <div className="mb-6">
-                    <span className="px-3 py-1.5 bg-indigo-600/30 text-indigo-300 rounded-full text-xs font-bold">
-                      <i className="fas fa-gift mr-1.5"></i>
-                      {freeSOPsRemaining} free SOP{freeSOPsRemaining !== 1 ? 's' : ''} remaining
-                    </span>
-                  </div>
-                )}
-
-                {/* Quick settings preview */}
-                <div className="flex items-center justify-center gap-4 text-sm">
-                  <button
-                    onClick={() => setShowSettings(true)}
-                    className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-                  >
-                    <i className="fas fa-sliders-h"></i>
-                    <span>Inställningar</span>
-                  </button>
-                  {directorMode && (
-                    <span className="flex items-center gap-2 text-indigo-400">
-                      <i className="fas fa-film"></i>
-                      <span>AI Director på</span>
-                    </span>
-                  )}
+              </div>
+            ))}
+            {isGeneratingGuide && (
+              <div className="flex justify-start">
+                <div className="bg-slate-800 text-slate-100 p-4 rounded-2xl">
+                  <i className="fas fa-circle-notch fa-spin mr-2"></i>
+                  Skapar din guide...
                 </div>
-
-                {cameraError && (
-                  <div className="mt-6 bg-red-600/20 border border-red-500/50 rounded-xl p-4">
-                    <p className="text-red-400 text-sm">{cameraError}</p>
-                  </div>
-                )}
-              </>
+              </div>
             )}
+          </div>
+
+          {/* Input */}
+          <div className="p-4 border-t border-slate-800">
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && userInput.trim() && generateShotList(userInput.trim())}
+                placeholder="Beskriv vad du ska dokumentera..."
+                className="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none"
+                disabled={isGeneratingGuide}
+              />
+              <button
+                onClick={() => userInput.trim() && generateShotList(userInput.trim())}
+                disabled={!userInput.trim() || isGeneratingGuide}
+                className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <i className="fas fa-paper-plane"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ready phase - Show shot list and start button */}
+      {phase === 'ready' && !cameraStarted && (
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-black flex flex-col z-30">
+          {/* Header */}
+          <div className="p-4 flex items-center justify-between border-b border-slate-800">
+            <button onClick={() => setPhase('planning')} className="text-slate-400 hover:text-white">
+              <i className="fas fa-arrow-left text-xl"></i>
+            </button>
+            <span className="text-white font-bold">{title || 'Din Guide'}</span>
+            <button onClick={() => setShowSettings(true)} className="text-slate-400 hover:text-white">
+              <i className="fas fa-cog text-xl"></i>
+            </button>
+          </div>
+
+          {/* Shot list */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <h3 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-4">
+              <i className="fas fa-list-ol mr-2"></i>
+              Inspelningsguide ({shotList.length} steg)
+            </h3>
+            <div className="space-y-3">
+              {shotList.map((shot, idx) => (
+                <div key={idx} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {shot.step}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white font-medium">{shot.instruction}</p>
+                      {shot.filmingTip && (
+                        <p className="text-slate-400 text-sm mt-1">
+                          <i className="fas fa-lightbulb text-amber-400 mr-1"></i>
+                          {shot.filmingTip}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Start button */}
+          <div className="p-4 border-t border-slate-800">
+            <button
+              onClick={() => startCamera()}
+              className="w-full py-4 bg-indigo-600 text-white font-bold text-lg rounded-2xl hover:bg-indigo-500 transition-colors"
+            >
+              <i className="fas fa-video mr-2"></i>
+              Starta kameran
+            </button>
+            {!isPro && (
+              <p className="text-center text-slate-500 text-sm mt-3">
+                <i className="fas fa-gift mr-1"></i>
+                {freeSOPsRemaining} gratis SOP kvar
+              </p>
+            )}
+          </div>
+
+          {cameraError && (
+            <div className="mx-4 mb-4 bg-red-600/20 border border-red-500/50 rounded-xl p-4">
+              <p className="text-red-400 text-sm">{cameraError}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Camera started but not recording - show start recording button */}
+      {phase === 'ready' && cameraStarted && !isRecording && (
+        <div className="absolute inset-0 flex items-center justify-center z-30">
+          <div className="text-center">
+            <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-6 mb-4">
+              <p className="text-white font-medium mb-2">Steg 1 av {shotList.length}</p>
+              <p className="text-indigo-300">{shotList[0]?.instruction}</p>
+              {shotList[0]?.filmingTip && (
+                <p className="text-slate-400 text-sm mt-2">
+                  <i className="fas fa-lightbulb text-amber-400 mr-1"></i>
+                  {shotList[0]?.filmingTip}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleStartRecording}
+              className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto"
+            >
+              <div className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-400 transition-colors"></div>
+            </button>
+            <p className="text-white/60 text-sm mt-4">Tryck för att börja spela in</p>
           </div>
         </div>
       )}
@@ -1093,35 +1212,87 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         </>
       )}
 
-      {/* AI Director feedback - only show when there's a tip */}
-      {isRecording && directorMode && directorTip && (
+      {/* Current instruction overlay - show during recording */}
+      {isRecording && shotList.length > 0 && !isPaused && (
         <div className="absolute top-20 left-4 right-4 md:right-auto md:max-w-sm z-20">
-          <div className={`rounded-2xl p-4 backdrop-blur-md border ${
-            directorSeverity === 'high'
-              ? 'bg-red-900/90 border-red-500/50'
-              : directorSeverity === 'medium'
-              ? 'bg-amber-900/90 border-amber-500/50'
-              : 'bg-emerald-900/90 border-emerald-500/50'
-          }`}>
+          <div className="rounded-2xl p-4 backdrop-blur-md bg-black/70 border border-slate-600/50">
             <div className="flex items-start gap-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                directorSeverity === 'high' ? 'bg-red-500' :
-                directorSeverity === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
-              }`}>
-                <i className={`fas ${
-                  directorSeverity === 'high' ? 'fa-exclamation' :
-                  directorSeverity === 'medium' ? 'fa-lightbulb' : 'fa-check'
-                } text-white text-sm`}></i>
+              <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-sm font-bold">{currentShotIndex + 1}</span>
               </div>
               <div className="flex-1">
-                <p className="text-white text-sm font-medium">{directorTip}</p>
+                <p className="text-white text-sm font-medium">{shotList[currentShotIndex]?.instruction}</p>
+                {shotList[currentShotIndex]?.filmingTip && (
+                  <p className="text-slate-400 text-xs mt-1">
+                    <i className="fas fa-lightbulb text-amber-400 mr-1"></i>
+                    {shotList[currentShotIndex]?.filmingTip}
+                  </p>
+                )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pause overlay with feedback */}
+      {isRecording && isPaused && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-25">
+          <div className="max-w-md mx-4 text-center">
+            {pauseFeedback ? (
+              <>
+                <div className="w-16 h-16 bg-indigo-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i className="fas fa-comment-dots text-indigo-400 text-2xl"></i>
+                </div>
+                <p className="text-white text-lg font-medium mb-6">{pauseFeedback}</p>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                  <i className="fas fa-circle-notch fa-spin text-white text-2xl"></i>
+                </div>
+                <p className="text-slate-400">Analyserar...</p>
+              </>
+            )}
+
+            {/* Next instruction preview */}
+            {currentShotIndex < shotList.length - 1 && pauseFeedback && (
+              <div className="mt-6 bg-slate-800/80 rounded-xl p-4 text-left">
+                <p className="text-slate-400 text-xs uppercase tracking-wider mb-2">Nästa steg</p>
+                <p className="text-white">{shotList[currentShotIndex + 1]?.instruction}</p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="mt-6 flex gap-4 justify-center">
+              {currentShotIndex < shotList.length - 1 && pauseFeedback && (
+                <button
+                  onClick={() => { completeCurrentShot(); togglePause(); }}
+                  className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500"
+                >
+                  <i className="fas fa-check mr-2"></i>
+                  Nästa steg
+                </button>
+              )}
               <button
-                onClick={() => setDirectorTip(null)}
-                className="text-white/50 hover:text-white"
+                onClick={togglePause}
+                className="px-6 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20"
               >
-                <i className="fas fa-times"></i>
+                <i className="fas fa-play mr-2"></i>
+                Fortsätt filma
               </button>
+            </div>
+
+            {/* Progress indicator */}
+            <div className="mt-6 flex justify-center gap-1">
+              {shotList.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`w-2 h-2 rounded-full ${
+                    idx < currentShotIndex ? 'bg-emerald-500' :
+                    idx === currentShotIndex ? 'bg-indigo-500' : 'bg-slate-600'
+                  }`}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -1161,20 +1332,6 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               >
                 <div className="w-8 h-8 rounded-lg bg-white"></div>
               </button>
-
-              {directorMode && (
-                <button
-                  onClick={() => requestDirectorFeedback('on_demand')}
-                  disabled={directorLoading}
-                  className="w-14 h-14 bg-indigo-600/80 backdrop-blur-sm rounded-full flex items-center justify-center text-white disabled:opacity-50"
-                >
-                  {directorLoading ? (
-                    <i className="fas fa-circle-notch fa-spin"></i>
-                  ) : (
-                    <i className="fas fa-film"></i>
-                  )}
-                </button>
-              )}
             </>
           )}
         </div>
@@ -1221,25 +1378,6 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 {sceneSensitivity < 30 ? 'Färre bilder, bara stora förändringar' :
                  sceneSensitivity < 70 ? 'Balanserat' : 'Fler bilder, mer detaljer'}
               </p>
-            </div>
-
-            {/* AI Director */}
-            <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
-                  <i className="fas fa-film text-white"></i>
-                </div>
-                <div>
-                  <p className="text-white font-medium">AI Director</p>
-                  <p className="text-slate-400 text-xs">Tips medan du filmar</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setDirectorMode(!directorMode)}
-                className={`w-12 h-7 rounded-full transition-colors relative ${directorMode ? 'bg-indigo-500' : 'bg-slate-600'}`}
-              >
-                <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-transform ${directorMode ? 'translate-x-6' : 'translate-x-1'}`}></div>
-              </button>
             </div>
 
             <button
