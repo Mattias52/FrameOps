@@ -101,7 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
   // Desktop: standard sidebar
   return (
     <aside className={`bg-slate-900 text-white transition-all duration-300 flex flex-col ${isOpen ? 'w-64' : 'w-20'}`}>
-      <div className="p-4 flex items-center gap-3 h-24 border-b border-slate-800 shrink-0">
+      <div className="p-4 flex items-center gap-1 h-24 border-b border-slate-800 shrink-0">
         <div className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0">
           <img src="/logo.png" alt="FrameOps" className="w-16 h-16" />
         </div>
