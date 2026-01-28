@@ -573,10 +573,11 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                 </div>
 
                 <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center gap-6">
-                  <button 
+                  <button
                     onClick={stopCamera}
                     disabled={isRecording}
                     className="w-14 h-14 bg-white/10 text-white rounded-full flex items-center justify-center backdrop-blur hover:bg-white/20 transition-all disabled:opacity-30"
+                    aria-label="Close camera"
                   >
                     <i className="fas fa-times text-xl"></i>
                   </button>

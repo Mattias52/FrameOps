@@ -307,6 +307,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
               <button
                 onClick={addSafetyWarning}
                 className="px-4 py-2 bg-rose-600 text-white rounded-xl font-bold text-sm hover:bg-rose-700 transition-colors"
+                aria-label="Add safety warning"
               >
                 <i className="fas fa-plus"></i>
               </button>
@@ -326,6 +327,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
                   <button
                     onClick={() => removeTool(i)}
                     className="w-4 h-4 flex items-center justify-center text-indigo-400 hover:text-indigo-600"
+                    aria-label="Remove tool"
                   >
                     <i className="fas fa-times text-xs"></i>
                   </button>
@@ -344,6 +346,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
               <button
                 onClick={addTool}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"
+                aria-label="Add tool"
               >
                 <i className="fas fa-plus"></i>
               </button>

@@ -948,6 +948,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         <button
           onClick={handleCancel}
           className="w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
+          aria-label="Cancel"
         >
           <i className="fas fa-times"></i>
         </button>
@@ -975,6 +976,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
           <button
             onClick={() => setShowSettings(true)}
             className="w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
+            aria-label="Settings"
           >
             <i className="fas fa-cog"></i>
           </button>
@@ -1139,6 +1141,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               <button
                 onClick={togglePause}
                 className="w-14 h-14 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
+                aria-label={isPaused ? 'Resume recording' : 'Pause recording'}
               >
                 <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'} text-lg`}></i>
               </button>
@@ -1147,6 +1150,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 onClick={handleStopRecording}
                 disabled={isFinishing}
                 className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center disabled:opacity-50"
+                aria-label="Stop recording"
               >
                 <div className="w-8 h-8 rounded-lg bg-white"></div>
               </button>
@@ -1280,7 +1284,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       {/* Image preview */}
       {previewImage && (
         <div className="absolute inset-0 z-50 bg-black flex items-center justify-center" onClick={() => setPreviewImage(null)}>
-          <button className="absolute top-4 right-4 text-white/60 hover:text-white z-10">
+          <button className="absolute top-4 right-4 text-white/60 hover:text-white z-10" aria-label="Close preview">
             <i className="fas fa-times text-2xl"></i>
           </button>
           <img src={previewImage} alt="" className="max-w-full max-h-full object-contain" />

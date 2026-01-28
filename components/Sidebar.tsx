@@ -53,7 +53,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
               </div>
               <span className="font-bold text-xl tracking-tight">FrameOps</span>
             </div>
-            <button onClick={onToggle} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white">
+            <button onClick={onToggle} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white" aria-label="Close menu">
               <i className="fas fa-times"></i>
             </button>
           </div>

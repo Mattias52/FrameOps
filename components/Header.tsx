@@ -14,6 +14,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
         <button
           onClick={onToggleSidebar}
           className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg md:hidden"
+          aria-label="Toggle menu"
         >
           <i className="fas fa-bars"></i>
         </button>

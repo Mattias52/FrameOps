@@ -507,7 +507,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                   {(editedSop.ppeRequirements || []).map((ppe, i) => (
                     <span key={i} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
                       {ppe}
-                      <button onClick={() => removePPE(i)} className="hover:text-indigo-900">
+                      <button onClick={() => removePPE(i)} className="hover:text-indigo-900" aria-label="Remove PPE item">
                         <i className="fas fa-times text-xs"></i>
                       </button>
                     </span>
@@ -522,7 +522,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     placeholder="Add PPE item..."
                     className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"
                   />
-                  <button onClick={addPPE} className="px-3 py-2 bg-indigo-600 text-white rounded-lg">
+                  <button onClick={addPPE} className="px-3 py-2 bg-indigo-600 text-white rounded-lg" aria-label="Add PPE item">
                     <i className="fas fa-plus"></i>
                   </button>
                 </div>
@@ -538,7 +538,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                   {(editedSop.materialsRequired || []).map((mat, i) => (
                     <span key={i} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
                       {mat}
-                      <button onClick={() => removeMaterial(i)} className="hover:text-emerald-900">
+                      <button onClick={() => removeMaterial(i)} className="hover:text-emerald-900" aria-label="Remove material">
                         <i className="fas fa-times text-xs"></i>
                       </button>
                     </span>
@@ -553,7 +553,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     placeholder="Add material..."
                     className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"
                   />
-                  <button onClick={addMaterial} className="px-3 py-2 bg-emerald-600 text-white rounded-lg">
+                  <button onClick={addMaterial} className="px-3 py-2 bg-emerald-600 text-white rounded-lg" aria-label="Add material">
                     <i className="fas fa-plus"></i>
                   </button>
                 </div>
