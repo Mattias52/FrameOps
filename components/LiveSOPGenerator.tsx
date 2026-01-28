@@ -41,18 +41,32 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 }) => {
   const canCreate = isPro || freeSOPsRemaining > 0;
 
-  // Phase state: planning -> ready -> recording -> finishing
-  const [phase, setPhase] = useState<'planning' | 'ready' | 'recording' | 'finishing'>('planning');
+  // Phase state: setup -> recording -> review -> finishing
+  // setup: optional soft guide or skip directly to recording
+  // recording: capture video/audio
+  // review: show draft SOP, AI feedback, discuss, re-record option
+  // finishing: final processing
+  const [phase, setPhase] = useState<'setup' | 'recording' | 'review' | 'finishing'>('setup');
 
-  // AI Guide state
+  // AI Guide state (now optional - soft guide)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { role: 'ai', content: 'Hej! Vad ska du dokumentera idag? Beskriv kort vad du ska göra så skapar jag en guide åt dig.' }
+    { role: 'ai', content: 'Hej! Vad ska du dokumentera idag? Beskriv kort vad du vill visa, eller hoppa över och spela in fritt.' }
   ]);
   const [userInput, setUserInput] = useState('');
-  const [shotList, setShotList] = useState<ShotInstruction[]>([]);
-  const [currentShotIndex, setCurrentShotIndex] = useState(0);
+  const [softTips, setSoftTips] = useState<string[]>([]); // Optional tips, not rigid structure
   const [isGeneratingGuide, setIsGeneratingGuide] = useState(false);
-  const [pauseFeedback, setPauseFeedback] = useState<string | null>(null);
+
+  // Review phase state
+  const [draftSOP, setDraftSOP] = useState<SOPStep[] | null>(null);
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftDescription, setDraftDescription] = useState('');
+  const [aiFeedback, setAiFeedback] = useState<string[]>([]); // AI suggestions for improvements
+  const [reviewChatMessages, setReviewChatMessages] = useState<ChatMessage[]>([]);
+  const [reviewInput, setReviewInput] = useState('');
+  const [stepsToReRecord, setStepsToReRecord] = useState<number[]>([]); // Step indices to re-record
+  const [isReRecording, setIsReRecording] = useState(false);
+  const [reRecordStepIndex, setReRecordStepIndex] = useState<number | null>(null);
+  const [isAnalyzingReview, setIsAnalyzingReview] = useState(false);
 
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -106,7 +120,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const recordedChunksRef = useRef<Blob[]>([]);
   const lastFrameRef = useRef<string | null>(null);
   const frameIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const allFramesRef = useRef<{ timestamp: number; image: string; shotIndex: number; instruction: string }[]>([]);
+  const allFramesRef = useRef<{ timestamp: number; image: string }[]>([]);
   const recordingTimeRef = useRef(0);
   const speechRecognitionRef = useRef<any>(null);
   const transcriptRef = useRef<string>('');
@@ -503,14 +517,12 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     const timestamp = recordingTimeRef.current;
     lastCaptureTimeRef.current = timestamp; // Track when we captured
 
-    console.log(`Captured frame #${allFramesRef.current.length + 1} at ${timestamp}s (diff: ${diff.toFixed(3)}, minInterval: ${minInterval}s, shot: ${currentShotIndex + 1})`);
+    console.log(`Captured frame #${allFramesRef.current.length + 1} at ${timestamp}s (diff: ${diff.toFixed(3)}, minInterval: ${minInterval}s)`);
 
-    // Store frame for later batch analysis - include shot context
+    // Store frame for later batch analysis
     allFramesRef.current.push({
       timestamp,
-      image: frame,
-      shotIndex: currentShotIndex,
-      instruction: shotList[currentShotIndex]?.instruction || ''
+      image: frame
     });
 
     // Add placeholder step to UI
@@ -686,7 +698,6 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         setTimeout(captureAndAnalyze, 500);
 
         setIsRecording(true);
-        setPhase('recording');
         if (!title) setTitle(`Live SOP ${new Date().toLocaleTimeString()}`);
     } catch (e: any) {
         console.error("Failed to start recording:", e);
@@ -694,13 +705,13 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     }
   };
 
-  // AI Guide: Generate shot list from user description
-  const generateShotList = async (description: string) => {
+  // Generate soft tips from user description (optional helper, not rigid structure)
+  const generateSoftTips = async (description: string) => {
     setIsGeneratingGuide(true);
     setChatMessages(prev => [...prev, { role: 'user', content: description }]);
 
     try {
-      const response = await fetch('https://frameops-production.up.railway.app/generate-shot-list', {
+      const response = await fetch('https://frameops-production.up.railway.app/generate-soft-tips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description })
@@ -708,95 +719,38 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 
       const data = await response.json();
 
-      if (data.success && data.shotList) {
-        setShotList(data.shotList.map((item: any, idx: number) => ({
-          step: idx + 1,
-          instruction: item.instruction,
-          filmingTip: item.filmingTip,
-          completed: false
-        })));
+      if (data.success && data.tips) {
+        setSoftTips(data.tips);
         setTitle(data.title || description.slice(0, 50));
         setChatMessages(prev => [...prev, {
           role: 'ai',
-          content: `Perfekt! Jag har skapat en guide med ${data.shotList.length} steg. Tryck "Starta inspelning" när du är redo.`
+          content: `Tack! Här är några tips att tänka på:\n\n${data.tips.map((t: string, i: number) => `• ${t}`).join('\n')}\n\nMen spela in på ditt sätt - jag följer dig! Tryck "Starta inspelning" när du är redo.`
         }]);
-        setPhase('ready');
       } else {
-        // Fallback: create simple shot list
-        const simpleList = [
-          { step: 1, instruction: 'Visa verktygen och materialet som behövs', filmingTip: 'Lägg ut allt på en plan yta', completed: false },
-          { step: 2, instruction: 'Börja med första steget', filmingTip: 'Berätta vad du gör medan du gör det', completed: false },
-          { step: 3, instruction: 'Fortsätt med resten av processen', filmingTip: 'Pausa mellan varje moment', completed: false },
-          { step: 4, instruction: 'Visa slutresultatet', filmingTip: 'Zooma in på det färdiga arbetet', completed: false }
-        ];
-        setShotList(simpleList);
         setTitle(description.slice(0, 50));
         setChatMessages(prev => [...prev, {
           role: 'ai',
-          content: `Jag skapade en enkel guide med ${simpleList.length} steg. Du kan börja spela in!`
+          content: 'Perfekt! Spela in på ditt sätt och berätta vad du gör. Jag lyssnar och skapar en SOP baserat på din visning.'
         }]);
-        setPhase('ready');
       }
     } catch (error) {
-      console.error('Error generating shot list:', error);
+      console.error('Error generating tips:', error);
+      setTitle(description.slice(0, 50));
       setChatMessages(prev => [...prev, {
         role: 'ai',
-        content: 'Något gick fel. Beskriv igen vad du ska göra.'
+        content: 'Perfekt! Börja spela in när du är redo. Berätta vad du gör medan du gör det.'
       }]);
     } finally {
       setIsGeneratingGuide(false);
     }
   };
 
-  // AI Guide: Get feedback when paused
-  const getPauseFeedback = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    try {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.drawImage(video, 0, 0);
-      const frame = canvas.toDataURL('image/jpeg', 0.7);
-
-      const currentShot = shotList[currentShotIndex];
-
-      const response = await fetch('https://frameops-production.up.railway.app/pause-feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          frame,
-          currentInstruction: currentShot?.instruction || '',
-          stepNumber: currentShotIndex + 1,
-          totalSteps: shotList.length
-        })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setPauseFeedback(data.feedback || 'Bra jobbat! Fortsätt till nästa steg.');
-      }
-    } catch (error) {
-      console.error('Error getting pause feedback:', error);
-      setPauseFeedback('Fortsätt till nästa steg när du är redo.');
-    }
+  // Skip AI guide and go directly to recording
+  const skipToRecording = () => {
+    setPhase('recording');
   };
 
-  // Mark current shot as completed and move to next
-  const completeCurrentShot = () => {
-    setShotList(prev => prev.map((shot, idx) =>
-      idx === currentShotIndex ? { ...shot, completed: true } : shot
-    ));
-    if (currentShotIndex < shotList.length - 1) {
-      setCurrentShotIndex(prev => prev + 1);
-    }
-    setPauseFeedback(null);
-  };
-
-  // Stop recording and finalize SOP
+  // Stop recording and go to review phase
   const handleStopRecording = async () => {
     if (!isRecording) return;
 
@@ -805,7 +759,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       speechRecognitionRef.current.stop();
       speechRecognitionRef.current = null;
     }
-    setIsListening(false); // Stop showing listening indicator
+    setIsListening(false);
 
     // Stop audio fallback recording
     console.log('Stopping audio recording...');
@@ -824,151 +778,274 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     }
 
     setIsRecording(false);
-    setIsFinishing(true);
+    setIsAnalyzingReview(true);
 
     console.log('Stopping recording. Total frames captured:', allFramesRef.current.length);
-    // Alert the user so they know how many frames are being processed
-    alert(`Recording stopped. Captured ${allFramesRef.current.length} frames. Starting AI analysis...`);
 
-    // Now batch analyze all frames with Gemini
+    // Generate draft SOP for review
     try {
       const frames = allFramesRef.current.map(f => f.image);
       const spokenContext = transcriptRef.current.trim();
 
       if (frames.length === 0) {
-        alert('No frames captured. Please try again.');
-        setIsFinishing(false);
+        alert('Inga bilder fångades. Försök igen.');
+        setIsAnalyzingReview(false);
+        setPhase('setup');
         return;
       }
 
-      // Check if we have audio fallback to process - transcribe with Gemini
+      // Transcribe audio
       let audioTranscript = '';
       const hasAudioBlob = audioBlobRef.current && audioBlobRef.current.size > 0;
-      console.log('Audio blob check:', {
-        hasBlob: !!audioBlobRef.current,
-        blobSize: audioBlobRef.current?.size || 0,
-        hasSpokenContext: !!spokenContext,
-        spokenContextLength: spokenContext?.length || 0
-      });
 
       if (hasAudioBlob) {
-        const blobSize = audioBlobRef.current?.size || 0;
-        console.log('=== AUDIO TRANSCRIPTION START ===');
-        console.log('Audio blob size:', blobSize, 'bytes (', (blobSize / 1024).toFixed(1), 'KB)');
-        console.log('Audio blob type:', audioBlobRef.current?.type);
-
-        if (blobSize < 5000) {
-          console.warn('WARNING: Audio blob very small - may not contain speech');
-        }
-
+        console.log('Transcribing audio...');
         try {
           audioTranscript = await transcribeAudioFile(audioBlobRef.current!);
-          console.log('=== AUDIO TRANSCRIPTION RESULT ===');
-          console.log('Transcript length:', audioTranscript?.length || 0, 'chars');
-          console.log('Transcript content:', audioTranscript || '(EMPTY - no speech detected)');
-          console.log('=================================');
+          console.log('Transcript:', audioTranscript?.substring(0, 100) || '(empty)');
         } catch (err) {
-          console.error('Audio transcription FAILED:', err);
+          console.error('Audio transcription failed:', err);
         }
-      } else {
-        console.warn('=== NO AUDIO BLOB - voice will not be used ===');
-        console.warn('audioBlobRef.current:', audioBlobRef.current);
       }
 
-      // Combine Web Speech API transcript with audio fallback transcript
       const finalTranscript = spokenContext || audioTranscript;
-      console.log('Sending to Gemini with transcript:', finalTranscript);
-      
-      if (finalTranscript) {
-        console.log(`Transcript found (${finalTranscript.length} chars). Using as primary source.`);
-      } else {
-        console.warn('No transcript found from either Web Speech or Audio Fallback');
-        alert('No spoken instructions were captured. The AI will only use visual analysis.');
-      }
 
-      // Build shot context from AI Guide (if used)
-      const shotContext = shotList.length > 0
-        ? allFramesRef.current.map(f => ({
-            shotIndex: f.shotIndex,
-            instruction: f.instruction
-          }))
-        : [];
-
-      // Create structured context for Gemini
+      // Create context - TRANSCRIPT IS PRIMARY SOURCE
       let contextWithTranscript = '';
-
-      if (shotList.length > 0) {
-        // We have AI Guide structure - use it!
-        const shotSummary = shotList.map((shot, idx) => {
-          const framesForShot = shotContext.filter(f => f.shotIndex === idx).length;
-          return `Step ${idx + 1}: "${shot.instruction}" (${framesForShot} frames)`;
-        }).join('\n');
-
-        contextWithTranscript = `AI GUIDE STRUCTURE (follow this exactly):\n${shotSummary}\n\n`;
-
-        if (finalTranscript) {
-          contextWithTranscript += `EXPERT NARRATION:\n"""\n${finalTranscript}\n"""\n\n`;
+      if (finalTranscript) {
+        contextWithTranscript = `EXPERT TRANSCRIPT (this is the primary source - use what the expert says):\n"""\n${finalTranscript}\n"""\n\nINSTRUCTION: Convert this transcript into a formal step-by-step manual. Each step must be a direct command. The expert's words are the source of truth.`;
+      } else {
+        // Add soft tips if user provided description
+        if (softTips.length > 0) {
+          contextWithTranscript = `User mentioned they would show: ${softTips.join(', ')}. But analyze the actual video content to create steps.`;
         }
-
-        contextWithTranscript += `INSTRUCTION: Create the SOP following the AI Guide structure above. Each step in the guide = one step in the SOP. Match frames to their intended step. Write professional instructions for each step.`;
-      } else if (finalTranscript) {
-        contextWithTranscript = `EXPERT TRANSCRIPT:\n"""\n${finalTranscript}\n"""\n\nINSTRUCTION: Convert this transcript into a formal step-by-step manual. Each step must be a direct command. Do not describe the video; write the manual for the person who will do the work.`;
       }
 
-      const result = await analyzeSOPFrames(frames, title, contextWithTranscript, [], shotContext);
+      const result = await analyzeSOPFrames(frames, title, contextWithTranscript, [], []);
       console.log('Gemini returned steps:', result.steps.length);
 
-      // Map Gemini results to our steps
-      const finalSteps: SOPStep[] = result.steps.map((step, idx) => ({
+      // Map to draft steps with thumbnails
+      const draftSteps: SOPStep[] = result.steps.map((step, idx) => ({
         ...step,
-        thumbnail: frames[idx] || frames[frames.length - 1],
-        timestamp: allFramesRef.current[idx]?.timestamp
-          ? formatTime(allFramesRef.current[idx].timestamp)
+        thumbnail: frames[Math.min(idx, frames.length - 1)],
+        timestamp: allFramesRef.current[Math.min(idx, allFramesRef.current.length - 1)]?.timestamp
+          ? formatTime(allFramesRef.current[Math.min(idx, allFramesRef.current.length - 1)].timestamp)
           : step.timestamp
       }));
 
-      // Use Gemini-selected best thumbnail, fallback to ~33% into video
-      const bestThumbnailIdx = typeof result.bestThumbnailIndex === 'number'
-        ? result.bestThumbnailIndex
-        : Math.floor(frames.length / 3);
-      const thumbnailUrl = frames[bestThumbnailIdx] || frames[Math.floor(frames.length / 3)] || frames[0];
-      console.log(`Using frame ${bestThumbnailIdx} as cover image (Gemini selected)`);
+      setDraftSOP(draftSteps);
+      setDraftTitle(result.title || title);
+      setDraftDescription(result.description || '');
 
-      // Create video blob from recorded chunks (will be uploaded to Supabase Storage)
+      // Get AI feedback on the draft
+      const feedback = await getAIFeedbackOnDraft(draftSteps, finalTranscript);
+      setAiFeedback(feedback);
+
+      // Initialize review chat
+      setReviewChatMessages([{
+        role: 'ai',
+        content: feedback.length > 0
+          ? `Här är din SOP med ${draftSteps.length} steg. Jag har några förslag:\n\n${feedback.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nVill du göra om något steg, eller är du nöjd?`
+          : `Bra jobbat! Här är din SOP med ${draftSteps.length} steg. Ser det bra ut, eller vill du ändra något?`
+      }]);
+
+      setPhase('review');
+    } catch (err: any) {
+      console.error('Error creating draft SOP:', err);
+      alert(`Fel vid analys: ${err.message}`);
+      setPhase('setup');
+    } finally {
+      setIsAnalyzingReview(false);
+    }
+  };
+
+  // Get AI feedback on draft SOP
+  const getAIFeedbackOnDraft = async (steps: SOPStep[], transcript: string): Promise<string[]> => {
+    try {
+      const response = await fetch('https://frameops-production.up.railway.app/review-sop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          steps: steps.map(s => ({ title: s.title, description: s.description })),
+          transcript,
+          frameCount: allFramesRef.current.length
+        })
+      });
+
+      const data = await response.json();
+      if (data.success && data.feedback) {
+        return data.feedback;
+      }
+    } catch (error) {
+      console.error('Error getting AI feedback:', error);
+    }
+    return [];
+  };
+
+  // Finalize and complete SOP
+  const finalizeSOP = async () => {
+    if (!draftSOP) return;
+
+    setIsFinishing(true);
+    setPhase('finishing');
+
+    try {
+      const frames = allFramesRef.current.map(f => f.image);
+
+      // Use Gemini-selected best thumbnail or ~33% into video
+      const bestThumbnailIdx = Math.floor(frames.length / 3);
+      const thumbnailUrl = frames[bestThumbnailIdx] || frames[0];
+
+      // Create video blob
       let videoBlob: Blob | undefined;
       if (recordedChunksRef.current.length > 0) {
         videoBlob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
         console.log('Video blob created:', (videoBlob.size / 1024 / 1024).toFixed(2), 'MB');
       }
 
-      // Convert captured frames to FrameOption format for frame picker
+      // Convert frames for frame picker
       const allFramesForPicker = allFramesRef.current.map(f => ({
         timestamp: formatTime(f.timestamp),
         imageBase64: f.image
       }));
 
-      // Create final SOP (videoBlob will be uploaded by App.tsx when saving)
       const sop: SOP = {
         id: Math.random().toString(36).substr(2, 9),
-        title: result.title || title,
-        description: result.description,
-        ppeRequirements: result.ppeRequirements,
-        materialsRequired: result.materialsRequired,
+        title: draftTitle || title,
+        description: draftDescription,
+        ppeRequirements: [],
+        materialsRequired: [],
         createdAt: new Date().toISOString(),
         sourceType: 'live',
         status: 'completed',
         thumbnail_url: thumbnailUrl,
-        steps: finalSteps,
-        allFrames: allFramesForPicker, // Include all frames for frame picker
-        videoBlob: videoBlob // Pass blob for upload, not base64
+        steps: draftSOP,
+        allFrames: allFramesForPicker,
+        videoBlob: videoBlob
       };
 
       onComplete(sop);
     } catch (err: any) {
-      console.error('Error analyzing frames:', err);
-      alert(`Error creating SOP: ${err.message}`);
-    } finally {
+      console.error('Error finalizing SOP:', err);
+      alert(`Fel: ${err.message}`);
       setIsFinishing(false);
+      setPhase('review');
+    }
+  };
+
+  // Handle review chat - discuss improvements
+  const handleReviewChat = async (message: string) => {
+    if (!message.trim()) return;
+
+    setReviewChatMessages(prev => [...prev, { role: 'user', content: message }]);
+    setReviewInput('');
+
+    // Check if user wants to re-record a step
+    const reRecordMatch = message.match(/steg\s*(\d+)/i) || message.match(/(\d+)/);
+    if (reRecordMatch && (message.toLowerCase().includes('om') || message.toLowerCase().includes('visa') || message.toLowerCase().includes('spela'))) {
+      const stepNum = parseInt(reRecordMatch[1]);
+      if (stepNum > 0 && stepNum <= (draftSOP?.length || 0)) {
+        setReviewChatMessages(prev => [...prev, {
+          role: 'ai',
+          content: `Ok, jag markerar steg ${stepNum} för ominspelning. Tryck "Spela om markerade steg" när du är redo.`
+        }]);
+        setStepsToReRecord(prev => prev.includes(stepNum - 1) ? prev : [...prev, stepNum - 1]);
+        return;
+      }
+    }
+
+    // Check for approval
+    if (message.toLowerCase().includes('bra') || message.toLowerCase().includes('ok') || message.toLowerCase().includes('nöjd') || message.toLowerCase().includes('klar')) {
+      setReviewChatMessages(prev => [...prev, {
+        role: 'ai',
+        content: 'Perfekt! Tryck "Slutför SOP" för att spara.'
+      }]);
+      return;
+    }
+
+    // Otherwise, send to AI for general discussion
+    try {
+      const response = await fetch('https://frameops-production.up.railway.app/review-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          steps: draftSOP?.map(s => ({ title: s.title, description: s.description })),
+          previousMessages: reviewChatMessages.slice(-4)
+        })
+      });
+
+      const data = await response.json();
+      if (data.success && data.response) {
+        setReviewChatMessages(prev => [...prev, { role: 'ai', content: data.response }]);
+      }
+    } catch (error) {
+      console.error('Error in review chat:', error);
+      setReviewChatMessages(prev => [...prev, {
+        role: 'ai',
+        content: 'Jag förstod inte riktigt. Vill du göra om något steg? Säg t.ex. "visa steg 3 igen".'
+      }]);
+    }
+  };
+
+  // Start re-recording specific steps
+  const startReRecording = () => {
+    if (stepsToReRecord.length === 0) return;
+    setReRecordStepIndex(stepsToReRecord[0]);
+    setIsReRecording(true);
+    // Reset recording state for re-record
+    recordedChunksRef.current = [];
+    setRecordingTime(0);
+    recordingTimeRef.current = 0;
+  };
+
+  // Handle re-record completion
+  const handleReRecordComplete = async () => {
+    if (reRecordStepIndex === null || !draftSOP) return;
+
+    setIsRecording(false);
+
+    // Stop audio
+    await stopAudioRecordingFallback();
+
+    // Stop interval
+    if (frameIntervalRef.current) {
+      clearInterval(frameIntervalRef.current);
+      frameIntervalRef.current = null;
+    }
+
+    // Get new frames captured during re-record
+    const newFrames = allFramesRef.current.slice(-5); // Take last 5 frames from re-record
+
+    if (newFrames.length > 0) {
+      // Update the step's thumbnail with new frame
+      const updatedSteps = [...draftSOP];
+      updatedSteps[reRecordStepIndex] = {
+        ...updatedSteps[reRecordStepIndex],
+        thumbnail: newFrames[Math.floor(newFrames.length / 2)].image
+      };
+      setDraftSOP(updatedSteps);
+    }
+
+    // Remove this step from re-record list
+    const remaining = stepsToReRecord.filter(i => i !== reRecordStepIndex);
+    setStepsToReRecord(remaining);
+
+    if (remaining.length > 0) {
+      // More steps to re-record
+      setReRecordStepIndex(remaining[0]);
+      setReviewChatMessages(prev => [...prev, {
+        role: 'ai',
+        content: `Steg ${reRecordStepIndex + 1} uppdaterat! Nu är det steg ${remaining[0] + 1}: "${draftSOP[remaining[0]]?.title}"`
+      }]);
+    } else {
+      // Done re-recording
+      setIsReRecording(false);
+      setReRecordStepIndex(null);
+      setReviewChatMessages(prev => [...prev, {
+        role: 'ai',
+        content: 'Alla steg uppdaterade! Ser det bättre ut nu?'
+      }]);
     }
   };
 
@@ -976,18 +1053,16 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const togglePause = () => {
     console.log('Toggling pause. Current state:', isPaused);
     if (isPaused) {
-      // Resuming - clear feedback and move to next shot
-      setPauseFeedback(null);
+      // Resuming
       mediaRecorderRef.current?.resume();
       frameIntervalRef.current = setInterval(captureAndAnalyze, FRAME_INTERVAL_MS);
     } else {
-      // Pausing - get AI feedback
+      // Pausing
       mediaRecorderRef.current?.pause();
       if (frameIntervalRef.current) {
         clearInterval(frameIntervalRef.current);
         frameIntervalRef.current = null;
       }
-      getPauseFeedback();
     }
     setIsPaused(!isPaused);
   };
@@ -1060,8 +1135,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         ) : <div className="w-10" />}
       </div>
 
-      {/* Planning phase - AI Guide chat */}
-      {phase === 'planning' && (
+      {/* Setup phase - optional description or skip */}
+      {phase === 'setup' && !cameraStarted && (
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-black flex flex-col z-30">
           {/* Header */}
           <div className="p-4 flex items-center justify-between border-b border-slate-800">
@@ -1070,9 +1145,9 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
             </button>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
-                <i className="fas fa-robot text-white text-sm"></i>
+                <i className="fas fa-video text-white text-sm"></i>
               </div>
-              <span className="text-white font-bold">AI Guide</span>
+              <span className="text-white font-bold">Live SOP</span>
             </div>
             <div className="w-8"></div>
           </div>
@@ -1081,7 +1156,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {chatMessages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] p-4 rounded-2xl ${
+                <div className={`max-w-[80%] p-4 rounded-2xl whitespace-pre-line ${
                   msg.role === 'user'
                     ? 'bg-indigo-600 text-white'
                     : 'bg-slate-800 text-slate-100'
@@ -1094,116 +1169,107 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               <div className="flex justify-start">
                 <div className="bg-slate-800 text-slate-100 p-4 rounded-2xl">
                   <i className="fas fa-circle-notch fa-spin mr-2"></i>
-                  Skapar din guide...
+                  Tänker...
                 </div>
               </div>
             )}
           </div>
 
-          {/* Input */}
-          <div className="p-4 border-t border-slate-800">
+          {/* Input + Skip button */}
+          <div className="p-4 border-t border-slate-800 space-y-3">
             <div className="flex gap-3">
               <input
                 type="text"
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && userInput.trim() && generateShotList(userInput.trim())}
-                placeholder="Beskriv vad du ska dokumentera..."
+                onKeyPress={(e) => e.key === 'Enter' && userInput.trim() && generateSoftTips(userInput.trim())}
+                placeholder="Beskriv kort vad du ska visa (valfritt)..."
                 className="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none"
                 disabled={isGeneratingGuide}
               />
               <button
-                onClick={() => userInput.trim() && generateShotList(userInput.trim())}
+                onClick={() => userInput.trim() && generateSoftTips(userInput.trim())}
                 disabled={!userInput.trim() || isGeneratingGuide}
                 className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <i className="fas fa-paper-plane"></i>
               </button>
             </div>
+            <button
+              onClick={skipToRecording}
+              className="w-full py-3 bg-slate-700 text-white font-medium rounded-xl hover:bg-slate-600 transition-colors"
+            >
+              <i className="fas fa-forward mr-2"></i>
+              Hoppa över - spela in direkt
+            </button>
           </div>
         </div>
       )}
 
-      {/* Ready phase - Show shot list and start button */}
-      {phase === 'ready' && !cameraStarted && (
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-black flex flex-col z-30">
-          {/* Header */}
-          <div className="p-4 flex items-center justify-between border-b border-slate-800">
-            <button onClick={() => setPhase('planning')} className="text-slate-400 hover:text-white">
-              <i className="fas fa-arrow-left text-xl"></i>
-            </button>
-            <span className="text-white font-bold">{title || 'Din Guide'}</span>
-            <button onClick={() => setShowSettings(true)} className="text-slate-400 hover:text-white">
-              <i className="fas fa-cog text-xl"></i>
-            </button>
-          </div>
-
-          {/* Shot list */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <h3 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-4">
-              <i className="fas fa-list-ol mr-2"></i>
-              Inspelningsguide ({shotList.length} steg)
-            </h3>
-            <div className="space-y-3">
-              {shotList.map((shot, idx) => (
-                <div key={idx} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                      {shot.step}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-white font-medium">{shot.instruction}</p>
-                      {shot.filmingTip && (
-                        <p className="text-slate-400 text-sm mt-1">
-                          <i className="fas fa-lightbulb text-amber-400 mr-1"></i>
-                          {shot.filmingTip}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+      {/* Setup phase - camera view with start button */}
+      {phase === 'setup' && cameraStarted && !isRecording && (
+        <div className="absolute inset-0 flex items-center justify-center z-30">
+          <div className="text-center max-w-md mx-4">
+            <div className="bg-black/70 backdrop-blur-sm rounded-2xl p-6 mb-4">
+              <div className="w-16 h-16 bg-indigo-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-microphone text-indigo-400 text-2xl"></i>
+              </div>
+              <h3 className="text-white font-bold text-lg mb-2">Redo att spela in</h3>
+              <p className="text-slate-300 text-sm">
+                Berätta vad du gör medan du gör det. Din röst blir grunden för SOP:en.
+              </p>
+              {softTips.length > 0 && (
+                <div className="mt-4 text-left bg-slate-800/50 rounded-xl p-3">
+                  <p className="text-slate-400 text-xs uppercase tracking-wider mb-2">Tips att tänka på:</p>
+                  {softTips.slice(0, 3).map((tip, i) => (
+                    <p key={i} className="text-slate-300 text-sm">• {tip}</p>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-
-          {/* Start button */}
-          <div className="p-4 border-t border-slate-800">
             <button
-              onClick={() => startCamera()}
-              className="w-full py-4 bg-indigo-600 text-white font-bold text-lg rounded-2xl hover:bg-indigo-500 transition-colors"
+              onClick={handleStartRecording}
+              className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto"
             >
-              <i className="fas fa-video mr-2"></i>
+              <div className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-400 transition-colors"></div>
+            </button>
+            <p className="text-white/60 text-sm mt-4">Tryck för att börja spela in</p>
+          </div>
+        </div>
+      )}
+
+      {/* Recording phase - camera view with start button (if not started yet) */}
+      {phase === 'recording' && !cameraStarted && (
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-black flex items-center justify-center z-30">
+          <div className="text-center">
+            <button
+              onClick={startCamera}
+              className="px-8 py-4 bg-indigo-600 text-white font-bold text-lg rounded-2xl hover:bg-indigo-500 transition-colors"
+            >
+              <i className="fas fa-video mr-3"></i>
               Starta kameran
             </button>
-            {!isPro && (
-              <p className="text-center text-slate-500 text-sm mt-3">
-                <i className="fas fa-gift mr-1"></i>
-                {freeSOPsRemaining} gratis SOP kvar
-              </p>
+            {cameraError && (
+              <div className="mt-4 bg-red-600/20 border border-red-500/50 rounded-xl p-4 max-w-md">
+                <p className="text-red-400 text-sm">{cameraError}</p>
+              </div>
             )}
           </div>
-
-          {cameraError && (
-            <div className="mx-4 mb-4 bg-red-600/20 border border-red-500/50 rounded-xl p-4">
-              <p className="text-red-400 text-sm">{cameraError}</p>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Camera started but not recording - show start recording button */}
-      {phase === 'ready' && cameraStarted && !isRecording && (
+      {/* Recording phase - ready to record */}
+      {phase === 'recording' && cameraStarted && !isRecording && (
         <div className="absolute inset-0 flex items-center justify-center z-30">
-          <div className="text-center">
-            <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-6 mb-4">
-              <p className="text-white font-medium mb-2">Steg 1 av {shotList.length}</p>
-              <p className="text-indigo-300">{shotList[0]?.instruction}</p>
-              {shotList[0]?.filmingTip && (
-                <p className="text-slate-400 text-sm mt-2">
-                  <i className="fas fa-lightbulb text-amber-400 mr-1"></i>
-                  {shotList[0]?.filmingTip}
-                </p>
-              )}
+          <div className="text-center max-w-md mx-4">
+            <div className="bg-black/70 backdrop-blur-sm rounded-2xl p-6 mb-4">
+              <div className="w-16 h-16 bg-indigo-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-microphone text-indigo-400 text-2xl"></i>
+              </div>
+              <h3 className="text-white font-bold text-lg mb-2">Redo att spela in</h3>
+              <p className="text-slate-300 text-sm">
+                Berätta vad du gör medan du gör det. Din röst blir grunden för SOP:en.
+              </p>
             </div>
             <button
               onClick={handleStartRecording}
@@ -1241,88 +1307,22 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         </>
       )}
 
-      {/* Current instruction overlay - show during recording */}
-      {isRecording && shotList.length > 0 && !isPaused && (
-        <div className="absolute top-20 left-4 right-4 md:right-auto md:max-w-sm z-20">
-          <div className="rounded-2xl p-4 backdrop-blur-md bg-black/70 border border-slate-600/50">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-sm font-bold">{currentShotIndex + 1}</span>
-              </div>
-              <div className="flex-1">
-                <p className="text-white text-sm font-medium">{shotList[currentShotIndex]?.instruction}</p>
-                {shotList[currentShotIndex]?.filmingTip && (
-                  <p className="text-slate-400 text-xs mt-1">
-                    <i className="fas fa-lightbulb text-amber-400 mr-1"></i>
-                    {shotList[currentShotIndex]?.filmingTip}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Pause overlay with feedback */}
+      {/* Simple pause overlay */}
       {isRecording && isPaused && (
         <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-25">
           <div className="max-w-md mx-4 text-center">
-            {pauseFeedback ? (
-              <>
-                <div className="w-16 h-16 bg-indigo-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <i className="fas fa-comment-dots text-indigo-400 text-2xl"></i>
-                </div>
-                <p className="text-white text-lg font-medium mb-6">{pauseFeedback}</p>
-              </>
-            ) : (
-              <>
-                <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                  <i className="fas fa-circle-notch fa-spin text-white text-2xl"></i>
-                </div>
-                <p className="text-slate-400">Analyserar...</p>
-              </>
-            )}
-
-            {/* Next instruction preview */}
-            {currentShotIndex < shotList.length - 1 && pauseFeedback && (
-              <div className="mt-6 bg-slate-800/80 rounded-xl p-4 text-left">
-                <p className="text-slate-400 text-xs uppercase tracking-wider mb-2">Nästa steg</p>
-                <p className="text-white">{shotList[currentShotIndex + 1]?.instruction}</p>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="mt-6 flex gap-4 justify-center">
-              {currentShotIndex < shotList.length - 1 && pauseFeedback && (
-                <button
-                  onClick={() => { completeCurrentShot(); togglePause(); }}
-                  className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500"
-                >
-                  <i className="fas fa-check mr-2"></i>
-                  Nästa steg
-                </button>
-              )}
-              <button
-                onClick={togglePause}
-                className="px-6 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20"
-              >
-                <i className="fas fa-play mr-2"></i>
-                Fortsätt filma
-              </button>
+            <div className="w-16 h-16 bg-amber-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i className="fas fa-pause text-amber-400 text-2xl"></i>
             </div>
-
-            {/* Progress indicator */}
-            <div className="mt-6 flex justify-center gap-1">
-              {shotList.map((_, idx) => (
-                <div
-                  key={idx}
-                  className={`w-2 h-2 rounded-full ${
-                    idx < currentShotIndex ? 'bg-emerald-500' :
-                    idx === currentShotIndex ? 'bg-indigo-500' : 'bg-slate-600'
-                  }`}
-                />
-              ))}
-            </div>
+            <p className="text-white text-lg font-medium mb-2">Pausad</p>
+            <p className="text-slate-400 mb-6">Tryck för att fortsätta spela in</p>
+            <button
+              onClick={togglePause}
+              className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500"
+            >
+              <i className="fas fa-play mr-2"></i>
+              Fortsätt
+            </button>
           </div>
         </div>
       )}
@@ -1365,6 +1365,180 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
           )}
         </div>
       </div>
+
+      {/* Review phase - show draft SOP with AI feedback */}
+      {phase === 'review' && (
+        <div className="absolute inset-0 bg-slate-900 flex flex-col z-30">
+          {/* Header */}
+          <div className="p-4 flex items-center justify-between border-b border-slate-800 bg-slate-900/95 backdrop-blur-sm">
+            <button onClick={() => setPhase('setup')} className="text-slate-400 hover:text-white">
+              <i className="fas fa-arrow-left text-xl"></i>
+            </button>
+            <span className="text-white font-bold">Granska SOP</span>
+            <button
+              onClick={finalizeSOP}
+              className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 text-sm"
+            >
+              <i className="fas fa-check mr-2"></i>
+              Slutför
+            </button>
+          </div>
+
+          {/* Two-column layout on desktop, tabs on mobile */}
+          <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+            {/* Left: Draft SOP steps */}
+            <div className="flex-1 overflow-y-auto p-4 md:border-r md:border-slate-800">
+              <h3 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-4">
+                <i className="fas fa-list-check mr-2"></i>
+                Draft ({draftSOP?.length || 0} steg)
+              </h3>
+
+              {draftSOP && draftSOP.map((step, idx) => (
+                <div
+                  key={idx}
+                  className={`mb-3 bg-slate-800/50 rounded-xl p-3 border ${
+                    stepsToReRecord.includes(idx)
+                      ? 'border-amber-500/50 bg-amber-900/20'
+                      : 'border-slate-700'
+                  }`}
+                >
+                  <div className="flex gap-3">
+                    <img
+                      src={step.thumbnail}
+                      alt=""
+                      className="w-24 h-16 object-cover rounded-lg flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-indigo-400 text-xs font-bold">Steg {idx + 1}</span>
+                        {stepsToReRecord.includes(idx) && (
+                          <span className="text-amber-400 text-xs">
+                            <i className="fas fa-redo mr-1"></i>Markerad
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-white text-sm font-medium line-clamp-1">{step.title}</p>
+                      <p className="text-slate-400 text-xs line-clamp-2">{step.description}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (stepsToReRecord.includes(idx)) {
+                          setStepsToReRecord(prev => prev.filter(i => i !== idx));
+                        } else {
+                          setStepsToReRecord(prev => [...prev, idx]);
+                        }
+                      }}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        stepsToReRecord.includes(idx)
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-slate-700 text-slate-400 hover:text-white'
+                      }`}
+                      title={stepsToReRecord.includes(idx) ? 'Ta bort markering' : 'Markera för ominspelning'}
+                    >
+                      <i className={`fas ${stepsToReRecord.includes(idx) ? 'fa-check' : 'fa-redo'} text-xs`}></i>
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Re-record button */}
+              {stepsToReRecord.length > 0 && (
+                <button
+                  onClick={startReRecording}
+                  className="w-full mt-4 py-3 bg-amber-600 text-white font-bold rounded-xl hover:bg-amber-500 transition-colors"
+                >
+                  <i className="fas fa-video mr-2"></i>
+                  Spela om {stepsToReRecord.length} steg
+                </button>
+              )}
+            </div>
+
+            {/* Right: Chat/discussion */}
+            <div className="md:w-96 flex flex-col border-t md:border-t-0 border-slate-800 bg-slate-900/50">
+              <div className="p-3 border-b border-slate-800">
+                <h3 className="text-slate-400 text-sm font-bold">
+                  <i className="fas fa-comments mr-2"></i>
+                  Diskutera
+                </h3>
+              </div>
+
+              {/* Chat messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-64 md:max-h-none">
+                {reviewChatMessages.map((msg, idx) => (
+                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] p-3 rounded-xl text-sm whitespace-pre-line ${
+                      msg.role === 'user'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-800 text-slate-100'
+                    }`}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Chat input */}
+              <div className="p-3 border-t border-slate-800">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={reviewInput}
+                    onChange={(e) => setReviewInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleReviewChat(reviewInput)}
+                    placeholder="Säg t.ex. 'visa steg 3 igen'..."
+                    className="flex-1 bg-slate-800 text-white px-3 py-2 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none text-sm"
+                  />
+                  <button
+                    onClick={() => handleReviewChat(reviewInput)}
+                    disabled={!reviewInput.trim()}
+                    className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50"
+                  >
+                    <i className="fas fa-paper-plane"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Re-recording overlay */}
+      {isReRecording && reRecordStepIndex !== null && draftSOP && (
+        <div className="absolute inset-0 z-35">
+          {/* Video still showing in background */}
+          <div className="absolute top-20 left-4 right-4 z-20">
+            <div className="bg-amber-600/90 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold">{reRecordStepIndex + 1}</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-white/80 text-xs uppercase tracking-wider">Spelar om steg</p>
+                  <p className="text-white font-medium">{draftSOP[reRecordStepIndex]?.title}</p>
+                </div>
+                <button
+                  onClick={handleReRecordComplete}
+                  className="px-4 py-2 bg-white text-amber-600 font-bold rounded-lg"
+                >
+                  <i className="fas fa-check mr-1"></i>
+                  Klar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Analyzing overlay (before review phase) */}
+      {isAnalyzingReview && (
+        <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-40">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-white text-lg font-bold">Analyserar inspelning...</p>
+            <p className="text-slate-400 text-sm mt-1">{allFramesRef.current.length} bilder bearbetas</p>
+          </div>
+        </div>
+      )}
 
       {/* Finishing overlay */}
       {isFinishing && (

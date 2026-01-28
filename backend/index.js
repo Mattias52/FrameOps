@@ -2046,6 +2046,213 @@ Eller: "Försök zooma in lite mer på detaljerna."`;
   }
 });
 
+// Generate soft tips (not rigid structure) - new collaborative flow
+app.post('/generate-soft-tips', async (req, res) => {
+  const { description } = req.body;
+
+  if (!description) {
+    return res.status(400).json({ error: 'Missing description' });
+  }
+
+  const jobId = crypto.randomBytes(4).toString('hex');
+  console.log(`[TIPS-${jobId}] Generating soft tips for: "${description.substring(0, 50)}..."`);
+
+  try {
+    const genai = getGenAI();
+
+    const prompt = `Du är en hjälpsam assistent. Någon ska spela in en instruktionsvideo och beskriver vad de ska göra:
+
+"${description}"
+
+Ge 3-4 MJUKA TIPS som de kan tänka på medan de spelar in. Dessa är INTE obligatoriska steg - bara förslag.
+
+Svara i JSON-format:
+{
+  "title": "Kort titel (max 50 tecken)",
+  "tips": [
+    "Tänk på att visa verktyg/material i början",
+    "Berätta vad du gör medan du gör det",
+    "..."
+  ]
+}
+
+Viktigt:
+- Tips på svenska
+- MJUKA förslag, inte krav
+- Max 4 tips
+- Korta och praktiska`;
+
+    const response = await genai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 500
+      }
+    });
+
+    const responseText = response.text.trim();
+
+    let result;
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      result = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    } catch (e) {
+      result = null;
+    }
+
+    if (result && result.tips) {
+      res.json({
+        success: true,
+        title: result.title || description.substring(0, 50),
+        tips: result.tips
+      });
+    } else {
+      res.json({
+        success: true,
+        title: description.substring(0, 50),
+        tips: ['Berätta vad du gör medan du gör det', 'Visa det viktiga i bild']
+      });
+    }
+
+  } catch (error) {
+    console.error(`[TIPS-${jobId}] Error:`, error.message);
+    res.json({
+      success: true,
+      title: description.substring(0, 50),
+      tips: ['Berätta vad du gör medan du gör det']
+    });
+  }
+});
+
+// Review SOP - get AI feedback on draft
+app.post('/review-sop', async (req, res) => {
+  const { steps, transcript, frameCount } = req.body;
+
+  if (!steps || !Array.isArray(steps)) {
+    return res.status(400).json({ error: 'Missing steps array' });
+  }
+
+  const jobId = crypto.randomBytes(4).toString('hex');
+  console.log(`[REVIEW-${jobId}] Reviewing ${steps.length} steps`);
+
+  try {
+    const genai = getGenAI();
+
+    const stepsSummary = steps.map((s, i) => `Steg ${i + 1}: ${s.title} - ${s.description?.substring(0, 100) || ''}`).join('\n');
+
+    const prompt = `Du granskar en SOP (Standard Operating Procedure) som just skapats.
+
+SOP STEG:
+${stepsSummary}
+
+ANTAL FRAMES: ${frameCount || 'okänt'}
+HAR TRANSCRIPT: ${transcript ? 'Ja (' + transcript.length + ' tecken)' : 'Nej'}
+
+Ge 0-3 förbättringsförslag. Fokusera på:
+1. Otydliga steg som kan behöva omspelning
+2. Saknade moment som borde finnas med
+3. Steg som verkar ha dålig bild/förklaring
+
+Om allt ser bra ut, returnera en tom lista.
+
+Svara i JSON-format:
+{
+  "feedback": [
+    "Steg 2 verkar otydligt - kanske visa verktyget närmare?",
+    "..."
+  ]
+}
+
+Svara på svenska. Max 3 förslag. Om det ser bra ut: {"feedback": []}`;
+
+    const response = await genai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.5,
+        maxOutputTokens: 300
+      }
+    });
+
+    const responseText = response.text.trim();
+
+    let result;
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      result = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    } catch (e) {
+      result = { feedback: [] };
+    }
+
+    res.json({
+      success: true,
+      feedback: result?.feedback || []
+    });
+
+  } catch (error) {
+    console.error(`[REVIEW-${jobId}] Error:`, error.message);
+    res.json({ success: true, feedback: [] });
+  }
+});
+
+// Review chat - discuss improvements
+app.post('/review-chat', async (req, res) => {
+  const { message, steps, previousMessages = [] } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ error: 'Missing message' });
+  }
+
+  const jobId = crypto.randomBytes(4).toString('hex');
+  console.log(`[CHAT-${jobId}] Review chat: "${message.substring(0, 50)}..."`);
+
+  try {
+    const genai = getGenAI();
+
+    const stepsSummary = steps?.map((s, i) => `Steg ${i + 1}: ${s.title}`).join(', ') || 'Okända steg';
+    const chatHistory = previousMessages.map(m => `${m.role === 'user' ? 'Användare' : 'AI'}: ${m.content}`).join('\n');
+
+    const prompt = `Du hjälper någon granska sin SOP (Standard Operating Procedure).
+
+SOP STEG: ${stepsSummary}
+
+TIDIGARE I KONVERSATIONEN:
+${chatHistory || '(Ingen tidigare konversation)'}
+
+ANVÄNDAREN SÄGER NU: "${message}"
+
+Svara kort och hjälpsamt (max 2 meningar) på svenska.
+
+Om de vill göra om ett steg, bekräfta vilket steg.
+Om de är nöjda, uppmuntra dem att slutföra.
+Om de har frågor, svara koncist.`;
+
+    const response = await genai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 150
+      }
+    });
+
+    const responseText = response.text.trim().replace(/^["']|["']$/g, '');
+
+    res.json({
+      success: true,
+      response: responseText
+    });
+
+  } catch (error) {
+    console.error(`[CHAT-${jobId}] Error:`, error.message);
+    res.json({
+      success: true,
+      response: 'Jag förstår. Vill du göra om något steg eller slutföra SOP:en?'
+    });
+  }
+});
+
 app.post('/analyze-sop', async (req, res) => {
   const { frames, title, additionalContext = '', vitTags = [], shotContext = [] } = req.body;
 
