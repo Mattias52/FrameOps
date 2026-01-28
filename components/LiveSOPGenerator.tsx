@@ -875,6 +875,12 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         console.log('Video blob created:', (videoBlob.size / 1024 / 1024).toFixed(2), 'MB');
       }
 
+      // Convert captured frames to FrameOption format for frame picker
+      const allFramesForPicker = allFramesRef.current.map(f => ({
+        timestamp: formatTime(f.timestamp),
+        imageBase64: f.image
+      }));
+
       // Create final SOP (videoBlob will be uploaded by App.tsx when saving)
       const sop: SOP = {
         id: Math.random().toString(36).substr(2, 9),
@@ -887,6 +893,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         status: 'completed',
         thumbnail_url: thumbnailUrl,
         steps: finalSteps,
+        allFrames: allFramesForPicker, // Include all frames for frame picker
         videoBlob: videoBlob // Pass blob for upload, not base64
       };
 

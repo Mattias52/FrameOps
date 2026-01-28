@@ -9,15 +9,15 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) => {
   const features = [
     {
-      icon: 'fa-mobile-screen',
-      title: 'Live Recording',
-      description: 'Record yourself doing the task with your phone. AI watches and creates the SOP as you work.',
-      highlight: true
+      icon: 'fa-youtube',
+      title: 'YouTube Import',
+      description: 'Paste any YouTube URL. AI extracts frames and generates step-by-step instructions automatically.',
+      isBrand: true
     },
     {
-      icon: 'fa-microphone',
-      title: 'Voice Instructions',
-      description: 'Just talk while you work. AI transcribes your voice and turns it into professional written steps.'
+      icon: 'fa-mobile-screen',
+      title: 'Live Recording',
+      description: 'Record yourself doing the task with your phone. AI watches and creates the SOP as you work.'
     },
     {
       icon: 'fa-cloud-upload-alt',
@@ -35,9 +35,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       description: 'One-click export to professional PDF ready for print or digital distribution.'
     },
     {
-      icon: 'fa-clock',
-      title: '10 Minutes',
-      description: 'What took 4-8 hours of manual documentation now takes under 10 minutes.'
+      icon: 'fa-images',
+      title: 'Frame Selection',
+      description: 'AI picks the best frames, or manually choose which images to use for each step.'
     }
   ];
 
@@ -50,39 +50,33 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
 
   const pricing = [
     {
-      name: 'Free',
+      name: 'Beta Free',
       price: '0',
-      period: '/forever',
-      description: 'Preview any video before you buy',
-      features: ['Unlimited previews', 'See first 3 steps of any SOP', 'Test with your own videos', 'No credit card required'],
-      cta: 'Try Free Preview',
-      highlighted: false
+      period: '',
+      description: 'All features included during beta!',
+      features: [
+        'Unlimited SOPs during beta',
+        'YouTube, upload & live recording',
+        'AI-generated step instructions',
+        'Safety & PPE detection',
+        'PDF export',
+        'Manual frame selection'
+      ],
+      cta: 'Get Started Free',
+      highlighted: true
     },
     {
       name: 'Pro',
       price: '19',
       period: '/month',
-      description: 'For professionals and small teams',
-      features: ['Unlimited SOPs', 'HD frame extraction', 'No watermark on exports', 'Priority AI processing', 'Custom branding'],
-      cta: 'Start Free Trial',
-      highlighted: true
-    },
-    {
-      name: 'Team',
-      price: '49',
-      period: '/month',
-      description: 'Collaboration for growing teams',
-      features: ['Everything in Pro', '5 team members', 'Shared SOP library', 'Team branding', 'Analytics dashboard'],
-      cta: 'Start Free Trial',
-      highlighted: false
-    },
-    {
-      name: 'Enterprise',
-      price: 'Custom',
-      period: '',
-      description: 'For large organizations',
-      features: ['Unlimited team members', 'SSO integration', 'API access', 'Dedicated support', 'On-premise option'],
-      cta: 'Contact Sales',
+      description: 'After beta ends',
+      features: [
+        'Unlimited SOPs forever',
+        'All features from beta',
+        'Priority support',
+        'Early access to new features'
+      ],
+      cta: 'Coming After Beta',
       highlighted: false
     }
   ];
@@ -345,29 +339,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
           </div>
         </section>
 
-      {/* Stats Bar */}
-      <section className="py-12 bg-indigo-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <p className="text-4xl font-bold text-white">95%</p>
-              <p className="text-indigo-200 mt-1">Time Saved</p>
-            </div>
-            <div>
-              <p className="text-4xl font-bold text-white">10min</p>
-              <p className="text-indigo-200 mt-1">Avg. SOP Creation</p>
-            </div>
-            <div>
-              <p className="text-4xl font-bold text-white">50+</p>
-              <p className="text-indigo-200 mt-1">Industries Served</p>
-            </div>
-            <div>
-              <p className="text-4xl font-bold text-white">99.9%</p>
-              <p className="text-indigo-200 mt-1">Uptime</p>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Features Section */}
       <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 scroll-mt-24">
@@ -381,8 +352,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, i) => (
               <div key={i} className="p-8 bg-white rounded-2xl border border-slate-100 hover:shadow-xl hover:border-slate-200 transition-all group">
-                <div className="w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-indigo-600 transition-colors">
-                  <i className={`fas ${feature.icon} text-2xl text-indigo-600 group-hover:text-white transition-colors`}></i>
+                <div className={`w-14 h-14 ${feature.isBrand ? 'bg-red-100 group-hover:bg-red-600' : 'bg-indigo-100 group-hover:bg-indigo-600'} rounded-2xl flex items-center justify-center mb-6 transition-colors`}>
+                  <i className={`${feature.isBrand ? 'fab' : 'fas'} ${feature.icon} text-2xl ${feature.isBrand ? 'text-red-600' : 'text-indigo-600'} group-hover:text-white transition-colors`}></i>
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
                 <p className="text-slate-600 leading-relaxed">{feature.description}</p>
@@ -418,7 +389,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
               Start free, upgrade when you need more. No hidden fees.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {pricing.map((plan, i) => (
               <div
                 key={i}

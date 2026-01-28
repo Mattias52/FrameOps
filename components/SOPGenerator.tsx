@@ -612,36 +612,26 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                 <input type="text" placeholder="Procedure Title" value={title} onChange={(e) => setTitle((e.target as any).value)} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-sm mb-4" />
                 <textarea rows={3} placeholder="Add equipment manuals or specific safety instructions..." value={context} onChange={(e) => setContext((e.target as any).value)} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all resize-none font-medium text-sm"></textarea>
               </div>
-              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-200 space-y-5">
-                <label className="text-xs font-black text-slate-900 uppercase tracking-widest block">Detaljnivå</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['quick', 'normal', 'detailed'] as const).map((level) => {
-                    const preset = detailPresets[level];
-                    const isSelected = detailLevel === level;
-                    return (
-                      <button
-                        key={level}
-                        type="button"
-                        onClick={() => setDetailLevel(level)}
-                        className={`p-3 rounded-xl text-center transition-all ${
-                          isSelected
-                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                            : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-300'
-                        }`}
-                      >
-                        <div className="text-xs font-black uppercase">{preset.label}</div>
-                        <div className={`text-[9px] mt-1 ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
-                          {preset.desc}
-                        </div>
-                      </button>
-                    );
-                  })}
+              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-[2rem] border border-indigo-100 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                    <i className="fas fa-comment-dots text-indigo-600"></i>
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Beta Feedback</p>
+                    <p className="text-[10px] text-slate-500">Hjälp oss bli bättre!</p>
+                  </div>
                 </div>
-                <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
-                  {detailLevel === 'quick' && 'Snabb genomgång - perfekt för enkla processer'}
-                  {detailLevel === 'normal' && 'Balanserad nivå - rekommenderad för de flesta videor'}
-                  {detailLevel === 'detailed' && 'Omfattande dokumentation - fångar varje detalj'}
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Något som inte fungerar? Saknar du en funktion? Vi vill höra från dig!
                 </p>
+                <a
+                  href="mailto:feedback@frameops.ai?subject=FrameOps%20Feedback"
+                  className="block w-full py-3 bg-white text-indigo-600 font-bold text-xs text-center rounded-xl border border-indigo-200 hover:bg-indigo-50 transition-colors"
+                >
+                  <i className="fas fa-envelope mr-2"></i>
+                  Skicka feedback
+                </a>
               </div>
             </div>
           </div>

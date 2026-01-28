@@ -15,22 +15,40 @@ import APIKeysPage from './components/APIKeysPage';
 import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
 import { fetchSOPsList, fetchSOPSteps, saveSOP, isSupabaseConfigured } from './services/supabaseService';
+import { getSubscriptionStatus, checkPaymentStatus, getSOPUsage, incrementSOPUsage } from './services/stripeService';
 
 const FREE_SOP_LIMIT = 3;
+const IS_BETA = true; // Set to false when launching paid plans
 
 const App: React.FC = () => {
   // Check if user has entered the app before
   const hasVisited = typeof window !== 'undefined' && window.localStorage.getItem('frameops_visited');
 
-  // Track free SOPs used
-  const getUsedSOPs = () => {
-    if (typeof window === 'undefined') return 0;
-    return parseInt(localStorage.getItem('frameops_sops_used') || '0', 10);
-  };
-
-  const [sopsUsed, setSopsUsed] = useState(getUsedSOPs);
+  // Track free SOPs used (only matters after beta)
+  const [sopsUsed, setSopsUsed] = useState(getSOPUsage);
   const freeSOPsRemaining = Math.max(0, FREE_SOP_LIMIT - sopsUsed);
-  const isPro = true; // Beta: Everyone gets Pro access. TODO: Check Stripe subscription status
+
+  // Pro status: During beta everyone is Pro, after beta check Stripe subscription
+  const [subscriptionChecked, setSubscriptionChecked] = useState(false);
+  const [stripeIsPro, setStripeIsPro] = useState(false);
+  const isPro = IS_BETA || stripeIsPro;
+
+  // Check for payment success/cancelled on page load
+  useEffect(() => {
+    const paymentStatus = checkPaymentStatus();
+    if (paymentStatus === 'success') {
+      setStripeIsPro(true);
+      // Show success message
+      alert('Betalning genomförd! Du har nu Pro-tillgång.');
+    } else if (paymentStatus === 'cancelled') {
+      // User cancelled - no action needed
+    }
+
+    // Check subscription status from localStorage
+    const { isPro: storedIsPro } = getSubscriptionStatus();
+    setStripeIsPro(storedIsPro);
+    setSubscriptionChecked(true);
+  }, []);
   const [currentView, setCurrentView] = useState<AppView>(hasVisited ? AppView.DASHBOARD : AppView.LANDING);
   const [sops, setSops] = useState<SOP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,12 +104,9 @@ const App: React.FC = () => {
   };
 
   const handleAddSOP = async (newSop: SOP) => {
-    // Track free SOP usage (only if not Pro)
-    if (!isPro) {
-      const newCount = sopsUsed + 1;
-      setSopsUsed(newCount);
-      localStorage.setItem('frameops_sops_used', newCount.toString());
-    }
+    // Track SOP usage (for freemium limit after beta)
+    const newCount = incrementSOPUsage();
+    setSopsUsed(newCount);
 
     // Extract video blob before adding to state (blob is only for upload)
     const videoBlob = newSop.videoBlob;

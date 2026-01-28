@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createCheckoutSession, isStripeConfigured, setSubscriptionStatus } from '../services/stripeService';
 
 // Promo codes - in production, validate these server-side
 const VALID_PROMO_CODES: Record<string, { type: 'pro' | 'team'; days: number; name: string }> = {
@@ -8,18 +9,42 @@ const VALID_PROMO_CODES: Record<string, { type: 'pro' | 'team'; days: number; na
   'TEAMTRIAL': { type: 'team', days: 14, name: 'Team Trial' },
 };
 
+const IS_BETA = true; // Set to false when launching paid plans
+
 const SubscriptionPlans: React.FC = () => {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [promoCode, setPromoCode] = useState('');
   const [promoStatus, setPromoStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [promoMessage, setPromoMessage] = useState('');
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+
+  // Handle upgrade button click
+  const handleUpgrade = async () => {
+    if (IS_BETA) {
+      alert('Pro-planen är inte tillgänglig under beta. Du har redan tillgång till alla funktioner!');
+      return;
+    }
+
+    if (!isStripeConfigured()) {
+      alert('Betalning är inte konfigurerad än. Kontakta support.');
+      return;
+    }
+
+    setIsCheckingOut(true);
+    const { error } = await createCheckoutSession();
+    setIsCheckingOut(false);
+
+    if (error) {
+      alert(`Fel vid checkout: ${error}`);
+    }
+  };
 
   const handlePromoSubmit = () => {
     const code = promoCode.trim().toUpperCase();
     const promo = VALID_PROMO_CODES[code];
 
     if (promo) {
-      // Store promo in localStorage (in production, this would be server-side)
+      // Store promo and set subscription status
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + promo.days);
       localStorage.setItem('frameops_promo', JSON.stringify({
@@ -28,8 +53,10 @@ const SubscriptionPlans: React.FC = () => {
         expiresAt: expiresAt.toISOString(),
         name: promo.name
       }));
+      // Also set subscription status so isPro is true
+      setSubscriptionStatus(true, expiresAt.toISOString());
       setPromoStatus('success');
-      setPromoMessage(`${promo.name} activated! You have ${promo.type === 'pro' ? 'Pro' : 'Team'} access for ${promo.days} days.`);
+      setPromoMessage(`${promo.name} aktiverad! Du har ${promo.type === 'pro' ? 'Pro' : 'Team'}-tillgång i ${promo.days} dagar.`);
     } else {
       setPromoStatus('error');
       setPromoMessage('Invalid promo code. Please check and try again.');
@@ -41,36 +68,35 @@ const SubscriptionPlans: React.FC = () => {
       name: 'Beta Free',
       monthlyPrice: '0',
       yearlyPrice: '0',
-      description: 'Try FrameOps during beta',
+      description: 'All features included during beta!',
       features: [
-        '3 SOPs total',
+        'Unlimited SOPs during beta',
         'YouTube, upload & live recording',
         'AI-generated instructions',
         'PDF export',
-        'SOP editing'
+        'Manual frame selection',
+        'All Pro features included'
       ],
       limitations: [],
       buttonText: 'Current Plan',
-      popular: false,
-      color: 'slate'
+      popular: true,
+      color: 'indigo'
     },
     {
       name: 'Pro',
       monthlyPrice: '19',
       yearlyPrice: '190',
-      description: 'For professionals who need unlimited',
+      description: 'After beta ends',
       features: [
         'Unlimited SOPs',
-        'YouTube, upload & live recording',
-        'AI review of SOPs',
-        'Manual frame selection',
-        'PDF export',
-        'Priority support'
+        'All features from Beta',
+        'Priority support',
+        'Early access to new features'
       ],
       limitations: [],
-      buttonText: 'Upgrade to Pro',
-      popular: true,
-      color: 'indigo'
+      buttonText: 'Coming After Beta',
+      popular: false,
+      color: 'slate'
     },
     {
       name: 'API Access',
@@ -93,16 +119,16 @@ const SubscriptionPlans: React.FC = () => {
 
   const faqs = [
     {
+      question: 'What do I get during beta?',
+      answer: 'During beta, you get full access to all features including unlimited SOPs, YouTube import, live recording, PDF export, and frame selection - completely free!'
+    },
+    {
+      question: 'What happens when beta ends?',
+      answer: 'When beta ends, free users will have a limit on SOPs. Your existing SOPs will remain accessible. Pro subscription gives unlimited access.'
+    },
+    {
       question: 'What counts as one SOP?',
       answer: 'One SOP is a single video processed into a procedure document, regardless of length or number of steps.'
-    },
-    {
-      question: 'Can I upgrade anytime?',
-      answer: 'Yes! You can upgrade your plan at any time and get immediate access to all Pro features.'
-    },
-    {
-      question: 'How long does the beta period last?',
-      answer: 'The beta period is ongoing. During beta you get 3 free SOPs to try the product.'
     },
     {
       question: 'What payment methods are accepted?',
@@ -194,15 +220,21 @@ const SubscriptionPlans: React.FC = () => {
             </ul>
 
             <button
+              onClick={plan.name === 'Pro' && !IS_BETA ? handleUpgrade : undefined}
+              disabled={isCheckingOut || plan.name === 'Beta Free'}
               className={`w-full py-3.5 rounded-xl font-bold transition-all ${
                 plan.popular
                   ? 'bg-white text-indigo-600 hover:bg-indigo-50'
-                  : plan.name === 'Free'
+                  : plan.name === 'Beta Free'
                     ? 'bg-slate-100 text-slate-400 cursor-default'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 disabled:opacity-50'
               }`}
             >
-              {plan.buttonText}
+              {isCheckingOut && plan.name === 'Pro' ? (
+                <><i className="fas fa-spinner fa-spin mr-2"></i>Laddar...</>
+              ) : (
+                plan.buttonText
+              )}
             </button>
           </div>
         ))}
@@ -216,58 +248,58 @@ const SubscriptionPlans: React.FC = () => {
             <thead>
               <tr className="border-b border-slate-100">
                 <th className="text-left p-4 font-semibold text-slate-900">Feature</th>
-                <th className="p-4 font-semibold text-slate-900 text-center">Beta Free</th>
-                <th className="p-4 font-semibold text-indigo-600 text-center bg-indigo-50">Pro</th>
+                <th className="p-4 font-semibold text-indigo-600 text-center bg-indigo-50">Beta Free</th>
+                <th className="p-4 font-semibold text-slate-900 text-center">Pro</th>
                 <th className="p-4 font-semibold text-slate-900 text-center">API</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               <tr className="border-b border-slate-50">
                 <td className="p-4 text-slate-700">Number of SOPs</td>
-                <td className="p-4 text-center text-slate-600">3 total</td>
-                <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">Unlimited</td>
+                <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">Unlimited (beta)</td>
+                <td className="p-4 text-center text-slate-600">Unlimited</td>
                 <td className="p-4 text-center text-slate-600">Unlimited</td>
               </tr>
               <tr className="border-b border-slate-50">
                 <td className="p-4 text-slate-700">YouTube videos</td>
-                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
                 <td className="p-4 text-slate-700">Video upload</td>
-                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
                 <td className="p-4 text-slate-700">Live recording</td>
-                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
                 <td className="p-4 text-slate-700">PDF export</td>
-                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">AI review</td>
-                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-slate-700">Frame selection</td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
+                <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
                 <td className="p-4 text-slate-700">REST API</td>
-                <td className="p-4 text-center"><i className="fas fa-times text-slate-300"></i></td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-times text-slate-300"></i></td>
+                <td className="p-4 text-center"><i className="fas fa-times text-slate-300"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr>
                 <td className="p-4 text-slate-700">Support</td>
-                <td className="p-4 text-center text-slate-600">Community</td>
-                <td className="p-4 text-center bg-indigo-50 text-slate-600">Email</td>
+                <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">Email</td>
+                <td className="p-4 text-center text-slate-600">Email</td>
                 <td className="p-4 text-center text-slate-600">Priority</td>
               </tr>
             </tbody>
