@@ -12,6 +12,8 @@ if (import.meta.env.VITE_SENTRY_DSN) {
     environment: import.meta.env.MODE,
     sendDefaultPii: true,
   });
+  // Expose Sentry globally for debugging
+  (window as any).Sentry = Sentry;
 }
 
 // Fix: Reference document via window with type assertion to bypass missing DOM types in the current environment
