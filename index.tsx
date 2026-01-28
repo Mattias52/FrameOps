@@ -10,7 +10,7 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
     environment: import.meta.env.MODE,
-    enabled: import.meta.env.PROD, // Only track errors in production
+    sendDefaultPii: true,
   });
 }
 
