@@ -2216,22 +2216,32 @@ app.post('/review-chat', async (req, res) => {
     let prompt;
 
     if (phase === 'setup') {
-      // Setup phase: help plan the recording - BE DECISIVE
-      prompt = `Du hjälper någon PLANERA en instruktionsvideo. Var BESLUTSAM och hjälpsam - fråga INTE massa frågor, GÖR saker istället.
+      // Setup phase: help plan the recording - return structured JSON
+      const currentSteps = steps?.map(s => s.title || s.description).filter(Boolean) || [];
+
+      prompt = `Du hjälper någon PLANERA en instruktionsvideo. Var BESLUTSAM - fråga INTE massa frågor.
+
+NUVARANDE STEG:
+${currentSteps.length > 0 ? currentSteps.map((s, i) => `${i+1}. ${s}`).join('\n') : '(Inga steg ännu)'}
 
 TIDIGARE I KONVERSATIONEN:
 ${chatHistory || '(Ingen tidigare konversation)'}
 
 ANVÄNDAREN SÄGER NU: "${message}"
 
-VIKTIGA REGLER:
-- Om användaren ber om stegförslag, GE KONKRETA STEG DIREKT (numrerad lista)
-- Om användaren vill ändra något, GÖR ÄNDRINGEN DIREKT och visa nya stegen
-- Fråga INTE "vill du ändra?", "är du nöjd?" osv - var proaktiv
-- Håll svaret KORT (max 3-4 meningar + eventuell steglista)
-- Avsluta med "Redo att börja spela in?" om stegen verkar klara
+Svara ALLTID i JSON-format:
+{
+  "message": "Kort svar till användaren (max 2 meningar)",
+  "steps": ["Steg 1 beskrivning", "Steg 2 beskrivning", ...],
+  "ready": true/false (true om stegen verkar klara för inspelning)
+}
 
-Svara på svenska. Var konkret och hjälpsam.`;
+REGLER:
+- Om användaren beskriver vad de ska göra, SKAPA steg baserat på det
+- Om användaren vill ändra, UPPDATERA stegen direkt
+- "steps" ska ALLTID vara en array med de aktuella stegen (eller tom om inga finns)
+- "ready" = true när det finns minst 2 steg och användaren verkar nöjd
+- Var konkret och hjälpsam på svenska`;
     } else {
       // Review phase: discuss the recorded SOP
       const stepsSummary = steps?.map((s, i) => `Steg ${i + 1}: ${s.title}`).join(', ') || 'Okända steg';
@@ -2252,22 +2262,50 @@ Svara kort (max 2 meningar). Om de vill ändra steg, bekräfta vilket. Om nöjda
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.6,
-        maxOutputTokens: 250
+        maxOutputTokens: 400
       }
     });
 
-    const responseText = response.text.trim().replace(/^["']|["']$/g, '');
+    const responseText = response.text.trim();
 
-    res.json({
-      success: true,
-      response: responseText
-    });
+    // For setup phase, parse JSON response
+    if (phase === 'setup') {
+      try {
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          res.json({
+            success: true,
+            response: parsed.message || 'Okej!',
+            steps: parsed.steps || [],
+            ready: parsed.ready || false
+          });
+          return;
+        }
+      } catch (e) {
+        console.error(`[CHAT-${jobId}] JSON parse failed:`, e.message);
+      }
+      // Fallback if JSON parsing fails
+      res.json({
+        success: true,
+        response: responseText.replace(/^["']|["']$/g, ''),
+        steps: [],
+        ready: false
+      });
+    } else {
+      res.json({
+        success: true,
+        response: responseText.replace(/^["']|["']$/g, '')
+      });
+    }
 
   } catch (error) {
     console.error(`[CHAT-${jobId}] Error:`, error.message);
     res.json({
       success: true,
-      response: 'Jag förstår. Vill du göra om något steg eller slutföra SOP:en?'
+      response: phase === 'setup' ? 'Något gick fel. Försök igen!' : 'Jag förstår. Vill du göra om något steg eller slutföra SOP:en?',
+      steps: [],
+      ready: false
     });
   }
 });

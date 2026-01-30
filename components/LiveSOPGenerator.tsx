@@ -53,8 +53,11 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     { role: 'ai', content: 'Hej! Vad ska du dokumentera idag? Beskriv kort vad du vill visa, eller hoppa över och spela in fritt.' }
   ]);
   const [userInput, setUserInput] = useState('');
-  const [softTips, setSoftTips] = useState<string[]>([]); // Optional tips, not rigid structure
+  const [proposedSteps, setProposedSteps] = useState<string[]>([]); // Steps being planned
+  const [isReady, setIsReady] = useState(false); // AI thinks we're ready to record
   const [isGeneratingGuide, setIsGeneratingGuide] = useState(false);
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
+  const [editingStepText, setEditingStepText] = useState('');
 
   // Review phase state
   const [draftSOP, setDraftSOP] = useState<SOPStep[] | null>(null);
@@ -705,10 +708,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     }
   };
 
-  // Track if we've received tips (to show start recording button)
-  const [hasReceivedTips, setHasReceivedTips] = useState(false);
-
-  // Handle chat message in setup phase
+  // Handle chat message in setup phase - always use structured response
   const handleSetupChat = async (message: string) => {
     if (!message.trim()) return;
 
@@ -716,65 +716,77 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     setIsGeneratingGuide(true);
     setChatMessages(prev => [...prev, { role: 'user', content: message }]);
 
-    try {
-      // If this is follow-up question, use chat endpoint with setup phase
-      if (hasReceivedTips) {
-        const response = await fetch('https://frameops-production.up.railway.app/review-chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message,
-            phase: 'setup', // Tell backend this is setup phase, not review
-            steps: softTips.map((t, i) => ({ title: `Tips ${i+1}`, description: t })),
-            previousMessages: chatMessages.slice(-4)
-          })
-        });
+    // Set title from first message if not set
+    if (!title) {
+      setTitle(message.slice(0, 50));
+    }
 
-        const data = await response.json();
-        if (data.success && data.response) {
-          setChatMessages(prev => [...prev, { role: 'ai', content: data.response }]);
-        } else {
-          setChatMessages(prev => [...prev, {
-            role: 'ai',
-            content: 'Tryck på "Starta inspelning" när du är redo, eller ställ en annan fråga.'
-          }]);
+    try {
+      const response = await fetch('https://frameops-production.up.railway.app/review-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          phase: 'setup',
+          steps: proposedSteps.map(s => ({ title: s, description: s })),
+          previousMessages: chatMessages.slice(-6)
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update chat
+        setChatMessages(prev => [...prev, { role: 'ai', content: data.response }]);
+
+        // Update steps if provided
+        if (data.steps && Array.isArray(data.steps) && data.steps.length > 0) {
+          setProposedSteps(data.steps);
+        }
+
+        // Update ready state
+        if (data.ready !== undefined) {
+          setIsReady(data.ready);
         }
       } else {
-        // First message - generate tips
-        const response = await fetch('https://frameops-production.up.railway.app/generate-soft-tips', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description: message })
-        });
-
-        const data = await response.json();
-
-        if (data.success && data.tips) {
-          setSoftTips(data.tips);
-          setTitle(data.title || message.slice(0, 50));
-          setHasReceivedTips(true);
-          setChatMessages(prev => [...prev, {
-            role: 'ai',
-            content: `Tack! Här är några tips att tänka på:\n\n${data.tips.map((t: string) => `• ${t}`).join('\n')}\n\nHar du frågor, eller vill du börja spela in?`
-          }]);
-        } else {
-          setTitle(message.slice(0, 50));
-          setHasReceivedTips(true);
-          setChatMessages(prev => [...prev, {
-            role: 'ai',
-            content: 'Perfekt! Spela in på ditt sätt och berätta vad du gör. Tryck "Starta inspelning" när du är redo.'
-          }]);
-        }
+        setChatMessages(prev => [...prev, {
+          role: 'ai',
+          content: 'Beskriv vad du ska visa så hjälper jag dig skapa steg!'
+        }]);
       }
     } catch (error) {
       console.error('Error in setup chat:', error);
       setChatMessages(prev => [...prev, {
         role: 'ai',
-        content: 'Något gick fel. Tryck "Starta inspelning" för att börja, eller försök igen.'
+        content: 'Något gick fel. Försök igen!'
       }]);
     } finally {
       setIsGeneratingGuide(false);
     }
+  };
+
+  // Edit a step directly
+  const handleStepEdit = (index: number) => {
+    setEditingStepIndex(index);
+    setEditingStepText(proposedSteps[index]);
+  };
+
+  const saveStepEdit = () => {
+    if (editingStepIndex !== null && editingStepText.trim()) {
+      setProposedSteps(prev => prev.map((s, i) => i === editingStepIndex ? editingStepText.trim() : s));
+    }
+    setEditingStepIndex(null);
+    setEditingStepText('');
+  };
+
+  const deleteStep = (index: number) => {
+    setProposedSteps(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addStep = () => {
+    setProposedSteps(prev => [...prev, 'Nytt steg...']);
+    setEditingStepIndex(proposedSteps.length);
+    setEditingStepText('');
   };
 
   // Skip AI guide and go directly to recording
@@ -1167,9 +1179,9 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         ) : <div className="w-10" />}
       </div>
 
-      {/* Setup phase - optional description or skip */}
+      {/* Setup phase - SPLIT VIEW: Steps + Chat */}
       {phase === 'setup' && !cameraStarted && (
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-black flex flex-col z-30">
+        <div className="absolute inset-0 bg-slate-900 flex flex-col z-30">
           {/* Header */}
           <div className="p-4 flex items-center justify-between border-b border-slate-800">
             <button onClick={handleCancel} className="text-slate-400 hover:text-white">
@@ -1179,83 +1191,179 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
                 <i className="fas fa-video text-white text-sm"></i>
               </div>
-              <span className="text-white font-bold">Live SOP</span>
+              <span className="text-white font-bold">Planera inspelning</span>
             </div>
             <div className="w-8"></div>
           </div>
 
-          {/* Chat messages - auto-scroll to bottom */}
-          <div
-            className="flex-1 overflow-y-auto p-4 space-y-4"
-            ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}
-          >
-            {chatMessages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] p-4 rounded-2xl whitespace-pre-line ${
-                  msg.role === 'user'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-800 text-slate-100'
-                }`}>
-                  {msg.content}
-                </div>
+          {/* Split view: Steps left, Chat right */}
+          <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+            {/* Left: Steps panel */}
+            <div className="md:w-1/2 flex flex-col border-b md:border-b-0 md:border-r border-slate-800 bg-slate-900/50">
+              <div className="p-4 border-b border-slate-800">
+                <h3 className="text-white font-bold flex items-center gap-2">
+                  <i className="fas fa-list-check text-indigo-400"></i>
+                  Steg att filma
+                  {proposedSteps.length > 0 && (
+                    <span className="text-slate-400 font-normal text-sm">({proposedSteps.length})</span>
+                  )}
+                </h3>
               </div>
-            ))}
-            {isGeneratingGuide && (
-              <div className="flex justify-start">
-                <div className="bg-slate-800 text-slate-100 p-4 rounded-2xl">
-                  <i className="fas fa-circle-notch fa-spin mr-2"></i>
-                  Tänker...
-                </div>
-              </div>
-            )}
-            {/* Invisible element to scroll to */}
-            <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
-          </div>
 
-          {/* Input + Action buttons */}
-          <div className="p-4 border-t border-slate-800 space-y-3">
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && userInput.trim() && handleSetupChat(userInput.trim())}
-                placeholder={hasReceivedTips ? "Ställ en fråga eller tryck Starta..." : "Beskriv vad du ska visa..."}
-                className="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none"
-                disabled={isGeneratingGuide}
-              />
-              <button
-                onClick={() => userInput.trim() && handleSetupChat(userInput.trim())}
-                disabled={!userInput.trim() || isGeneratingGuide}
-                className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <i className="fas fa-paper-plane"></i>
-              </button>
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {proposedSteps.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <i className="fas fa-lightbulb text-slate-600 text-2xl"></i>
+                    </div>
+                    <p className="text-slate-500 text-sm">Beskriv vad du ska visa så skapar AI:n stegen</p>
+                  </div>
+                ) : (
+                  proposedSteps.map((step, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-slate-800/50 rounded-xl p-3 border border-slate-700 group"
+                    >
+                      {editingStepIndex === idx ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={editingStepText}
+                            onChange={(e) => setEditingStepText(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && saveStepEdit()}
+                            className="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-sm outline-none"
+                            autoFocus
+                          />
+                          <button
+                            onClick={saveStepEdit}
+                            className="px-3 py-2 bg-emerald-600 text-white rounded-lg"
+                          >
+                            <i className="fas fa-check"></i>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-3">
+                          <div className="w-7 h-7 bg-indigo-600/30 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-indigo-300 text-sm font-bold">{idx + 1}</span>
+                          </div>
+                          <p className="text-white text-sm flex-1 pt-1">{step}</p>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleStepEdit(idx)}
+                              className="w-7 h-7 bg-slate-700 rounded-lg flex items-center justify-center text-slate-400 hover:text-white"
+                            >
+                              <i className="fas fa-pen text-xs"></i>
+                            </button>
+                            <button
+                              onClick={() => deleteStep(idx)}
+                              className="w-7 h-7 bg-slate-700 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-400"
+                            >
+                              <i className="fas fa-trash text-xs"></i>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+
+                {/* Add step button */}
+                {proposedSteps.length > 0 && (
+                  <button
+                    onClick={addStep}
+                    className="w-full py-2 border-2 border-dashed border-slate-700 rounded-xl text-slate-500 hover:border-slate-600 hover:text-slate-400 transition-colors text-sm"
+                  >
+                    <i className="fas fa-plus mr-2"></i>
+                    Lägg till steg
+                  </button>
+                )}
+              </div>
+
+              {/* Start recording button */}
+              <div className="p-4 border-t border-slate-800">
+                <button
+                  onClick={skipToRecording}
+                  disabled={proposedSteps.length === 0}
+                  className={`w-full py-4 font-bold text-lg rounded-xl transition-colors ${
+                    proposedSteps.length > 0
+                      ? 'bg-red-600 text-white hover:bg-red-500'
+                      : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                  }`}
+                >
+                  <i className="fas fa-video mr-2"></i>
+                  {proposedSteps.length > 0 ? 'Starta inspelning' : 'Skapa steg först...'}
+                </button>
+                {proposedSteps.length === 0 && (
+                  <button
+                    onClick={skipToRecording}
+                    className="w-full mt-2 py-2 text-slate-500 hover:text-slate-400 text-sm"
+                  >
+                    Eller spela in utan plan
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Show Start Recording button after receiving tips */}
-            {hasReceivedTips ? (
-              <button
-                onClick={skipToRecording}
-                className="w-full py-4 bg-red-600 text-white font-bold text-lg rounded-xl hover:bg-red-500 transition-colors"
-              >
-                <i className="fas fa-video mr-2"></i>
-                Starta inspelning
-              </button>
-            ) : (
-              <button
-                onClick={skipToRecording}
-                className="w-full py-3 bg-slate-700 text-white font-medium rounded-xl hover:bg-slate-600 transition-colors"
-              >
-                <i className="fas fa-forward mr-2"></i>
-                Hoppa över - spela in direkt
-              </button>
-            )}
+            {/* Right: Chat panel */}
+            <div className="md:w-1/2 flex flex-col">
+              <div className="p-4 border-b border-slate-800">
+                <h3 className="text-white font-bold flex items-center gap-2">
+                  <i className="fas fa-comments text-indigo-400"></i>
+                  AI-assistent
+                </h3>
+              </div>
+
+              {/* Chat messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {chatMessages.map((msg, idx) => (
+                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] p-3 rounded-xl text-sm whitespace-pre-line ${
+                      msg.role === 'user'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-800 text-slate-100'
+                    }`}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {isGeneratingGuide && (
+                  <div className="flex justify-start">
+                    <div className="bg-slate-800 text-slate-100 p-3 rounded-xl text-sm">
+                      <i className="fas fa-circle-notch fa-spin mr-2"></i>
+                      Tänker...
+                    </div>
+                  </div>
+                )}
+                <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
+              </div>
+
+              {/* Chat input */}
+              <div className="p-4 border-t border-slate-800">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && userInput.trim() && handleSetupChat(userInput.trim())}
+                    placeholder="Beskriv vad du ska filma..."
+                    className="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none text-sm"
+                    disabled={isGeneratingGuide}
+                  />
+                  <button
+                    onClick={() => userInput.trim() && handleSetupChat(userInput.trim())}
+                    disabled={!userInput.trim() || isGeneratingGuide}
+                    className="px-5 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50"
+                  >
+                    <i className="fas fa-paper-plane"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Setup phase - camera view with start button */}
+      {/* Setup phase - camera view with start button (after camera started) */}
       {phase === 'setup' && cameraStarted && !isRecording && (
         <div className="absolute inset-0 flex items-center justify-center z-30">
           <div className="text-center max-w-md mx-4">
@@ -1264,14 +1372,14 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 <i className="fas fa-microphone text-indigo-400 text-2xl"></i>
               </div>
               <h3 className="text-white font-bold text-lg mb-2">Redo att spela in</h3>
-              <p className="text-slate-300 text-sm">
-                Berätta vad du gör medan du gör det. Din röst blir grunden för SOP:en.
+              <p className="text-slate-300 text-sm mb-4">
+                Berätta vad du gör medan du gör det.
               </p>
-              {softTips.length > 0 && (
-                <div className="mt-4 text-left bg-slate-800/50 rounded-xl p-3">
-                  <p className="text-slate-400 text-xs uppercase tracking-wider mb-2">Tips att tänka på:</p>
-                  {softTips.slice(0, 3).map((tip, i) => (
-                    <p key={i} className="text-slate-300 text-sm">• {tip}</p>
+              {proposedSteps.length > 0 && (
+                <div className="text-left bg-slate-800/50 rounded-xl p-3">
+                  <p className="text-slate-400 text-xs uppercase tracking-wider mb-2">Dina steg:</p>
+                  {proposedSteps.map((step, i) => (
+                    <p key={i} className="text-slate-300 text-sm">{i + 1}. {step}</p>
                   ))}
                 </div>
               )}
