@@ -2196,44 +2196,63 @@ Svara på svenska. Max 3 förslag. Om det ser bra ut: {"feedback": []}`;
   }
 });
 
-// Review chat - discuss improvements
+// Review chat - discuss improvements (also used in setup phase)
 app.post('/review-chat', async (req, res) => {
-  const { message, steps, previousMessages = [] } = req.body;
+  const { message, steps, previousMessages = [], phase = 'review' } = req.body;
 
   if (!message) {
     return res.status(400).json({ error: 'Missing message' });
   }
 
   const jobId = crypto.randomBytes(4).toString('hex');
-  console.log(`[CHAT-${jobId}] Review chat: "${message.substring(0, 50)}..."`);
+  console.log(`[CHAT-${jobId}] Chat (${phase}): "${message.substring(0, 50)}..."`);
 
   try {
     const genai = getGenAI();
 
-    const stepsSummary = steps?.map((s, i) => `Steg ${i + 1}: ${s.title}`).join(', ') || 'Okända steg';
     const chatHistory = previousMessages.map(m => `${m.role === 'user' ? 'Användare' : 'AI'}: ${m.content}`).join('\n');
 
-    const prompt = `Du hjälper någon granska sin SOP (Standard Operating Procedure).
+    // Different prompts for setup vs review phase
+    let prompt;
 
-SOP STEG: ${stepsSummary}
+    if (phase === 'setup') {
+      // Setup phase: help plan the recording - BE DECISIVE
+      prompt = `Du hjälper någon PLANERA en instruktionsvideo. Var BESLUTSAM och hjälpsam - fråga INTE massa frågor, GÖR saker istället.
 
 TIDIGARE I KONVERSATIONEN:
 ${chatHistory || '(Ingen tidigare konversation)'}
 
 ANVÄNDAREN SÄGER NU: "${message}"
 
-Svara kort och hjälpsamt (max 2 meningar) på svenska.
+VIKTIGA REGLER:
+- Om användaren ber om stegförslag, GE KONKRETA STEG DIREKT (numrerad lista)
+- Om användaren vill ändra något, GÖR ÄNDRINGEN DIREKT och visa nya stegen
+- Fråga INTE "vill du ändra?", "är du nöjd?" osv - var proaktiv
+- Håll svaret KORT (max 3-4 meningar + eventuell steglista)
+- Avsluta med "Redo att börja spela in?" om stegen verkar klara
 
-Om de vill göra om ett steg, bekräfta vilket steg.
-Om de är nöjda, uppmuntra dem att slutföra.
-Om de har frågor, svara koncist.`;
+Svara på svenska. Var konkret och hjälpsam.`;
+    } else {
+      // Review phase: discuss the recorded SOP
+      const stepsSummary = steps?.map((s, i) => `Steg ${i + 1}: ${s.title}`).join(', ') || 'Okända steg';
+      prompt = `Du hjälper någon granska sin inspelade SOP.
+
+SOP STEG: ${stepsSummary}
+
+TIDIGARE:
+${chatHistory || '(Ingen tidigare)'}
+
+ANVÄNDAREN: "${message}"
+
+Svara kort (max 2 meningar). Om de vill ändra steg, bekräfta vilket. Om nöjda, uppmuntra slutföra.`;
+    }
 
     const response = await genai.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 150
+        temperature: 0.6,
+        maxOutputTokens: 250
       }
     });
 

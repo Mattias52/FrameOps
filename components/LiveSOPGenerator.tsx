@@ -717,13 +717,14 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     setChatMessages(prev => [...prev, { role: 'user', content: message }]);
 
     try {
-      // If this is follow-up question, use chat endpoint
+      // If this is follow-up question, use chat endpoint with setup phase
       if (hasReceivedTips) {
         const response = await fetch('https://frameops-production.up.railway.app/review-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message,
+            phase: 'setup', // Tell backend this is setup phase, not review
             steps: softTips.map((t, i) => ({ title: `Tips ${i+1}`, description: t })),
             previousMessages: chatMessages.slice(-4)
           })
@@ -1183,8 +1184,11 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
             <div className="w-8"></div>
           </div>
 
-          {/* Chat messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Chat messages - auto-scroll to bottom */}
+          <div
+            className="flex-1 overflow-y-auto p-4 space-y-4"
+            ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}
+          >
             {chatMessages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] p-4 rounded-2xl whitespace-pre-line ${
@@ -1204,6 +1208,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 </div>
               </div>
             )}
+            {/* Invisible element to scroll to */}
+            <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
           </div>
 
           {/* Input + Action buttons */}
