@@ -2198,7 +2198,7 @@ Svara på svenska. Max 3 förslag. Om det ser bra ut: {"feedback": []}`;
 
 // Review chat - discuss improvements (also used in setup phase)
 app.post('/review-chat', async (req, res) => {
-  const { message, steps, previousMessages = [], phase = 'review' } = req.body;
+  const { message, steps, previousMessages = [], phase = 'review', contentMode = 'sop' } = req.body;
 
   if (!message) {
     return res.status(400).json({ error: 'Missing message' });
@@ -2219,7 +2219,26 @@ app.post('/review-chat', async (req, res) => {
       // Setup phase: help plan the recording - return structured JSON
       const currentSteps = steps?.map(s => s.title || s.description).filter(Boolean) || [];
 
-      prompt = `Du hjälper någon PLANERA en instruktionsvideo. Var BESLUTSAM - fråga INTE massa frågor.
+      // Different prompts based on content mode
+      const modeContext = contentMode === 'creator'
+        ? `Du hjälper en CONTENT CREATOR planera en tutorial/how-to video. Fokus på ENGAGEMANG och STORYTELLING.
+
+Tips för creator-läge:
+- Börja med en hook som fångar tittarens intresse
+- Använd personlig och underhållande ton
+- Tänk på visuellt intressanta moment
+- Avsluta med call-to-action eller sammanfattning`
+        : `Du hjälper någon skapa en ARBETSRUTIN/SOP (Standard Operating Procedure). Fokus på PRECISION och REPETERBARHET.
+
+Tips för SOP-läge:
+- Tydliga, konkreta instruktioner
+- Professionell och formell ton
+- Inkludera säkerhetsmoment om relevant
+- Varje steg ska kunna följas exakt`;
+
+      prompt = `${modeContext}
+
+Var BESLUTSAM - fråga INTE massa frågor, GÖR saker istället.
 
 NUVARANDE STEG:
 ${currentSteps.length > 0 ? currentSteps.map((s, i) => `${i+1}. ${s}`).join('\n') : '(Inga steg ännu)'}
@@ -2241,7 +2260,8 @@ REGLER:
 - Om användaren vill ändra, UPPDATERA stegen direkt
 - "steps" ska ALLTID vara en array med de aktuella stegen (eller tom om inga finns)
 - "ready" = true när det finns minst 2 steg och användaren verkar nöjd
-- Var konkret och hjälpsam på svenska`;
+- Var konkret och hjälpsam på svenska
+- Anpassa ton och stil efter ${contentMode === 'creator' ? 'creator/tutorial' : 'SOP/arbetsrutin'}-läget`;
     } else {
       // Review phase: discuss the recorded SOP
       const stepsSummary = steps?.map((s, i) => `Steg ${i + 1}: ${s.title}`).join(', ') || 'Okända steg';

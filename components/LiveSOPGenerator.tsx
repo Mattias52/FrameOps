@@ -41,17 +41,14 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 }) => {
   const canCreate = isPro || freeSOPsRemaining > 0;
 
-  // Phase state: setup -> recording -> review -> finishing
-  // setup: optional soft guide or skip directly to recording
-  // recording: capture video/audio
-  // review: show draft SOP, AI feedback, discuss, re-record option
-  // finishing: final processing
-  const [phase, setPhase] = useState<'setup' | 'recording' | 'review' | 'finishing'>('setup');
+  // Phase state: mode-select -> setup -> recording -> review -> finishing
+  const [phase, setPhase] = useState<'mode-select' | 'setup' | 'recording' | 'review' | 'finishing'>('mode-select');
 
-  // AI Guide state (now optional - soft guide)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { role: 'ai', content: 'Hej! Vad ska du dokumentera idag? Beskriv kort vad du vill visa, eller hoppa över och spela in fritt.' }
-  ]);
+  // Content mode: affects AI tone and output style
+  const [contentMode, setContentMode] = useState<'sop' | 'creator'>('sop');
+
+  // AI Guide state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
   const [proposedSteps, setProposedSteps] = useState<string[]>([]); // Steps being planned
   const [isReady, setIsReady] = useState(false); // AI thinks we're ready to record
@@ -728,6 +725,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         body: JSON.stringify({
           message,
           phase: 'setup',
+          contentMode, // 'sop' or 'creator' - affects AI tone
           steps: proposedSteps.map(s => ({ title: s, description: s })),
           previousMessages: chatMessages.slice(-6)
         })
@@ -787,6 +785,18 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     setProposedSteps(prev => [...prev, 'Nytt steg...']);
     setEditingStepIndex(proposedSteps.length);
     setEditingStepText('');
+  };
+
+  // Select content mode and start setup
+  const selectMode = (mode: 'sop' | 'creator') => {
+    setContentMode(mode);
+    setChatMessages([{
+      role: 'ai',
+      content: mode === 'sop'
+        ? 'Hej! Beskriv arbetsrutinen du ska dokumentera så skapar jag en steg-för-steg guide.'
+        : 'Hej! Vad ska du skapa idag? Beskriv din video-idé så hjälper jag dig planera innehållet!'
+    }]);
+    setPhase('setup');
   };
 
   // Skip AI guide and go directly to recording
@@ -1178,6 +1188,76 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
           </button>
         ) : <div className="w-10" />}
       </div>
+
+      {/* Mode selection */}
+      {phase === 'mode-select' && (
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-black flex flex-col z-30">
+          {/* Header */}
+          <div className="p-4 flex items-center justify-between border-b border-slate-800">
+            <button onClick={handleCancel} className="text-slate-400 hover:text-white">
+              <i className="fas fa-times text-xl"></i>
+            </button>
+            <span className="text-white font-bold">Live SOP</span>
+            <div className="w-8"></div>
+          </div>
+
+          {/* Mode selection cards */}
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="max-w-lg w-full space-y-4">
+              <h2 className="text-white text-2xl font-bold text-center mb-8">
+                Vad skapar du idag?
+              </h2>
+
+              {/* SOP Mode */}
+              <button
+                onClick={() => selectMode('sop')}
+                className="w-full p-6 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500 rounded-2xl text-left transition-all group"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 bg-indigo-600/20 rounded-xl flex items-center justify-center group-hover:bg-indigo-600/30 transition-colors">
+                    <i className="fas fa-clipboard-list text-indigo-400 text-2xl"></i>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-white font-bold text-lg">Arbetsrutin / SOP</h3>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Dokumentera en process steg för steg. Perfekt för instruktioner, manualer och rutiner.
+                    </p>
+                  </div>
+                  <i className="fas fa-chevron-right text-slate-600 group-hover:text-indigo-400 mt-4"></i>
+                </div>
+              </button>
+
+              {/* Creator Mode */}
+              <button
+                onClick={() => selectMode('creator')}
+                className="w-full p-6 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-pink-500 rounded-2xl text-left transition-all group"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 bg-pink-600/20 rounded-xl flex items-center justify-center group-hover:bg-pink-600/30 transition-colors">
+                    <i className="fas fa-video text-pink-400 text-2xl"></i>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-white font-bold text-lg">Tutorial / Content</h3>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Skapa engagerande tutorials och how-to videos. Fokus på storytelling och tittarupplevelse.
+                    </p>
+                  </div>
+                  <i className="fas fa-chevron-right text-slate-600 group-hover:text-pink-400 mt-4"></i>
+                </div>
+              </button>
+
+              {/* Skip option */}
+              <button
+                onClick={skipToRecording}
+                className="w-full py-3 text-slate-500 hover:text-slate-400 text-sm"
+              >
+                <i className="fas fa-forward mr-2"></i>
+                Hoppa över och spela in direkt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Setup phase - SPLIT VIEW: Steps + Chat */}
       {phase === 'setup' && !cameraStarted && (
