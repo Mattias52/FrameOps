@@ -705,40 +705,71 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     }
   };
 
-  // Generate soft tips from user description (optional helper, not rigid structure)
-  const generateSoftTips = async (description: string) => {
+  // Track if we've received tips (to show start recording button)
+  const [hasReceivedTips, setHasReceivedTips] = useState(false);
+
+  // Handle chat message in setup phase
+  const handleSetupChat = async (message: string) => {
+    if (!message.trim()) return;
+
+    setUserInput(''); // Clear input immediately
     setIsGeneratingGuide(true);
-    setChatMessages(prev => [...prev, { role: 'user', content: description }]);
+    setChatMessages(prev => [...prev, { role: 'user', content: message }]);
 
     try {
-      const response = await fetch('https://frameops-production.up.railway.app/generate-soft-tips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description })
-      });
+      // If this is follow-up question, use chat endpoint
+      if (hasReceivedTips) {
+        const response = await fetch('https://frameops-production.up.railway.app/review-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            steps: softTips.map((t, i) => ({ title: `Tips ${i+1}`, description: t })),
+            previousMessages: chatMessages.slice(-4)
+          })
+        });
 
-      const data = await response.json();
-
-      if (data.success && data.tips) {
-        setSoftTips(data.tips);
-        setTitle(data.title || description.slice(0, 50));
-        setChatMessages(prev => [...prev, {
-          role: 'ai',
-          content: `Tack! Här är några tips att tänka på:\n\n${data.tips.map((t: string, i: number) => `• ${t}`).join('\n')}\n\nMen spela in på ditt sätt - jag följer dig! Tryck "Starta inspelning" när du är redo.`
-        }]);
+        const data = await response.json();
+        if (data.success && data.response) {
+          setChatMessages(prev => [...prev, { role: 'ai', content: data.response }]);
+        } else {
+          setChatMessages(prev => [...prev, {
+            role: 'ai',
+            content: 'Tryck på "Starta inspelning" när du är redo, eller ställ en annan fråga.'
+          }]);
+        }
       } else {
-        setTitle(description.slice(0, 50));
-        setChatMessages(prev => [...prev, {
-          role: 'ai',
-          content: 'Perfekt! Spela in på ditt sätt och berätta vad du gör. Jag lyssnar och skapar en SOP baserat på din visning.'
-        }]);
+        // First message - generate tips
+        const response = await fetch('https://frameops-production.up.railway.app/generate-soft-tips', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: message })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.tips) {
+          setSoftTips(data.tips);
+          setTitle(data.title || message.slice(0, 50));
+          setHasReceivedTips(true);
+          setChatMessages(prev => [...prev, {
+            role: 'ai',
+            content: `Tack! Här är några tips att tänka på:\n\n${data.tips.map((t: string) => `• ${t}`).join('\n')}\n\nHar du frågor, eller vill du börja spela in?`
+          }]);
+        } else {
+          setTitle(message.slice(0, 50));
+          setHasReceivedTips(true);
+          setChatMessages(prev => [...prev, {
+            role: 'ai',
+            content: 'Perfekt! Spela in på ditt sätt och berätta vad du gör. Tryck "Starta inspelning" när du är redo.'
+          }]);
+        }
       }
     } catch (error) {
-      console.error('Error generating tips:', error);
-      setTitle(description.slice(0, 50));
+      console.error('Error in setup chat:', error);
       setChatMessages(prev => [...prev, {
         role: 'ai',
-        content: 'Perfekt! Börja spela in när du är redo. Berätta vad du gör medan du gör det.'
+        content: 'Något gick fel. Tryck "Starta inspelning" för att börja, eller försök igen.'
       }]);
     } finally {
       setIsGeneratingGuide(false);
@@ -1175,33 +1206,45 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
             )}
           </div>
 
-          {/* Input + Skip button */}
+          {/* Input + Action buttons */}
           <div className="p-4 border-t border-slate-800 space-y-3">
             <div className="flex gap-3">
               <input
                 type="text"
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && userInput.trim() && generateSoftTips(userInput.trim())}
-                placeholder="Beskriv kort vad du ska visa (valfritt)..."
+                onKeyPress={(e) => e.key === 'Enter' && userInput.trim() && handleSetupChat(userInput.trim())}
+                placeholder={hasReceivedTips ? "Ställ en fråga eller tryck Starta..." : "Beskriv vad du ska visa..."}
                 className="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none"
                 disabled={isGeneratingGuide}
               />
               <button
-                onClick={() => userInput.trim() && generateSoftTips(userInput.trim())}
+                onClick={() => userInput.trim() && handleSetupChat(userInput.trim())}
                 disabled={!userInput.trim() || isGeneratingGuide}
                 className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <i className="fas fa-paper-plane"></i>
               </button>
             </div>
-            <button
-              onClick={skipToRecording}
-              className="w-full py-3 bg-slate-700 text-white font-medium rounded-xl hover:bg-slate-600 transition-colors"
-            >
-              <i className="fas fa-forward mr-2"></i>
-              Hoppa över - spela in direkt
-            </button>
+
+            {/* Show Start Recording button after receiving tips */}
+            {hasReceivedTips ? (
+              <button
+                onClick={skipToRecording}
+                className="w-full py-4 bg-red-600 text-white font-bold text-lg rounded-xl hover:bg-red-500 transition-colors"
+              >
+                <i className="fas fa-video mr-2"></i>
+                Starta inspelning
+              </button>
+            ) : (
+              <button
+                onClick={skipToRecording}
+                className="w-full py-3 bg-slate-700 text-white font-medium rounded-xl hover:bg-slate-600 transition-colors"
+              >
+                <i className="fas fa-forward mr-2"></i>
+                Hoppa över - spela in direkt
+              </button>
+            )}
           </div>
         </div>
       )}
