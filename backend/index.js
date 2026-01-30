@@ -2221,20 +2221,21 @@ app.post('/review-chat', async (req, res) => {
 
       // Different prompts based on content mode
       const modeContext = contentMode === 'creator'
-        ? `Du hjälper en CONTENT CREATOR planera en tutorial/how-to video. Fokus på ENGAGEMANG och STORYTELLING.
+        ? `Du hjälper en CONTENT CREATOR planera en tutorial/how-to video.
 
-Tips för creator-läge:
-- Börja med en hook som fångar tittarens intresse
-- Använd personlig och underhållande ton
-- Tänk på visuellt intressanta moment
-- Avsluta med call-to-action eller sammanfattning`
-        : `Du hjälper någon skapa en ARBETSRUTIN/SOP (Standard Operating Procedure). Fokus på PRECISION och REPETERBARHET.
+VIKTIGT för creator-läge:
+- Stegen ska vara KORTA (max 10 ord per steg)
+- Skriv VAD de ska göra, inte HUR de ska säga det
+- Ingen voiceover-text eller manus
+- Exempel: "Visa ingredienserna", "Krydda köttet", "Sätt i ugnen"
+- INTE: "**Hook:** Säg 'Hej allihopa!' med energi och visa..."`
+        : `Du hjälper någon skapa en ARBETSRUTIN/SOP (Standard Operating Procedure).
 
-Tips för SOP-läge:
+VIKTIGT för SOP-läge:
+- Stegen ska vara KORTA (max 10 ord per steg)
 - Tydliga, konkreta instruktioner
-- Professionell och formell ton
-- Inkludera säkerhetsmoment om relevant
-- Varje steg ska kunna följas exakt`;
+- Exempel: "Förbered verktyg", "Skruva loss panelen", "Kontrollera mätaren"
+- INTE långa beskrivningar`;
 
       prompt = `${modeContext}
 
@@ -2251,17 +2252,17 @@ ANVÄNDAREN SÄGER NU: "${message}"
 Svara ALLTID i JSON-format:
 {
   "message": "Kort svar till användaren (max 2 meningar)",
-  "steps": ["Steg 1 beskrivning", "Steg 2 beskrivning", ...],
-  "ready": true/false (true om stegen verkar klara för inspelning)
+  "steps": ["Kort steg 1", "Kort steg 2", ...],
+  "ready": true/false
 }
 
 REGLER:
+- VARJE STEG MAX 10 ORD - skriv kort och enkelt!
 - Om användaren beskriver vad de ska göra, SKAPA steg baserat på det
 - Om användaren vill ändra, UPPDATERA stegen direkt
-- "steps" ska ALLTID vara en array med de aktuella stegen (eller tom om inga finns)
-- "ready" = true när det finns minst 2 steg och användaren verkar nöjd
-- Var konkret och hjälpsam på svenska
-- Anpassa ton och stil efter ${contentMode === 'creator' ? 'creator/tutorial' : 'SOP/arbetsrutin'}-läget`;
+- "steps" ska ALLTID innehålla de aktuella stegen
+- "ready" = true när det finns minst 2 steg
+- Svara på svenska`;
     } else {
       // Review phase: discuss the recorded SOP
       const stepsSummary = steps?.map((s, i) => `Steg ${i + 1}: ${s.title}`).join(', ') || 'Okända steg';

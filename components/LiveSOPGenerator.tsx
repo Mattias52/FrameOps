@@ -1550,13 +1550,10 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 
           {/* Right: Camera area with controls overlay */}
           <div className="flex-1 relative">
-            {/* Recording controls overlay at bottom */}
+            {/* Recording controls overlay */}
             {!isRecording ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+              <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
-                  <p className="text-white/80 mb-4 text-lg">
-                    {proposedSteps.length > 0 ? `Steg 1: ${proposedSteps[0]}` : 'Redo att spela in'}
-                  </p>
                   <button
                     onClick={() => { setCurrentRecordingStep(0); handleStartRecording(); }}
                     className="w-24 h-24 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto"
