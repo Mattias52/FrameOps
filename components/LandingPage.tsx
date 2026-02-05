@@ -351,9 +351,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, i) => (
-              <div key={i} className="p-8 bg-white rounded-2xl border border-slate-100 hover:shadow-xl hover:border-slate-200 transition-all group">
-                <div className={`w-14 h-14 ${feature.isBrand ? 'bg-red-100 group-hover:bg-red-600' : 'bg-indigo-100 group-hover:bg-indigo-600'} rounded-2xl flex items-center justify-center mb-6 transition-colors`}>
-                  <i className={`${feature.isBrand ? 'fab' : 'fas'} ${feature.icon} text-2xl ${feature.isBrand ? 'text-red-600' : 'text-indigo-600'} group-hover:text-white transition-colors`}></i>
+              <div key={i} className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                <div className={`w-14 h-14 ${feature.isBrand ? 'bg-red-100' : 'bg-indigo-100'} rounded-2xl flex items-center justify-center mb-6`}>
+                  <i className={`${feature.isBrand ? 'fab' : 'fas'} ${feature.icon} text-2xl ${feature.isBrand ? 'text-red-600' : 'text-indigo-600'}`}></i>
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
                 <p className="text-slate-600 leading-relaxed">{feature.description}</p>
