@@ -2431,10 +2431,10 @@ app.post('/analyze-sop', async (req, res) => {
         ❌ "In this frame..."
         ❌ "It appears that..."
 
-      - ALWAYS write as the instructor:
-        ✅ "Position the bracket against the mounting surface"
-        ✅ "Apply firm pressure while turning clockwise"
-        ✅ "Ensure the component is fully seated before proceeding"
+      - ALWAYS write as the instructor (in Swedish):
+        ✅ "Placera konsolen mot monteringsytan"
+        ✅ "Tryck fast med jämnt tryck medan du vrider medurs"
+        ✅ "Kontrollera att komponenten sitter ordentligt innan du fortsätter"
 
       - Deduce the actions from visual cues: hand positions, tool angles, component states
       - If you see hands holding a screwdriver at an angle, write: "Insert the screwdriver at a 45-degree angle"
@@ -2501,11 +2501,16 @@ app.post('/analyze-sop', async (req, res) => {
       - Use the shot instruction as basis for step title
       - Describe the complete action shown across all frames in that shot
       ` : `
-      Generate EXACTLY ${validImageParts.length} steps - one step for each frame, in the same order.
-      - Step 1 describes what to DO based on Frame 1
-      - Step 2 describes what to DO based on Frame 2
-      - Step 3 describes what to DO based on Frame 3
-      ... and so on for all ${validImageParts.length} frames.
+      Analyze all ${validImageParts.length} frames and the transcript to identify EVERY distinct action in the procedure.
+
+      IMPORTANT - STEP GENERATION RULES:
+      - Create ONE step for EACH distinct action visible or mentioned
+      - If the transcript mentions multiple steps, create a step for EACH one
+      - Do NOT consolidate multiple actions into one vague step like "Prepare the food"
+      - Instead, break down into specific actions: "Skär fläskfilén i skivor", "Krydda med salt och peppar", "Värm stekpanna på medelvärme"
+      - Minimum 3-5 steps for any procedure - even simple ones have multiple actions
+      - Each step should be ONE specific action, not a summary of the whole process
+      - Use the transcript as your PRIMARY source for what steps to include
       `}
 
       WRITING RULES (CRITICAL):
@@ -2513,7 +2518,7 @@ app.post('/analyze-sop', async (req, res) => {
       - You ARE the instructor teaching this procedure
       - NEVER describe what "the video shows" or what "the person does"
       - ALWAYS write what the READER should do: "Grip the handle firmly", "Rotate 90 degrees clockwise"
-      - LANGUAGE: ALWAYS write the SOP in ENGLISH unless the user explicitly provides context in another language. Ignore any text visible in the video frames - only match language if the TRANSCRIPT or USER CONTEXT is in another language.
+      - LANGUAGE: Write the SOP in SWEDISH (Svenska) by default. If the transcript is clearly in another language, match that language. Swedish examples: "Förbered", "Placera", "Skär", "Värm", "Blanda".
 
       For each step:
       - Write a clear, actionable title (e.g., "Tighten the mounting bolt")
@@ -2525,7 +2530,7 @@ app.post('/analyze-sop', async (req, res) => {
 
       ${hasShotContext
         ? `You MUST return exactly the number of steps matching the AI Guide shots above.`
-        : `You MUST return exactly ${validImageParts.length} steps. No more, no less.`}
+        : `Create as many steps as needed to cover ALL actions in the procedure. Use the transcript to identify every step. Minimum 3 steps, but create more if the procedure has more actions.`}
 
       THUMBNAIL SELECTION:
       Also select the BEST frame to use as the cover image/thumbnail for this SOP.

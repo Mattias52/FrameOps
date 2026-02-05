@@ -41,14 +41,16 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 }) => {
   const canCreate = isPro || freeSOPsRemaining > 0;
 
-  // Phase state: mode-select -> setup -> recording -> review -> finishing
-  const [phase, setPhase] = useState<'mode-select' | 'setup' | 'recording' | 'review' | 'finishing'>('mode-select');
+  // Phase state: setup -> recording -> review -> finishing
+  const [phase, setPhase] = useState<'setup' | 'recording' | 'review' | 'finishing'>('setup');
 
-  // Content mode: affects AI tone and output style
-  const [contentMode, setContentMode] = useState<'sop' | 'creator'>('sop');
+  // Initial chat message
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([{
+    role: 'ai',
+    content: 'Hej! Vad ska du visa? Beskriv kort så hjälper jag dig planera stegen.'
+  }]);
 
-  // AI Guide state
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  // AI Guide state (chatMessages initialized above with welcome message)
   const [userInput, setUserInput] = useState('');
   const [proposedSteps, setProposedSteps] = useState<string[]>([]); // Steps being planned
   const [isReady, setIsReady] = useState(false); // AI thinks we're ready to record
@@ -726,7 +728,6 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         body: JSON.stringify({
           message,
           phase: 'setup',
-          contentMode, // 'sop' or 'creator' - affects AI tone
           steps: proposedSteps.map(s => ({ title: s, description: s })),
           previousMessages: chatMessages.slice(-6)
         })
@@ -788,17 +789,6 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     setEditingStepText('');
   };
 
-  // Select content mode and start setup
-  const selectMode = (mode: 'sop' | 'creator') => {
-    setContentMode(mode);
-    setChatMessages([{
-      role: 'ai',
-      content: mode === 'sop'
-        ? 'Hej! Beskriv arbetsrutinen du ska dokumentera så skapar jag en steg-för-steg guide.'
-        : 'Hej! Vad ska du skapa idag? Beskriv din video-idé så hjälper jag dig planera innehållet!'
-    }]);
-    setPhase('setup');
-  };
 
   // Skip AI guide and go directly to recording
   const skipToRecording = () => {
@@ -1011,6 +1001,14 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 
     // Check for approval
     if (message.toLowerCase().includes('bra') || message.toLowerCase().includes('ok') || message.toLowerCase().includes('nöjd') || message.toLowerCase().includes('klar')) {
+      // Warn if too few steps - likely incomplete recording
+      if (draftSOP && draftSOP.length <= 2) {
+        setReviewChatMessages(prev => [...prev, {
+          role: 'ai',
+          content: `Hmm, din SOP har bara ${draftSOP.length} steg - det verkar lite kort. Saknas det något? Du kan:\n\n1. Spela in igen med fler steg\n2. Lägga till steg manuellt\n3. Om det verkligen är klart, tryck "Slutför"`
+        }]);
+        return;
+      }
       setReviewChatMessages(prev => [...prev, {
         role: 'ai',
         content: 'Perfekt! Tryck "Slutför SOP" för att spara.'
@@ -1150,113 +1148,45 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       />
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Top bar - minimal */}
-      <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between safe-area-top z-20">
-        <button
-          onClick={handleCancel}
-          className="w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
-          aria-label="Cancel"
-        >
-          <i className="fas fa-times"></i>
-        </button>
-
-        {/* Title input - only show when recording */}
-        {cameraStarted && (
-          <div className="flex-1 mx-4">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Namnge din SOP..."
-              className="w-full bg-black/40 backdrop-blur-sm text-white text-center font-medium px-4 py-2 rounded-full border-none outline-none placeholder:text-white/50"
-            />
-          </div>
-        )}
-
-        {/* Recording time */}
-        {isRecording ? (
-          <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-full">
-            <div className={`w-2 h-2 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`}></div>
-            <span className="text-white font-mono text-sm font-bold">{formatTime(recordingTime)}</span>
-          </div>
-        ) : cameraStarted ? (
+      {/* Top bar - minimal (hide during split-screen recording - steps panel has time) */}
+      {!(proposedSteps.length > 0 && cameraStarted && isRecording) && (
+        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between safe-area-top z-20">
           <button
-            onClick={() => setShowSettings(true)}
+            onClick={handleCancel}
             className="w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
-            aria-label="Settings"
+            aria-label="Cancel"
           >
-            <i className="fas fa-cog"></i>
+            <i className="fas fa-times"></i>
           </button>
-        ) : <div className="w-10" />}
-      </div>
 
-      {/* Mode selection */}
-      {phase === 'mode-select' && (
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-black flex flex-col z-30">
-          {/* Header */}
-          <div className="p-4 flex items-center justify-between border-b border-slate-800">
-            <button onClick={handleCancel} className="text-slate-400 hover:text-white">
-              <i className="fas fa-times text-xl"></i>
-            </button>
-            <span className="text-white font-bold">Live SOP</span>
-            <div className="w-8"></div>
-          </div>
-
-          {/* Mode selection cards */}
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="max-w-lg w-full space-y-4">
-              <h2 className="text-white text-2xl font-bold text-center mb-8">
-                Vad skapar du idag?
-              </h2>
-
-              {/* SOP Mode */}
-              <button
-                onClick={() => selectMode('sop')}
-                className="w-full p-6 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500 rounded-2xl text-left transition-all group"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 bg-indigo-600/20 rounded-xl flex items-center justify-center group-hover:bg-indigo-600/30 transition-colors">
-                    <i className="fas fa-clipboard-list text-indigo-400 text-2xl"></i>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-white font-bold text-lg">Arbetsrutin / SOP</h3>
-                    <p className="text-slate-400 text-sm mt-1">
-                      Dokumentera en process steg för steg. Perfekt för instruktioner, manualer och rutiner.
-                    </p>
-                  </div>
-                  <i className="fas fa-chevron-right text-slate-600 group-hover:text-indigo-400 mt-4"></i>
-                </div>
-              </button>
-
-              {/* Creator Mode */}
-              <button
-                onClick={() => selectMode('creator')}
-                className="w-full p-6 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-pink-500 rounded-2xl text-left transition-all group"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 bg-pink-600/20 rounded-xl flex items-center justify-center group-hover:bg-pink-600/30 transition-colors">
-                    <i className="fas fa-video text-pink-400 text-2xl"></i>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-white font-bold text-lg">Tutorial / Content</h3>
-                    <p className="text-slate-400 text-sm mt-1">
-                      Skapa engagerande tutorials och how-to videos. Fokus på storytelling och tittarupplevelse.
-                    </p>
-                  </div>
-                  <i className="fas fa-chevron-right text-slate-600 group-hover:text-pink-400 mt-4"></i>
-                </div>
-              </button>
-
-              {/* Skip option */}
-              <button
-                onClick={skipToRecording}
-                className="w-full py-3 text-slate-500 hover:text-slate-400 text-sm"
-              >
-                <i className="fas fa-forward mr-2"></i>
-                Hoppa över och spela in direkt
-              </button>
+          {/* Title input - only show when camera is on but not split-screen recording */}
+          {cameraStarted && proposedSteps.length === 0 && (
+            <div className="flex-1 mx-4">
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Namnge din SOP..."
+                className="w-full bg-black/40 backdrop-blur-sm text-white text-center font-medium px-4 py-2 rounded-full border-none outline-none placeholder:text-white/50"
+              />
             </div>
-          </div>
+          )}
+
+          {/* Recording time - only without split-screen */}
+          {isRecording && proposedSteps.length === 0 ? (
+            <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-full">
+              <div className={`w-2 h-2 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`}></div>
+              <span className="text-white font-mono text-sm font-bold">{formatTime(recordingTime)}</span>
+            </div>
+          ) : cameraStarted && proposedSteps.length === 0 ? (
+            <button
+              onClick={() => setShowSettings(true)}
+              className="w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
+              aria-label="Settings"
+            >
+              <i className="fas fa-cog"></i>
+            </button>
+          ) : <div className="w-10" />}
         </div>
       )}
 
@@ -1470,22 +1400,47 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
           {/* Left: Steps panel (only if we have steps) */}
           {proposedSteps.length > 0 && (
             <div className="w-80 bg-slate-900/95 backdrop-blur-sm flex flex-col border-r border-slate-800 z-30">
-              {/* Header */}
-              <div className="p-4 border-b border-slate-800">
-                <h3 className="text-white font-bold flex items-center gap-2">
-                  <i className="fas fa-list-check text-indigo-400"></i>
-                  {isRecording ? 'Följ stegen' : 'Dina steg'}
-                </h3>
-                {isRecording && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                    <span className="text-red-400 font-mono text-sm">{formatTime(recordingTime)}</span>
-                  </div>
-                )}
-              </div>
+              {/* Recording indicator */}
+              {isRecording && (
+                <div className="p-3 bg-red-600/20 border-b border-red-600/30 flex items-center justify-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
+                  <span className="text-red-400 font-mono font-bold">{formatTime(recordingTime)}</span>
+                  <span className="text-red-400/60 text-sm ml-2">SPELAR IN</span>
+                </div>
+              )}
 
-              {/* Steps list */}
+              {/* CURRENT INSTRUCTION - Big and prominent during recording */}
+              {isRecording && (
+                <div className="p-4 bg-indigo-600/20 border-b border-indigo-500/30">
+                  <div className="text-indigo-400 text-xs font-bold uppercase tracking-wider mb-2">
+                    <i className="fas fa-play-circle mr-1"></i>
+                    NU - Steg {currentRecordingStep + 1} av {proposedSteps.length}
+                  </div>
+                  <p className="text-white text-lg font-bold leading-tight">
+                    {proposedSteps[currentRecordingStep]}
+                  </p>
+                  <p className="text-indigo-300/70 text-sm mt-2">
+                    Visa detta i kameran. Tryck "Klar" när du är färdig.
+                  </p>
+                </div>
+              )}
+
+              {/* Header when not recording */}
+              {!isRecording && (
+                <div className="p-4 border-b border-slate-800">
+                  <h3 className="text-white font-bold flex items-center gap-2">
+                    <i className="fas fa-list-check text-indigo-400"></i>
+                    Dina steg
+                  </h3>
+                  <p className="text-slate-400 text-sm mt-1">Tryck för att börja spela in</p>
+                </div>
+              )}
+
+              {/* Steps list - smaller during recording since current step is shown above */}
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {isRecording && (
+                  <p className="text-slate-500 text-xs uppercase tracking-wider mb-2 px-1">Alla steg:</p>
+                )}
                 {proposedSteps.map((step, idx) => (
                   <div
                     key={idx}
@@ -1494,7 +1449,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                         ? 'bg-indigo-600/30 border-2 border-indigo-500'
                         : idx < currentRecordingStep
                         ? 'bg-emerald-600/20 border border-emerald-600/50'
-                        : 'bg-slate-800/50 border border-slate-700'
+                        : 'bg-slate-800/50 border border-slate-700 opacity-60'
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -1521,28 +1476,43 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 ))}
               </div>
 
-              {/* Next step button (during recording) */}
-              {isRecording && currentRecordingStep < proposedSteps.length - 1 && (
-                <div className="p-3 border-t border-slate-800">
-                  <button
-                    onClick={() => setCurrentRecordingStep(prev => prev + 1)}
-                    className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500"
-                  >
-                    Nästa steg <i className="fas fa-arrow-right ml-2"></i>
-                  </button>
-                </div>
-              )}
+              {/* Action buttons during recording */}
+              {isRecording && (
+                <div className="p-3 border-t border-slate-800 space-y-2">
+                  {/* Next step / Done with current step */}
+                  {currentRecordingStep < proposedSteps.length - 1 ? (
+                    <button
+                      onClick={() => setCurrentRecordingStep(prev => prev + 1)}
+                      className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 text-lg"
+                    >
+                      <i className="fas fa-check mr-2"></i>
+                      Klar - Nästa steg
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleStopRecording}
+                      className="w-full py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 text-lg"
+                    >
+                      <i className="fas fa-flag-checkered mr-2"></i>
+                      Klar - Avsluta
+                    </button>
+                  )}
 
-              {/* Finish button (on last step) */}
-              {isRecording && currentRecordingStep >= proposedSteps.length - 1 && (
-                <div className="p-3 border-t border-slate-800">
-                  <button
-                    onClick={handleStopRecording}
-                    className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500"
-                  >
-                    <i className="fas fa-check mr-2"></i>
-                    Avsluta inspelning
-                  </button>
+                  {/* Progress indicator */}
+                  <div className="flex gap-1">
+                    {proposedSteps.map((_, idx) => (
+                      <div
+                        key={idx}
+                        className={`h-1 flex-1 rounded-full ${
+                          idx < currentRecordingStep
+                            ? 'bg-emerald-500'
+                            : idx === currentRecordingStep
+                            ? 'bg-indigo-500'
+                            : 'bg-slate-700'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1628,8 +1598,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         </div>
       )}
 
-      {/* Bottom controls - only show when recording (not during setup overlays) */}
-      {phase === 'recording' && cameraStarted && isRecording && (
+      {/* Bottom controls - only show when recording WITHOUT split-screen (split-screen has its own controls) */}
+      {phase === 'recording' && cameraStarted && isRecording && proposedSteps.length === 0 && (
         <div className="absolute bottom-0 left-0 right-0 p-6 safe-area-bottom z-20">
           <div className="flex items-center justify-center gap-6">
             <button
