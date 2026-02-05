@@ -357,7 +357,7 @@ const SubscriptionPlans: React.FC = () => {
           )}
 
           <p className="text-xs text-slate-400 text-center mt-4">
-            Influencer? Creator? <a href="mailto:partners@frameops.ai" className="text-indigo-600 hover:underline">Contact us</a> for a free trial code.
+            Creator with an audience? <a href="mailto:partners@frameops.ai" className="text-indigo-600 hover:underline">Join our Creator Partnership</a> for free Pro access.
           </p>
         </div>
       </div>
