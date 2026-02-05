@@ -2431,10 +2431,10 @@ app.post('/analyze-sop', async (req, res) => {
         ❌ "In this frame..."
         ❌ "It appears that..."
 
-      - ALWAYS write as the instructor (in Swedish):
-        ✅ "Placera konsolen mot monteringsytan"
-        ✅ "Tryck fast med jämnt tryck medan du vrider medurs"
-        ✅ "Kontrollera att komponenten sitter ordentligt innan du fortsätter"
+      - ALWAYS write as the instructor:
+        ✅ "Position the bracket against the mounting surface"
+        ✅ "Apply firm pressure while turning clockwise"
+        ✅ "Ensure the component is fully seated before proceeding"
 
       - Deduce the actions from visual cues: hand positions, tool angles, component states
       - If you see hands holding a screwdriver at an angle, write: "Insert the screwdriver at a 45-degree angle"
@@ -2518,7 +2518,7 @@ app.post('/analyze-sop', async (req, res) => {
       - You ARE the instructor teaching this procedure
       - NEVER describe what "the video shows" or what "the person does"
       - ALWAYS write what the READER should do: "Grip the handle firmly", "Rotate 90 degrees clockwise"
-      - LANGUAGE: Write the SOP in SWEDISH (Svenska) by default. If the transcript is clearly in another language, match that language. Swedish examples: "Förbered", "Placera", "Skär", "Värm", "Blanda".
+      - LANGUAGE: Write the SOP in ENGLISH by default. If the transcript is clearly in another language (Swedish, Spanish, German, etc.), match that language automatically.
 
       For each step:
       - Write a clear, actionable title (e.g., "Tighten the mounting bolt")
