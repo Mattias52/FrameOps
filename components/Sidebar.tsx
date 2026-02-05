@@ -128,32 +128,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-slate-800">
-        {isOpen ? (
-          <div className="p-3 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/30">
-            <div className="flex items-center gap-2 mb-2">
-              <i className="fas fa-eye text-indigo-400"></i>
-              <span className="text-xs font-semibold text-indigo-300">Preview Mode</span>
-            </div>
-            <p className="text-xs text-slate-400 mb-3">Unlimited previews • First 3 steps free</p>
-            <button
-              onClick={() => onViewChange(AppView.SUBSCRIPTION)}
-              className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors"
-            >
-              <i className="fas fa-crown mr-1"></i>
-              Unlock Full SOPs
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => onViewChange(AppView.SUBSCRIPTION)}
-            className="w-full p-2 bg-indigo-600/20 hover:bg-indigo-600/30 rounded-lg transition-colors"
-            title="Upgrade to Pro"
-          >
-            <i className="fas fa-crown text-indigo-400"></i>
-          </button>
-        )}
-      </div>
     </aside>
   );
 };
