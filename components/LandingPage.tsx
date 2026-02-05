@@ -320,11 +320,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-rose-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <i className="fas fa-film text-white text-xl"></i>
+                    <i className="fas fa-list-check text-white text-xl"></i>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold mb-1">AI Director</h3>
-                    <p className="text-slate-400">Get real-time tips while recording. AI checks lighting, framing, and guides you to better footage.</p>
+                    <h3 className="text-lg font-bold mb-1">AI Step Planner</h3>
+                    <p className="text-slate-400">Describe what you'll show and AI creates a step-by-step plan. Follow the guide while recording.</p>
                   </div>
                 </div>
                 <button

@@ -101,8 +101,8 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-400 text-sm font-medium mb-8">
-            <i className="fas fa-star"></i>
-            <span>Free Pro access for creators during beta</span>
+            <i className="fas fa-handshake"></i>
+            <span>Creator Partnership Program</span>
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-tight mb-6">
@@ -351,11 +351,11 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-rose-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <i className="fas fa-film text-white"></i>
+                    <i className="fas fa-list-check text-white"></i>
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg mb-1">AI Director</h3>
-                    <p className="text-slate-400">Get real-time tips on lighting and framing while you record. Better footage, better guides.</p>
+                    <h3 className="font-bold text-lg mb-1">AI Step Planner</h3>
+                    <p className="text-slate-400">Describe what you'll show and AI creates a step-by-step plan. Follow the guide while you record.</p>
                   </div>
                 </div>
               </div>
@@ -372,47 +372,56 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
         </div>
       </section>
 
-      {/* CTA */}
+      {/* CTA - Creator Partnership */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-900 to-slate-950">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-medium mb-6">
-            <i className="fas fa-gift"></i>
-            <span>Limited beta offer</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-400 text-sm font-medium mb-6">
+            <i className="fas fa-handshake"></i>
+            <span>Creator Partnership Program</span>
           </div>
           <h2 className="text-4xl font-bold mb-6">
-            Get Free Pro Access During Beta
+            Partner With Us & Get Free Pro Forever
           </h2>
           <p className="text-slate-400 text-lg mb-8">
-            We're looking for creators to help shape FrameOps. In exchange, you get full Pro access
-            for free - no credit card, no catch.
+            Mention FrameOps in your content and get permanent Pro access.
+            We grow together - you get a free tool, we get exposure.
           </p>
           <div className="bg-slate-800/50 rounded-2xl p-6 mb-8 border border-slate-700">
-            <h3 className="font-bold mb-4">What Beta Creators Get:</h3>
+            <h3 className="font-bold mb-4">What Creator Partners Get:</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
               {[
-                "Unlimited SOP generation",
-                "PDF & Word export",
-                "Custom branding",
-                "Direct support from founders",
-                "Feature requests priority",
-                "Early access to new features"
+                "Free Pro access forever",
+                "We share your content",
+                "Priority feature requests",
+                "Direct founder support",
+                "Early access to new features",
+                "Affiliate commission (coming soon)"
               ].map((perk, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm">
-                  <i className="fas fa-check text-emerald-400"></i>
+                  <i className="fas fa-check text-amber-400"></i>
                   <span className="text-slate-300">{perk}</span>
                 </div>
               ))}
             </div>
           </div>
-          <button
-            onClick={onGetStarted}
-            className="px-10 py-4 bg-amber-500 text-slate-900 rounded-2xl font-bold text-lg hover:bg-amber-400 transition-all shadow-xl shadow-amber-500/20"
-          >
-            <i className="fas fa-rocket mr-2"></i>
-            Start Creating SOPs - Free
-          </button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={onGetStarted}
+              className="px-10 py-4 bg-amber-500 text-slate-900 rounded-2xl font-bold text-lg hover:bg-amber-400 transition-all shadow-xl shadow-amber-500/20"
+            >
+              <i className="fas fa-rocket mr-2"></i>
+              Try FrameOps Free
+            </button>
+            <a
+              href="mailto:partners@frameops.ai?subject=Creator Partnership"
+              className="px-10 py-4 bg-slate-700 text-white rounded-2xl font-bold text-lg hover:bg-slate-600 transition-all"
+            >
+              <i className="fas fa-envelope mr-2"></i>
+              Apply for Partnership
+            </a>
+          </div>
           <p className="text-slate-500 text-sm mt-4">
-            No credit card required. Try with your own YouTube video.
+            Already have an audience? Email us for instant Pro access.
           </p>
         </div>
       </section>
