@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppView } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface CreatorLandingPageProps {
   onGetStarted: () => void;
@@ -7,6 +8,8 @@ interface CreatorLandingPageProps {
 }
 
 const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, onNavigate }) => {
+  const { user, signIn } = useAuth();
+
   const useCases = [
     {
       icon: "fa-hammer",
@@ -87,12 +90,32 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                 For Creators
               </span>
             </div>
-            <button
-              onClick={onGetStarted}
-              className="px-5 py-2.5 bg-amber-500 text-slate-900 rounded-xl font-bold hover:bg-amber-400 transition-colors"
-            >
-              Get Free Access
-            </button>
+            <div className="flex items-center gap-3">
+              {user ? (
+                <button
+                  onClick={onGetStarted}
+                  className="px-5 py-2.5 bg-amber-500 text-slate-900 rounded-xl font-bold hover:bg-amber-400 transition-colors"
+                >
+                  Go to Dashboard
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={signIn}
+                    className="hidden sm:flex items-center gap-2 px-4 py-2.5 text-white/80 font-medium hover:text-white"
+                  >
+                    <i className="fab fa-google"></i>
+                    Sign in
+                  </button>
+                  <button
+                    onClick={onGetStarted}
+                    className="px-5 py-2.5 bg-amber-500 text-slate-900 rounded-xl font-bold hover:bg-amber-400 transition-colors"
+                  >
+                    Get Free Access
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </nav>

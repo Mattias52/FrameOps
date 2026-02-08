@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, User, Session } from '@supabase/supabase-js';
 import { SOP, SOPStep } from '../types';
 
 // Initialize Supabase client
@@ -13,6 +13,68 @@ export const supabase = supabaseUrl && supabaseAnonKey
 if (!supabase) {
   console.warn('Supabase credentials missing. Using localStorage fallback.');
 }
+
+// ============================================
+// AUTH FUNCTIONS
+// ============================================
+
+// Get current user
+export const getCurrentUser = async (): Promise<User | null> => {
+  if (!supabase) return null;
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+};
+
+// Get current session
+export const getSession = async (): Promise<Session | null> => {
+  if (!supabase) return null;
+  const { data: { session } } = await supabase.auth.getSession();
+  return session;
+};
+
+// Sign in with Google
+export const signInWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: false, error: 'Supabase not configured' };
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin,
+    }
+  });
+
+  if (error) {
+    console.error('Google sign in error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+};
+
+// Sign out
+export const signOut = async (): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: false, error: 'Supabase not configured' };
+
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    console.error('Sign out error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+};
+
+// Listen to auth state changes
+export const onAuthStateChange = (callback: (user: User | null) => void) => {
+  if (!supabase) return { unsubscribe: () => {} };
+
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session?.user ?? null);
+  });
+
+  return { unsubscribe: () => subscription.unsubscribe() };
+};
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = () => {
@@ -193,15 +255,24 @@ export const fetchSOPsList = async (limit: number = 20, offset: number = 0): Pro
   if (!isSupabaseConfigured() || !supabase) return { sops: [], total: 0 };
 
   try {
-    // Get total count
+    // Get current user - only fetch their SOPs
+    const user = await getCurrentUser();
+    if (!user) {
+      console.log('No user logged in - returning empty SOP list');
+      return { sops: [], total: 0 };
+    }
+
+    // Get total count for this user
     const { count } = await supabase
       .from('sops')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
 
-    // Fetch SOPs (metadata only)
+    // Fetch SOPs (metadata only) for this user
     const { data: sops, error: sopError } = await supabase
       .from('sops')
       .select('*')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -341,10 +412,17 @@ const pickBestThumbnail = (steps: SOP['steps']): string | null => {
 };
 
 // Save a new SOP (with optional video blob for live recordings)
-export const saveSOP = async (sop: SOP, videoBlob?: Blob): Promise<{ success: boolean; id?: string; videoUrl?: string }> => {
+export const saveSOP = async (sop: SOP, videoBlob?: Blob): Promise<{ success: boolean; id?: string; videoUrl?: string; requiresLogin?: boolean }> => {
   if (!isSupabaseConfigured() || !supabase) return { success: false };
 
   try {
+    // Get current user
+    const user = await getCurrentUser();
+    if (!user) {
+      console.warn('No user logged in - SOP will not be saved');
+      return { success: false, requiresLogin: true };
+    }
+
     // Insert SOP - let database generate UUID
     const { data: insertedSop, error: sopError } = await supabase
       .from('sops')
@@ -357,6 +435,7 @@ export const saveSOP = async (sop: SOP, videoBlob?: Blob): Promise<{ success: bo
         materials_required: sop.materialsRequired || null,
         num_steps: sop.steps.length,
         thumbnail_url: sop.thumbnail_url || pickBestThumbnail(sop.steps),
+        user_id: user.id,
       })
       .select('id')
       .single();

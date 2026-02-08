@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppView } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LandingPageProps {
   onNavigate: (view: AppView) => void;
@@ -7,6 +8,8 @@ interface LandingPageProps {
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) => {
+  const { user, signIn } = useAuth();
+
   const features = [
     {
       icon: 'fa-youtube',
@@ -105,12 +108,30 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
               </button>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={onGetStarted}
-                className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-              >
-                Get Started Free
-              </button>
+              {user ? (
+                <button
+                  onClick={onGetStarted}
+                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                >
+                  Go to Dashboard
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={signIn}
+                    className="hidden sm:flex items-center gap-2 px-4 py-2.5 text-slate-700 font-medium hover:text-slate-900"
+                  >
+                    <i className="fab fa-google text-red-500"></i>
+                    Sign in
+                  </button>
+                  <button
+                    onClick={onGetStarted}
+                    className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                  >
+                    Get Started Free
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
