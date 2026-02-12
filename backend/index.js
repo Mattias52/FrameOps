@@ -2210,7 +2210,7 @@ app.post('/review-chat', async (req, res) => {
   try {
     const genai = getGenAI();
 
-    const chatHistory = previousMessages.map(m => `${m.role === 'user' ? 'Användare' : 'AI'}: ${m.content}`).join('\n');
+    const chatHistory = previousMessages.map(m => `${m.role === 'user' ? 'User' : 'AI'}: ${m.content}`).join('\n');
 
     // Different prompts for setup vs review phase
     let prompt;
@@ -2221,61 +2221,61 @@ app.post('/review-chat', async (req, res) => {
 
       // Different prompts based on content mode
       const modeContext = contentMode === 'creator'
-        ? `Du hjälper en CONTENT CREATOR planera en tutorial/how-to video.
+        ? `You are helping a CONTENT CREATOR plan a tutorial/how-to video.
 
-VIKTIGT för creator-läge:
-- Stegen ska vara KORTA (max 10 ord per steg)
-- Skriv VAD de ska göra, inte HUR de ska säga det
-- Ingen voiceover-text eller manus
-- Exempel: "Visa ingredienserna", "Krydda köttet", "Sätt i ugnen"
-- INTE: "**Hook:** Säg 'Hej allihopa!' med energi och visa..."`
-        : `Du hjälper någon skapa en ARBETSRUTIN/SOP (Standard Operating Procedure).
+IMPORTANT for creator mode:
+- Steps should be SHORT (max 10 words per step)
+- Write WHAT they should do, not HOW to say it
+- No voiceover text or scripts
+- Example: "Show ingredients", "Season the meat", "Put in oven"
+- NOT: "**Hook:** Say 'Hey everyone!' with energy and show..."`
+        : `You are helping someone create a WORK ROUTINE/SOP (Standard Operating Procedure).
 
-VIKTIGT för SOP-läge:
-- Stegen ska vara KORTA (max 10 ord per steg)
-- Tydliga, konkreta instruktioner
-- Exempel: "Förbered verktyg", "Skruva loss panelen", "Kontrollera mätaren"
-- INTE långa beskrivningar`;
+IMPORTANT for SOP mode:
+- Steps should be SHORT (max 10 words per step)
+- Clear, concrete instructions
+- Example: "Prepare tools", "Unscrew the panel", "Check the meter"
+- NOT long descriptions`;
 
       prompt = `${modeContext}
 
-Var BESLUTSAM - fråga INTE massa frågor, GÖR saker istället.
+Be DECISIVE - do NOT ask lots of questions, DO things instead.
 
-NUVARANDE STEG:
-${currentSteps.length > 0 ? currentSteps.map((s, i) => `${i+1}. ${s}`).join('\n') : '(Inga steg ännu)'}
+CURRENT STEPS:
+${currentSteps.length > 0 ? currentSteps.map((s, i) => `${i+1}. ${s}`).join('\n') : '(No steps yet)'}
 
-TIDIGARE I KONVERSATIONEN:
-${chatHistory || '(Ingen tidigare konversation)'}
+PREVIOUS IN CONVERSATION:
+${chatHistory || '(No previous conversation)'}
 
-ANVÄNDAREN SÄGER NU: "${message}"
+USER SAYS NOW: "${message}"
 
-Svara ALLTID i JSON-format:
+ALWAYS respond in JSON format:
 {
-  "message": "Kort svar till användaren (max 2 meningar)",
-  "steps": ["Kort steg 1", "Kort steg 2", ...],
+  "message": "Short response to user (max 2 sentences)",
+  "steps": ["Short step 1", "Short step 2", ...],
   "ready": true/false
 }
 
-REGLER:
-- VARJE STEG MAX 10 ORD - skriv kort och enkelt!
-- Om användaren beskriver vad de ska göra, SKAPA steg baserat på det
-- Om användaren vill ändra, UPPDATERA stegen direkt
-- "steps" ska ALLTID innehålla de aktuella stegen
-- "ready" = true när det finns minst 2 steg
-- Svara på svenska`;
+RULES:
+- EACH STEP MAX 10 WORDS - write short and simple!
+- If user describes what they'll do, CREATE steps based on that
+- If user wants to change, UPDATE steps directly
+- "steps" should ALWAYS contain the current steps
+- "ready" = true when there are at least 2 steps
+- Respond in English`;
     } else {
       // Review phase: discuss the recorded SOP
-      const stepsSummary = steps?.map((s, i) => `Steg ${i + 1}: ${s.title}`).join(', ') || 'Okända steg';
-      prompt = `Du hjälper någon granska sin inspelade SOP.
+      const stepsSummary = steps?.map((s, i) => `Step ${i + 1}: ${s.title}`).join(', ') || 'Unknown steps';
+      prompt = `You are helping someone review their recorded SOP.
 
-SOP STEG: ${stepsSummary}
+SOP STEPS: ${stepsSummary}
 
-TIDIGARE:
-${chatHistory || '(Ingen tidigare)'}
+PREVIOUS:
+${chatHistory || '(None)'}
 
-ANVÄNDAREN: "${message}"
+USER: "${message}"
 
-Svara kort (max 2 meningar). Om de vill ändra steg, bekräfta vilket. Om nöjda, uppmuntra slutföra.`;
+Respond briefly (max 2 sentences). If they want to change a step, confirm which one. If satisfied, encourage them to finalize.`;
     }
 
     const response = await genai.models.generateContent({
@@ -2297,7 +2297,7 @@ Svara kort (max 2 meningar). Om de vill ändra steg, bekräfta vilket. Om nöjda
           const parsed = JSON.parse(jsonMatch[0]);
           res.json({
             success: true,
-            response: parsed.message || 'Okej!',
+            response: parsed.message || 'Okay!',
             steps: parsed.steps || [],
             ready: parsed.ready || false
           });
@@ -2324,7 +2324,7 @@ Svara kort (max 2 meningar). Om de vill ändra steg, bekräfta vilket. Om nöjda
     console.error(`[CHAT-${jobId}] Error:`, error.message);
     res.json({
       success: true,
-      response: phase === 'setup' ? 'Något gick fel. Försök igen!' : 'Jag förstår. Vill du göra om något steg eller slutföra SOP:en?',
+      response: phase === 'setup' ? 'Something went wrong. Please try again!' : 'I understand. Want to redo a step or finalize the SOP?',
       steps: [],
       ready: false
     });

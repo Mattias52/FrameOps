@@ -47,7 +47,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   // Initial chat message
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([{
     role: 'ai',
-    content: 'Hej! Vad ska du visa? Beskriv kort så hjälper jag dig planera stegen.'
+    content: 'Hi! What will you be showing? Describe briefly and I\'ll help you plan the steps.'
   }]);
 
   // AI Guide state (chatMessages initialized above with welcome message)
@@ -751,7 +751,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       } else {
         setChatMessages(prev => [...prev, {
           role: 'ai',
-          content: 'Beskriv vad du ska visa så hjälper jag dig skapa steg!'
+          content: 'Describe what you\'ll show and I\'ll help create the steps!'
         }]);
       }
     } catch (error) {
@@ -784,7 +784,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   };
 
   const addStep = () => {
-    setProposedSteps(prev => [...prev, 'Nytt steg...']);
+    setProposedSteps(prev => [...prev, 'New step...']);
     setEditingStepIndex(proposedSteps.length);
     setEditingStepText('');
   };
@@ -833,7 +833,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       const spokenContext = transcriptRef.current.trim();
 
       if (frames.length === 0) {
-        alert('Inga bilder fångades. Försök igen.');
+        alert('No frames captured. Please try again.');
         setIsAnalyzingReview(false);
         setPhase('setup');
         return;
@@ -890,8 +890,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       setReviewChatMessages([{
         role: 'ai',
         content: feedback.length > 0
-          ? `Här är din SOP med ${draftSteps.length} steg. Jag har några förslag:\n\n${feedback.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nVill du göra om något steg, eller är du nöjd?`
-          : `Bra jobbat! Här är din SOP med ${draftSteps.length} steg. Ser det bra ut, eller vill du ändra något?`
+          ? `Here's your SOP with ${draftSteps.length} steps. I have some suggestions:\n\n${feedback.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nWant to re-record any step, or are you satisfied?`
+          : `Great job! Here's your SOP with ${draftSteps.length} steps. Does it look good, or would you like to change something?`
       }]);
 
       setPhase('review');
@@ -993,13 +993,13 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     setReviewInput('');
 
     // Check if user wants to re-record a step
-    const reRecordMatch = message.match(/steg\s*(\d+)/i) || message.match(/(\d+)/);
-    if (reRecordMatch && (message.toLowerCase().includes('om') || message.toLowerCase().includes('visa') || message.toLowerCase().includes('spela'))) {
+    const reRecordMatch = message.match(/step\s*(\d+)/i) || message.match(/(\d+)/);
+    if (reRecordMatch && (message.toLowerCase().includes('redo') || message.toLowerCase().includes('again') || message.toLowerCase().includes('show') || message.toLowerCase().includes('record'))) {
       const stepNum = parseInt(reRecordMatch[1]);
       if (stepNum > 0 && stepNum <= (draftSOP?.length || 0)) {
         setReviewChatMessages(prev => [...prev, {
           role: 'ai',
-          content: `Ok, jag markerar steg ${stepNum} för ominspelning. Tryck "Spela om markerade steg" när du är redo.`
+          content: `Ok, I'm marking step ${stepNum} for re-recording. Click "Re-record marked steps" when you're ready.`
         }]);
         setStepsToReRecord(prev => prev.includes(stepNum - 1) ? prev : [...prev, stepNum - 1]);
         return;
@@ -1007,18 +1007,18 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     }
 
     // Check for approval
-    if (message.toLowerCase().includes('bra') || message.toLowerCase().includes('ok') || message.toLowerCase().includes('nöjd') || message.toLowerCase().includes('klar')) {
+    if (message.toLowerCase().includes('good') || message.toLowerCase().includes('great') || message.toLowerCase().includes('ok') || message.toLowerCase().includes('satisfied') || message.toLowerCase().includes('done')) {
       // Warn if too few steps - likely incomplete recording
       if (draftSOP && draftSOP.length <= 2) {
         setReviewChatMessages(prev => [...prev, {
           role: 'ai',
-          content: `Hmm, din SOP har bara ${draftSOP.length} steg - det verkar lite kort. Saknas det något? Du kan:\n\n1. Spela in igen med fler steg\n2. Lägga till steg manuellt\n3. Om det verkligen är klart, tryck "Slutför"`
+          content: `Hmm, your SOP only has ${draftSOP.length} steps - that seems short. Is something missing? You can:\n\n1. Record again with more steps\n2. Add steps manually\n3. If it's really complete, click "Finalize"`
         }]);
         return;
       }
       setReviewChatMessages(prev => [...prev, {
         role: 'ai',
-        content: 'Perfekt! Tryck "Slutför SOP" för att spara.'
+        content: 'Perfect! Click "Finalize SOP" to save.'
       }]);
       return;
     }
@@ -1043,7 +1043,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       console.error('Error in review chat:', error);
       setReviewChatMessages(prev => [...prev, {
         role: 'ai',
-        content: 'Jag förstod inte riktigt. Vill du göra om något steg? Säg t.ex. "visa steg 3 igen".'
+        content: 'I didn\'t quite understand. Want to re-record a step? Say e.g. "redo step 3".'
       }]);
     }
   };
@@ -1109,7 +1109,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       setReRecordStepIndex(remaining[0]);
       setReviewChatMessages(prev => [...prev, {
         role: 'ai',
-        content: `Steg ${reRecordStepIndex + 1} uppdaterat! Nu är det steg ${remaining[0] + 1}: "${draftSOP[remaining[0]]?.title}"`
+        content: `Step ${reRecordStepIndex + 1} updated! Now it's step ${remaining[0] + 1}: "${draftSOP[remaining[0]]?.title}"`
       }]);
     } else {
       // Done re-recording - stop camera
@@ -1123,7 +1123,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       setReRecordStepIndex(null);
       setReviewChatMessages(prev => [...prev, {
         role: 'ai',
-        content: 'Alla steg uppdaterade! Ser det bättre ut nu?'
+        content: 'All steps updated! Does it look better now?'
       }]);
     }
   };
@@ -1192,7 +1192,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Namnge din SOP..."
+                placeholder="Name your SOP..."
                 className="w-full bg-black/40 backdrop-blur-sm text-white text-center font-medium px-4 py-2 rounded-full border-none outline-none placeholder:text-white/50"
               />
             </div>
@@ -1228,7 +1228,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
                 <i className="fas fa-video text-white text-sm"></i>
               </div>
-              <span className="text-white font-bold">Planera inspelning</span>
+              <span className="text-white font-bold">Plan Recording</span>
             </div>
             <div className="w-8"></div>
           </div>
@@ -1240,7 +1240,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               <div className="p-4 border-b border-slate-800">
                 <h3 className="text-white font-bold flex items-center gap-2">
                   <i className="fas fa-list-check text-indigo-400"></i>
-                  Steg att filma
+                  Steps to Record
                   {proposedSteps.length > 0 && (
                     <span className="text-slate-400 font-normal text-sm">({proposedSteps.length})</span>
                   )}
@@ -1253,7 +1253,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                     <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                       <i className="fas fa-lightbulb text-slate-600 text-2xl"></i>
                     </div>
-                    <p className="text-slate-500 text-sm">Beskriv vad du ska visa så skapar AI:n stegen</p>
+                    <p className="text-slate-500 text-sm">Describe what you'll show and the AI will create the steps</p>
                   </div>
                 ) : (
                   proposedSteps.map((step, idx) => (
@@ -1311,7 +1311,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                     className="w-full py-2 border-2 border-dashed border-slate-700 rounded-xl text-slate-500 hover:border-slate-600 hover:text-slate-400 transition-colors text-sm"
                   >
                     <i className="fas fa-plus mr-2"></i>
-                    Lägg till steg
+                    Add step
                   </button>
                 )}
               </div>
@@ -1328,14 +1328,14 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                   }`}
                 >
                   <i className="fas fa-video mr-2"></i>
-                  {proposedSteps.length > 0 ? 'Starta inspelning' : 'Skapa steg först...'}
+                  {proposedSteps.length > 0 ? 'Start Recording' : 'Create steps first...'}
                 </button>
                 {proposedSteps.length === 0 && (
                   <button
                     onClick={skipToRecording}
                     className="w-full mt-2 py-2 text-slate-500 hover:text-slate-400 text-sm"
                   >
-                    Eller spela in utan plan
+                    Or record without a plan
                   </button>
                 )}
               </div>
@@ -1367,7 +1367,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                   <div className="flex justify-start">
                     <div className="bg-slate-800 text-slate-100 p-3 rounded-xl text-sm">
                       <i className="fas fa-circle-notch fa-spin mr-2"></i>
-                      Tänker...
+                      Thinking...
                     </div>
                   </div>
                 )}
@@ -1382,7 +1382,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && userInput.trim() && handleSetupChat(userInput.trim())}
-                    placeholder="Beskriv vad du ska filma..."
+                    placeholder="Describe what you'll record..."
                     className="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none text-sm"
                     disabled={isGeneratingGuide}
                   />
@@ -1409,7 +1409,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               className="px-8 py-4 bg-indigo-600 text-white font-bold text-lg rounded-2xl hover:bg-indigo-500 transition-colors"
             >
               <i className="fas fa-video mr-3"></i>
-              Starta kameran
+              Start Camera
             </button>
             {cameraError && (
               <div className="mt-4 bg-red-600/20 border border-red-500/50 rounded-xl p-4 max-w-md">
@@ -1431,7 +1431,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 <div className="p-3 bg-red-600/20 border-b border-red-600/30 flex items-center justify-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
                   <span className="text-red-400 font-mono font-bold">{formatTime(recordingTime)}</span>
-                  <span className="text-red-400/60 text-sm ml-2">SPELAR IN</span>
+                  <span className="text-red-400/60 text-sm ml-2">RECORDING</span>
                 </div>
               )}
 
@@ -1440,13 +1440,13 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 <div className="p-4 bg-indigo-600/20 border-b border-indigo-500/30">
                   <div className="text-indigo-400 text-xs font-bold uppercase tracking-wider mb-2">
                     <i className="fas fa-play-circle mr-1"></i>
-                    NU - Steg {currentRecordingStep + 1} av {proposedSteps.length}
+                    NOW - Step {currentRecordingStep + 1} of {proposedSteps.length}
                   </div>
                   <p className="text-white text-lg font-bold leading-tight">
                     {proposedSteps[currentRecordingStep]}
                   </p>
                   <p className="text-indigo-300/70 text-sm mt-2">
-                    Visa detta i kameran. Tryck "Klar" när du är färdig.
+                    Show this on camera. Press "Done" when finished.
                   </p>
                 </div>
               )}
@@ -1456,16 +1456,16 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 <div className="p-4 border-b border-slate-800">
                   <h3 className="text-white font-bold flex items-center gap-2">
                     <i className="fas fa-list-check text-indigo-400"></i>
-                    Dina steg
+                    Your Steps
                   </h3>
-                  <p className="text-slate-400 text-sm mt-1">Tryck för att börja spela in</p>
+                  <p className="text-slate-400 text-sm mt-1">Press to start recording</p>
                 </div>
               )}
 
               {/* Steps list - smaller during recording since current step is shown above */}
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
                 {isRecording && (
-                  <p className="text-slate-500 text-xs uppercase tracking-wider mb-2 px-1">Alla steg:</p>
+                  <p className="text-slate-500 text-xs uppercase tracking-wider mb-2 px-1">All steps:</p>
                 )}
                 {proposedSteps.map((step, idx) => (
                   <div
@@ -1512,7 +1512,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                       className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 text-lg"
                     >
                       <i className="fas fa-check mr-2"></i>
-                      Klar - Nästa steg
+                      Done - Next Step
                     </button>
                   ) : (
                     <button
@@ -1520,7 +1520,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                       className="w-full py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 text-lg"
                     >
                       <i className="fas fa-flag-checkered mr-2"></i>
-                      Klar - Avsluta
+                      Done - Finish
                     </button>
                   )}
 
@@ -1556,7 +1556,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                   >
                     <div className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-400 transition-colors"></div>
                   </button>
-                  <p className="text-white/60 text-sm mt-4">Tryck för att börja</p>
+                  <p className="text-white/60 text-sm mt-4">Press to start</p>
                 </div>
               </div>
             ) : (
@@ -1611,14 +1611,14 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
             <div className="w-16 h-16 bg-amber-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <i className="fas fa-pause text-amber-400 text-2xl"></i>
             </div>
-            <p className="text-white text-lg font-medium mb-2">Pausad</p>
-            <p className="text-slate-400 mb-6">Tryck för att fortsätta spela in</p>
+            <p className="text-white text-lg font-medium mb-2">Paused</p>
+            <p className="text-slate-400 mb-6">Press to continue recording</p>
             <button
               onClick={togglePause}
               className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500"
             >
               <i className="fas fa-play mr-2"></i>
-              Fortsätt
+              Continue
             </button>
           </div>
         </div>
@@ -1656,13 +1656,13 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
             <button onClick={() => setPhase('setup')} className="text-slate-400 hover:text-white">
               <i className="fas fa-arrow-left text-xl"></i>
             </button>
-            <span className="text-white font-bold">Granska SOP</span>
+            <span className="text-white font-bold">Review SOP</span>
             <button
               onClick={finalizeSOP}
               className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 text-sm"
             >
               <i className="fas fa-check mr-2"></i>
-              Slutför
+              Finalize
             </button>
           </div>
 
@@ -1672,7 +1672,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
             <div className="flex-1 overflow-y-auto p-4 md:border-r md:border-slate-800">
               <h3 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-4">
                 <i className="fas fa-list-check mr-2"></i>
-                Draft ({draftSOP?.length || 0} steg)
+                Draft ({draftSOP?.length || 0} steps)
               </h3>
 
               {draftSOP && draftSOP.map((step, idx) => (
@@ -1692,7 +1692,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-indigo-400 text-xs font-bold">Steg {idx + 1}</span>
+                        <span className="text-indigo-400 text-xs font-bold">Step {idx + 1}</span>
                         {stepsToReRecord.includes(idx) && (
                           <span className="text-amber-400 text-xs">
                             <i className="fas fa-redo mr-1"></i>Markerad
@@ -1715,7 +1715,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                           ? 'bg-amber-600 text-white'
                           : 'bg-slate-700 text-slate-400 hover:text-white'
                       }`}
-                      title={stepsToReRecord.includes(idx) ? 'Ta bort markering' : 'Markera för ominspelning'}
+                      title={stepsToReRecord.includes(idx) ? 'Remove mark' : 'Mark for re-recording'}
                     >
                       <i className={`fas ${stepsToReRecord.includes(idx) ? 'fa-check' : 'fa-redo'} text-xs`}></i>
                     </button>
@@ -1730,7 +1730,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                   className="w-full mt-4 py-3 bg-amber-600 text-white font-bold rounded-xl hover:bg-amber-500 transition-colors"
                 >
                   <i className="fas fa-video mr-2"></i>
-                  Spela om {stepsToReRecord.length} steg
+                  Re-record {stepsToReRecord.length} steps
                 </button>
               )}
             </div>
@@ -1740,7 +1740,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               <div className="p-3 border-b border-slate-800">
                 <h3 className="text-slate-400 text-sm font-bold">
                   <i className="fas fa-comments mr-2"></i>
-                  Diskutera
+                  Discuss
                 </h3>
               </div>
 
@@ -1767,7 +1767,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                     value={reviewInput}
                     onChange={(e) => setReviewInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleReviewChat(reviewInput)}
-                    placeholder="Säg t.ex. 'visa steg 3 igen'..."
+                    placeholder="Say e.g. 'redo step 3'..."
                     className="flex-1 bg-slate-800 text-white px-3 py-2 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none text-sm"
                   />
                   <button
@@ -1795,7 +1795,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                   <span className="text-white font-bold">{reRecordStepIndex + 1}</span>
                 </div>
                 <div className="flex-1">
-                  <p className="text-white/80 text-xs uppercase tracking-wider">Spelar om steg</p>
+                  <p className="text-white/80 text-xs uppercase tracking-wider">Re-recording step</p>
                   <p className="text-white font-medium">{draftSOP[reRecordStepIndex]?.title}</p>
                 </div>
                 <button
@@ -1803,7 +1803,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                   className="px-4 py-2 bg-white text-amber-600 font-bold rounded-lg"
                 >
                   <i className="fas fa-check mr-1"></i>
-                  Klar
+                  Done
                 </button>
               </div>
             </div>
@@ -1816,8 +1816,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-40">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-white text-lg font-bold">Analyserar inspelning...</p>
-            <p className="text-slate-400 text-sm mt-1">{allFramesRef.current.length} bilder bearbetas</p>
+            <p className="text-white text-lg font-bold">Analyzing recording...</p>
+            <p className="text-slate-400 text-sm mt-1">{allFramesRef.current.length} frames being processed</p>
           </div>
         </div>
       )}
@@ -1827,8 +1827,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-40">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-white text-lg font-bold">Skapar SOP...</p>
-            <p className="text-slate-400 text-sm mt-1">{allFramesRef.current.length} bilder analyseras</p>
+            <p className="text-white text-lg font-bold">Creating SOP...</p>
+            <p className="text-slate-400 text-sm mt-1">{allFramesRef.current.length} frames being analyzed</p>
           </div>
         </div>
       )}
@@ -1839,7 +1839,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
           <div className="absolute inset-0 bg-black/60" onClick={() => setShowSettings(false)} />
           <div className="relative bg-slate-900 w-full md:w-96 md:rounded-2xl p-6 space-y-6 rounded-t-3xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-white text-lg font-bold">Inställningar</h3>
+              <h3 className="text-white text-lg font-bold">Settings</h3>
               <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-white">
                 <i className="fas fa-times"></i>
               </button>
@@ -1848,7 +1848,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
             {/* Scene Sensitivity */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-white text-sm font-medium">Känslighet</label>
+                <label className="text-white text-sm font-medium">Sensitivity</label>
                 <span className="text-indigo-400 text-sm font-bold">{sceneSensitivity}%</span>
               </div>
               <input
@@ -1860,8 +1860,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
               />
               <p className="text-slate-500 text-xs mt-2">
-                {sceneSensitivity < 30 ? 'Färre bilder, bara stora förändringar' :
-                 sceneSensitivity < 70 ? 'Balanserat' : 'Fler bilder, mer detaljer'}
+                {sceneSensitivity < 30 ? 'Fewer frames, only major changes' :
+                 sceneSensitivity < 70 ? 'Balanced' : 'More frames, more details'}
               </p>
             </div>
 
@@ -1869,7 +1869,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               onClick={() => setShowSettings(false)}
               className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 transition-colors"
             >
-              Klar
+              Done
             </button>
           </div>
         </div>
@@ -1885,7 +1885,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
             </div>
             <div className="px-4 pb-3 flex items-center justify-between">
               <h3 className="text-white font-bold">
-                Steg <span className="text-indigo-400">({liveSteps.length})</span>
+                Steps <span className="text-indigo-400">({liveSteps.length})</span>
               </h3>
               <button onClick={() => setShowStepsPanel(false)} className="text-slate-400">
                 <i className="fas fa-times"></i>
@@ -1902,7 +1902,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-500 text-xs font-mono">{step.timestamp}</p>
-                    <p className="text-white text-sm font-medium truncate">{step.title || `Steg ${idx + 1}`}</p>
+                    <p className="text-white text-sm font-medium truncate">{step.title || `Step ${idx + 1}`}</p>
                   </div>
                 </div>
               ))}
