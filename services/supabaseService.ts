@@ -65,6 +65,45 @@ export const signOut = async (): Promise<{ success: boolean; error?: string }> =
   return { success: true };
 };
 
+// Sign up with email/password
+export const signUpWithEmail = async (email: string, password: string): Promise<{ success: boolean; error?: string; needsConfirmation?: boolean }> => {
+  if (!supabase) return { success: false, error: 'Supabase not configured' };
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: window.location.origin,
+    }
+  });
+
+  if (error) {
+    console.error('Sign up error:', error);
+    return { success: false, error: error.message };
+  }
+
+  // Check if email confirmation is required
+  const needsConfirmation = !data.session;
+  return { success: true, needsConfirmation };
+};
+
+// Sign in with email/password
+export const signInWithEmail = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: false, error: 'Supabase not configured' };
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    console.error('Sign in error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+};
+
 // Listen to auth state changes
 export const onAuthStateChange = (callback: (user: User | null) => void) => {
   if (!supabase) return { unsubscribe: () => {} };

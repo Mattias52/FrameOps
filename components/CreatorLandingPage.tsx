@@ -8,7 +8,7 @@ interface CreatorLandingPageProps {
 }
 
 const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, onNavigate }) => {
-  const { user, signIn } = useAuth();
+  const { user, signInGoogle } = useAuth();
 
   const useCases = [
     {
@@ -101,7 +101,7 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
               ) : (
                 <>
                   <button
-                    onClick={signIn}
+                    onClick={signInGoogle}
                     className="hidden sm:flex items-center gap-2 px-4 py-2.5 text-white/80 font-medium hover:text-white"
                   >
                     <i className="fab fa-google"></i>

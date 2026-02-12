@@ -22,7 +22,7 @@ const FREE_SOP_LIMIT = 3;
 const IS_BETA = true; // Set to false when launching paid plans
 
 const App: React.FC = () => {
-  const { user, signIn } = useAuth();
+  const { user, signInGoogle } = useAuth();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   // Check if user has entered the app before
@@ -317,7 +317,7 @@ const App: React.FC = () => {
             <div className="space-y-3">
               <button
                 onClick={async () => {
-                  await signIn();
+                  await signInGoogle();
                   setShowLoginPrompt(false);
                 }}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"

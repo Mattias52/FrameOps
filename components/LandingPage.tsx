@@ -8,7 +8,7 @@ interface LandingPageProps {
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) => {
-  const { user, signIn } = useAuth();
+  const { user, signInGoogle } = useAuth();
 
   const features = [
     {
@@ -118,10 +118,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
               ) : (
                 <>
                   <button
-                    onClick={signIn}
+                    onClick={signInGoogle}
                     className="hidden sm:flex items-center gap-2 px-4 py-2.5 text-slate-700 font-medium hover:text-slate-900"
                   >
-                    <i className="fab fa-google text-red-500"></i>
+                    <i className="fas fa-user"></i>
                     Sign in
                   </button>
                   <button

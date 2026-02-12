@@ -1,18 +1,22 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
-import { getCurrentUser, onAuthStateChange, signInWithGoogle, signOut } from '../services/supabaseService';
+import { getCurrentUser, onAuthStateChange, signInWithGoogle, signOut, signUpWithEmail, signInWithEmail } from '../services/supabaseService';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: () => Promise<{ success: boolean; error?: string }>;
+  signInGoogle: () => Promise<{ success: boolean; error?: string }>;
+  signInEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUpEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string; needsConfirmation?: boolean }>;
   logOut: () => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  signIn: async () => ({ success: false }),
+  signInGoogle: async () => ({ success: false }),
+  signInEmail: async () => ({ success: false }),
+  signUpEmail: async () => ({ success: false }),
   logOut: async () => ({ success: false }),
 });
 
@@ -38,8 +42,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  const signIn = async () => {
+  const signInGoogle = async () => {
     return signInWithGoogle();
+  };
+
+  const signInEmail = async (email: string, password: string) => {
+    return signInWithEmail(email, password);
+  };
+
+  const signUpEmail = async (email: string, password: string) => {
+    return signUpWithEmail(email, password);
   };
 
   const logOut = async () => {
@@ -51,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, logOut }}>
+    <AuthContext.Provider value={{ user, loading, signInGoogle, signInEmail, signUpEmail, logOut }}>
       {children}
     </AuthContext.Provider>
   );
