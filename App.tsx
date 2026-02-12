@@ -16,11 +16,15 @@ import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
 import { fetchSOPsList, fetchSOPSteps, saveSOP, isSupabaseConfigured } from './services/supabaseService';
 import { getSubscriptionStatus, checkPaymentStatus, getSOPUsage, incrementSOPUsage } from './services/stripeService';
+import { useAuth } from './contexts/AuthContext';
 
 const FREE_SOP_LIMIT = 3;
 const IS_BETA = true; // Set to false when launching paid plans
 
 const App: React.FC = () => {
+  const { user, signIn } = useAuth();
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
   // Check if user has entered the app before
   const hasVisited = typeof window !== 'undefined' && window.localStorage.getItem('frameops_visited');
 
@@ -92,7 +96,7 @@ const App: React.FC = () => {
     };
 
     loadData();
-  }, []);
+  }, [user]); // Reload SOPs when user changes (login/logout)
 
   // Load more SOPs (pagination)
   const loadMoreSOPs = async () => {
@@ -133,6 +137,10 @@ const App: React.FC = () => {
         }
         setSyncStatus('saved');
         setTimeout(() => setSyncStatus('idle'), 2000);
+      } else if (result.requiresLogin) {
+        // User not logged in - show login prompt
+        setShowLoginPrompt(true);
+        setSyncStatus('idle');
       } else {
         setSyncStatus('error');
         console.error('Failed to save to Supabase');
@@ -292,6 +300,41 @@ const App: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* Login prompt modal */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-user-lock text-2xl text-indigo-600"></i>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Sign in to Save</h3>
+              <p className="text-slate-600">
+                Your SOP was created! Sign in with Google to save it to your account.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <button
+                onClick={async () => {
+                  await signIn();
+                  setShowLoginPrompt(false);
+                }}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"
+              >
+                <i className="fab fa-google text-red-500 text-lg"></i>
+                Sign in with Google
+              </button>
+              <button
+                onClick={() => setShowLoginPrompt(false)}
+                className="w-full px-4 py-3 text-slate-500 hover:text-slate-700 transition-colors font-medium"
+              >
+                Continue without saving
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
