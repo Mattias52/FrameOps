@@ -895,6 +895,13 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       }]);
 
       setPhase('review');
+
+      // Stop camera when entering review phase
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      setCameraStarted(false);
     } catch (err: any) {
       console.error('Error creating draft SOP:', err);
       alert(`Fel vid analys: ${err.message}`);
@@ -1042,14 +1049,27 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   };
 
   // Start re-recording specific steps
-  const startReRecording = () => {
+  const startReRecording = async () => {
     if (stepsToReRecord.length === 0) return;
+
     setReRecordStepIndex(stepsToReRecord[0]);
     setIsReRecording(true);
+
     // Reset recording state for re-record
     recordedChunksRef.current = [];
+    allFramesRef.current = [];
     setRecordingTime(0);
     recordingTimeRef.current = 0;
+    lastCaptureTimeRef.current = 0;
+    lastImageDataRef.current = null;
+
+    // Start camera if not running
+    if (!streamRef.current) {
+      await startCamera();
+    }
+
+    // Start recording
+    await handleStartRecording();
   };
 
   // Handle re-record completion
@@ -1092,7 +1112,13 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         content: `Steg ${reRecordStepIndex + 1} uppdaterat! Nu är det steg ${remaining[0] + 1}: "${draftSOP[remaining[0]]?.title}"`
       }]);
     } else {
-      // Done re-recording
+      // Done re-recording - stop camera
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      setCameraStarted(false);
+
       setIsReRecording(false);
       setReRecordStepIndex(null);
       setReviewChatMessages(prev => [...prev, {
@@ -1622,8 +1648,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         </div>
       )}
 
-      {/* Review phase - show draft SOP with AI feedback */}
-      {phase === 'review' && (
+      {/* Review phase - show draft SOP with AI feedback (hide during re-recording) */}
+      {phase === 'review' && !isReRecording && (
         <div className="absolute inset-0 bg-slate-900 flex flex-col z-30">
           {/* Header */}
           <div className="p-4 flex items-center justify-between border-b border-slate-800 bg-slate-900/95 backdrop-blur-sm">
