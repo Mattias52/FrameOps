@@ -1002,6 +1002,13 @@ app.post('/extract-frames-scene-detect', async (req, res) => {
     // Sort timestamps
     sceneTimestamps.sort((a, b) => a - b);
 
+    // ALWAYS add a frame near the end to capture final scene (e.g. closing hood)
+    const lastFrameTime = Math.max(0, effectiveEnd - 0.5); // 0.5s before end
+    if (sceneTimestamps.length === 0 || lastFrameTime - sceneTimestamps[sceneTimestamps.length - 1] > 1.0) {
+      sceneTimestamps.push(lastFrameTime);
+      console.log(`[${jobId}] Added final frame at ${lastFrameTime.toFixed(2)}s to capture ending`);
+    }
+
     // Remove duplicates (within 0.5s of each other)
     const uniqueTimestamps = [];
     for (const ts of sceneTimestamps) {
@@ -1204,6 +1211,11 @@ app.post('/analyze-video-native', async (req, res) => {
     for (let t = 0; t < duration; t += 2) {
       intervalFrames.push(t);
     }
+
+    // ALWAYS add a frame near the end to capture final scene
+    const lastFrameTime = Math.max(0, duration - 0.5);
+    intervalFrames.push(lastFrameTime);
+    console.log(`[${jobId}] Added final frame at ${lastFrameTime.toFixed(2)}s to capture ending`);
 
     // Merge and deduplicate (keep frames that are at least 1 second apart)
     const allTimestamps = [...new Set([...timestamps, ...intervalFrames])].sort((a, b) => a - b);
@@ -1566,6 +1578,11 @@ app.post('/analyze-youtube-native', async (req, res) => {
     for (let t = 0; t < duration; t += 2) {
       intervalFrames.push(t);
     }
+
+    // ALWAYS add a frame near the end to capture final scene
+    const lastFrameTime = Math.max(0, duration - 0.5);
+    intervalFrames.push(lastFrameTime);
+    console.log(`[${jobId}] Added final frame at ${lastFrameTime.toFixed(2)}s to capture ending`);
 
     // Merge and deduplicate (keep frames that are at least 1 second apart)
     const allTimestamps = [...new Set([...timestamps, ...intervalFrames])].sort((a, b) => a - b);
