@@ -2292,7 +2292,19 @@ ${chatHistory || '(None)'}
 
 USER: "${message}"
 
-Respond briefly (max 2 sentences). If they want to change a step, confirm which one. If satisfied, encourage them to finalize.`;
+IMPORTANT - You can ONLY do these things:
+1. Suggest which steps to RE-RECORD (user must click the checkbox themselves)
+2. Tell user to click "Finalize" when done
+3. Answer questions about the SOP
+
+You CANNOT:
+- Edit step text directly
+- Delete or add steps
+- Change images
+
+If user asks to change text or images, tell them to click "Finalize" first, then edit in the SOP viewer.
+
+Respond briefly (max 2 sentences). Be helpful but realistic about your capabilities.`;
     }
 
     const response = await genai.models.generateContent({

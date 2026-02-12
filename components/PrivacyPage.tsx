@@ -85,7 +85,7 @@ const PrivacyPage: React.FC<PrivacyPageProps> = ({ onNavigate }) => {
               <h2 className="text-2xl font-bold text-slate-900 mb-4">5. Third-Party Services</h2>
               <p className="text-slate-600 mb-4">We use the following third-party services:</p>
               <ul className="list-disc pl-6 text-slate-600 space-y-2">
-                <li><strong>Google Gemini AI:</strong> For video analysis and content generation</li>
+                <li><strong>AI Services:</strong> For video analysis and content generation</li>
                 <li><strong>Supabase:</strong> For secure data storage and authentication</li>
                 <li><strong>YouTube API:</strong> For accessing public video content you request</li>
               </ul>

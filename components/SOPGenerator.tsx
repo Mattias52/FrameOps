@@ -361,7 +361,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
           <div className="mb-8 flex justify-between items-start">
             <div>
               <h2 className="text-3xl font-black text-slate-900 tracking-tight">Standard Operating Procedure</h2>
-              <p className="text-slate-500 font-medium">Capture high-fidelity workflows via FFmpeg & Gemini 3 Pro.</p>
+              <p className="text-slate-500 font-medium">Turn any video into step-by-step instructions with AI.</p>
             </div>
             {videoFile && (
               <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
@@ -459,7 +459,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                 <i className={`fab fa-youtube text-lg ${sourceType === 'youtube' ? 'text-white' : 'text-rose-500'}`}></i>
               </div>
               <p className={`text-sm font-bold ${sourceType === 'youtube' ? 'text-white' : 'text-slate-900'}`}>YouTube</p>
-              <p className={`text-[10px] mt-1 ${sourceType === 'youtube' ? 'text-indigo-200' : 'text-slate-400'}`}>Klistra in länk</p>
+              <p className={`text-[10px] mt-1 ${sourceType === 'youtube' ? 'text-indigo-200' : 'text-slate-400'}`}>Paste link</p>
             </button>
           </div>
 
@@ -475,8 +475,8 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                   <div className="w-16 h-16 bg-rose-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-rose-200">
                     <i className="fas fa-circle text-2xl"></i>
                   </div>
-                  <p className="text-lg font-bold text-slate-900">Starta inspelning</p>
-                  <p className="text-sm text-slate-500 mt-1">Klicka för att öppna kameran och börja spela in</p>
+                  <p className="text-lg font-bold text-slate-900">Start Recording</p>
+                  <p className="text-sm text-slate-500 mt-1">Click to open camera and start recording</p>
                 </div>
               )}
 
@@ -504,7 +504,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                       </div>
                       <p className="text-lg font-bold text-slate-900">{videoFile.name}</p>
                       <p className="text-sm text-slate-500 mt-1">
-                        {(videoFile.size / 1024 / 1024).toFixed(1)} MB • Klicka för att byta fil
+                        {(videoFile.size / 1024 / 1024).toFixed(1)} MB • Click to change file
                       </p>
                     </>
                   ) : (
@@ -512,8 +512,8 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                       <div className="w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
                         <i className="fas fa-cloud-upload-alt text-2xl"></i>
                       </div>
-                      <p className="text-lg font-bold text-slate-900">Dra och släpp video här</p>
-                      <p className="text-sm text-slate-500 mt-1">eller klicka för att välja fil</p>
+                      <p className="text-lg font-bold text-slate-900">Drag and drop video here</p>
+                      <p className="text-sm text-slate-500 mt-1">or click to select file</p>
                     </>
                   )}
                 </div>
@@ -525,7 +525,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="Klistra in YouTube-länk här..."
+                      placeholder="Paste YouTube link here..."
                       value={youtubeUrl}
                       onChange={(e) => setYoutubeUrl((e.target as any).value)}
                       className="w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm font-medium"
@@ -619,11 +619,11 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                   </div>
                   <div>
                     <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Beta Feedback</p>
-                    <p className="text-[10px] text-slate-500">Hjälp oss bli bättre!</p>
+                    <p className="text-[10px] text-slate-500">Help us improve!</p>
                   </div>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Något som inte fungerar? Saknar du en funktion? Vi vill höra från dig!
+                  Something not working? Missing a feature? We'd love to hear from you!
                 </p>
                 <a
                   href="mailto:feedback@frameops.ai?subject=FrameOps%20Feedback"
@@ -690,7 +690,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                       {['analyzing', 'generating'].includes(pipelineStage) ? <i className="fas fa-check"></i> : '2'}
                     </div>
                     <span className={`text-sm font-medium ${pipelineStage === 'uploading' ? 'text-indigo-600' : 'text-slate-500'}`}>
-                      Laddar upp till Gemini...
+                      Uploading video...
                       {pipelineStage === 'uploading' && <i className="fas fa-spinner fa-spin ml-2"></i>}
                     </span>
                   </div>
@@ -702,7 +702,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                       3
                     </div>
                     <span className={`text-sm font-medium ${pipelineStage === 'generating' ? 'text-indigo-600' : 'text-slate-500'}`}>
-                      Genererar SOP-steg...
+                      Generating SOP steps...
                       {pipelineStage === 'generating' && <i className="fas fa-spinner fa-spin ml-2"></i>}
                     </span>
                   </div>
@@ -711,7 +711,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                   <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700 rounded-full" style={{ width: `${progress}%` }}></div>
                   </div>
-                  <p className="text-slate-400 text-xs">Detta tar vanligtvis 30-60 sekunder</p>
+                  <p className="text-slate-400 text-xs">This usually takes 1-2 minutes</p>
                 </div>
               </div>
             ) : (
@@ -740,8 +740,8 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
             <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
               <i className="fas fa-check-double text-3xl"></i>
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2 uppercase">SOP Skapad!</h2>
-            <p className="text-slate-500 font-medium max-w-sm mx-auto">Din SOP är redo. Granska och förbättra den för bästa resultat.</p>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2 uppercase">SOP Created!</h2>
+            <p className="text-slate-500 font-medium max-w-sm mx-auto">Your SOP is ready. Review and refine it for best results.</p>
           </div>
 
           {/* Tip box */}
@@ -751,11 +751,11 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                 <i className="fas fa-lightbulb text-amber-600"></i>
               </div>
               <div>
-                <h3 className="font-bold text-amber-900 mb-1">Tips: Gör din SOP perfekt</h3>
+                <h3 className="font-bold text-amber-900 mb-1">Tip: Make your SOP perfect</h3>
                 <ul className="text-sm text-amber-800 space-y-1">
-                  <li><i className="fas fa-check text-amber-600 mr-2"></i>Granska att alla steg är korrekta</li>
-                  <li><i className="fas fa-check text-amber-600 mr-2"></i>Byt ut bilder som inte matchar</li>
-                  <li><i className="fas fa-check text-amber-600 mr-2"></i>Använd <strong>✨ AI Förbättra</strong> för professionell text</li>
+                  <li><i className="fas fa-check text-amber-600 mr-2"></i>Review that all steps are correct</li>
+                  <li><i className="fas fa-check text-amber-600 mr-2"></i>Replace images that don't match</li>
+                  <li><i className="fas fa-check text-amber-600 mr-2"></i>Use <strong>AI Enhance</strong> for professional text</li>
                 </ul>
               </div>
             </div>
@@ -764,13 +764,13 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
           {/* Action buttons */}
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <button onClick={() => { setStep(1); setCreatedSopId(null); setPipelineStage('idle'); }} className="px-6 py-4 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors order-3 sm:order-1">
-              <i className="fas fa-plus mr-2"></i>Ny SOP
+              <i className="fas fa-plus mr-2"></i>New SOP
             </button>
             <button onClick={() => createdSopId && onOpenSOP ? onOpenSOP(createdSopId) : onNavigateToLibrary?.()} className="px-6 py-4 bg-slate-200 text-slate-800 font-bold rounded-xl hover:bg-slate-300 transition-colors order-2">
-              <i className="fas fa-eye mr-2"></i>Visa SOP
+              <i className="fas fa-eye mr-2"></i>View SOP
             </button>
             <button onClick={() => createdSopId && onOpenSOP ? onOpenSOP(createdSopId) : onNavigateToLibrary?.()} className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-wider text-sm rounded-xl shadow-xl shadow-indigo-600/30 hover:from-indigo-700 hover:to-purple-700 transition-all order-1 sm:order-3">
-              <i className="fas fa-edit mr-2"></i>Redigera & Förbättra
+              <i className="fas fa-edit mr-2"></i>Edit & Enhance
             </button>
           </div>
         </div>
