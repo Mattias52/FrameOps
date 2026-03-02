@@ -11,6 +11,7 @@ import SubscriptionPlans from './components/SubscriptionPlans';
 import ErrorBoundary from './components/ErrorBoundary';
 import LandingPage from './components/LandingPage';
 import CreatorLandingPage from './components/CreatorLandingPage';
+import IndustryPage from './components/IndustryPage';
 import APIKeysPage from './components/APIKeysPage';
 import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
@@ -21,12 +22,28 @@ import { useAuth } from './contexts/AuthContext';
 const FREE_SOP_LIMIT = 3;
 const IS_BETA = true; // Set to false when launching paid plans
 
+// URL to AppView mapping for SEO pages
+const getViewFromUrl = (): AppView | null => {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname.toLowerCase();
+  if (path === '/manufacturing') return AppView.MANUFACTURING;
+  if (path === '/healthcare') return AppView.HEALTHCARE;
+  if (path === '/training') return AppView.TRAINING;
+  if (path === '/creators') return AppView.CREATOR_LANDING;
+  if (path === '/privacy') return AppView.PRIVACY;
+  if (path === '/terms') return AppView.TERMS;
+  return null;
+};
+
 const App: React.FC = () => {
   const { user, signInGoogle } = useAuth();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   // Check if user has entered the app before
   const hasVisited = typeof window !== 'undefined' && window.localStorage.getItem('frameops_visited');
+
+  // Check URL for direct page access (SEO)
+  const urlView = getViewFromUrl();
 
   // Track free SOPs used (only matters after beta)
   const [sopsUsed, setSopsUsed] = useState(getSOPUsage);
@@ -53,7 +70,9 @@ const App: React.FC = () => {
     setStripeIsPro(storedIsPro);
     setSubscriptionChecked(true);
   }, []);
-  const [currentView, setCurrentView] = useState<AppView>(hasVisited ? AppView.DASHBOARD : AppView.LANDING);
+  const [currentView, setCurrentView] = useState<AppView>(
+    urlView || (hasVisited ? AppView.DASHBOARD : AppView.LANDING)
+  );
   const [sops, setSops] = useState<SOP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -249,6 +268,17 @@ const App: React.FC = () => {
   // Terms page - show without app chrome
   if (currentView === AppView.TERMS) {
     return <TermsPage onNavigate={setCurrentView} />;
+  }
+
+  // Industry SEO pages - show without app chrome
+  if (currentView === AppView.MANUFACTURING) {
+    return <IndustryPage industry="manufacturing" onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
+  }
+  if (currentView === AppView.HEALTHCARE) {
+    return <IndustryPage industry="healthcare" onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
+  }
+  if (currentView === AppView.TRAINING) {
+    return <IndustryPage industry="training" onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
   }
 
   // Loading screen

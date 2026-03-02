@@ -10,7 +10,11 @@ export enum AppView {
   SUBSCRIPTION = 'subscription',
   API_KEYS = 'api_keys',
   PRIVACY = 'privacy',
-  TERMS = 'terms'
+  TERMS = 'terms',
+  // SEO industry pages
+  MANUFACTURING = 'manufacturing',
+  HEALTHCARE = 'healthcare',
+  TRAINING = 'training'
 }
 
 export interface SOPStep {
