@@ -1220,108 +1220,102 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       {phase === 'setup' && !cameraStarted && (
         <div className="absolute inset-0 bg-slate-900 flex flex-col z-30">
           {/* Header */}
-          <div className="p-4 flex items-center justify-between border-b border-slate-800">
-            <button onClick={handleCancel} className="text-slate-400 hover:text-white">
-              <i className="fas fa-times text-xl"></i>
+          <div className="p-3 md:p-4 flex items-center justify-between border-b border-slate-800 safe-area-top">
+            <button onClick={handleCancel} className="text-slate-400 hover:text-white p-1">
+              <i className="fas fa-times text-lg md:text-xl"></i>
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
-                <i className="fas fa-video text-white text-sm"></i>
+              <div className="w-7 h-7 md:w-8 md:h-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                <i className="fas fa-video text-white text-xs md:text-sm"></i>
               </div>
-              <span className="text-white font-bold">Plan Recording</span>
+              <span className="text-white font-bold text-sm md:text-base">Plan Recording</span>
             </div>
             <div className="w-8"></div>
           </div>
 
-          {/* Split view: Steps left, Chat right */}
-          <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-            {/* Left: Steps panel */}
-            <div className="md:w-1/2 flex flex-col border-b md:border-b-0 md:border-r border-slate-800 bg-slate-900/50">
-              <div className="p-4 border-b border-slate-800">
-                <h3 className="text-white font-bold flex items-center gap-2">
+          {/* Split view: On mobile, show chat first (more important), steps below */}
+          <div className="flex-1 flex flex-col-reverse md:flex-row overflow-hidden">
+            {/* Left: Steps panel (bottom on mobile) */}
+            <div className={`md:w-1/2 flex flex-col border-t md:border-t-0 md:border-r border-slate-800 bg-slate-900/50 ${
+              proposedSteps.length === 0 ? 'hidden md:flex' : 'max-h-[40vh] md:max-h-none'
+            }`}>
+              <div className="p-3 md:p-4 border-b border-slate-800">
+                <h3 className="text-white font-bold flex items-center gap-2 text-sm md:text-base">
                   <i className="fas fa-list-check text-indigo-400"></i>
-                  Steps to Record
+                  <span className="hidden md:inline">Steps to Record</span>
+                  <span className="md:hidden">Steps</span>
                   {proposedSteps.length > 0 && (
-                    <span className="text-slate-400 font-normal text-sm">({proposedSteps.length})</span>
+                    <span className="text-slate-400 font-normal text-xs md:text-sm">({proposedSteps.length})</span>
                   )}
                 </h3>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {proposedSteps.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <i className="fas fa-lightbulb text-slate-600 text-2xl"></i>
-                    </div>
-                    <p className="text-slate-500 text-sm">Describe what you'll show and the AI will create the steps</p>
-                  </div>
-                ) : (
-                  proposedSteps.map((step, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-slate-800/50 rounded-xl p-3 border border-slate-700 group"
-                    >
-                      {editingStepIndex === idx ? (
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={editingStepText}
-                            onChange={(e) => setEditingStepText(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && saveStepEdit()}
-                            className="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-sm outline-none"
-                            autoFocus
-                          />
+              <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2">
+                {proposedSteps.map((step, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-slate-800/50 rounded-xl p-2.5 md:p-3 border border-slate-700 group"
+                  >
+                    {editingStepIndex === idx ? (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={editingStepText}
+                          onChange={(e) => setEditingStepText(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && saveStepEdit()}
+                          className="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-sm outline-none"
+                          autoFocus
+                        />
+                        <button
+                          onClick={saveStepEdit}
+                          className="px-3 py-2 bg-emerald-600 text-white rounded-lg"
+                        >
+                          <i className="fas fa-check"></i>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2 md:gap-3">
+                        <div className="w-6 h-6 md:w-7 md:h-7 bg-indigo-600/30 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-indigo-300 text-xs md:text-sm font-bold">{idx + 1}</span>
+                        </div>
+                        <p className="text-white text-xs md:text-sm flex-1 pt-0.5 md:pt-1">{step}</p>
+                        <div className="flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
-                            onClick={saveStepEdit}
-                            className="px-3 py-2 bg-emerald-600 text-white rounded-lg"
+                            onClick={() => handleStepEdit(idx)}
+                            className="w-6 h-6 md:w-7 md:h-7 bg-slate-700 rounded-lg flex items-center justify-center text-slate-400 hover:text-white"
                           >
-                            <i className="fas fa-check"></i>
+                            <i className="fas fa-pen text-[10px] md:text-xs"></i>
+                          </button>
+                          <button
+                            onClick={() => deleteStep(idx)}
+                            className="w-6 h-6 md:w-7 md:h-7 bg-slate-700 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-400"
+                          >
+                            <i className="fas fa-trash text-[10px] md:text-xs"></i>
                           </button>
                         </div>
-                      ) : (
-                        <div className="flex items-start gap-3">
-                          <div className="w-7 h-7 bg-indigo-600/30 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-indigo-300 text-sm font-bold">{idx + 1}</span>
-                          </div>
-                          <p className="text-white text-sm flex-1 pt-1">{step}</p>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => handleStepEdit(idx)}
-                              className="w-7 h-7 bg-slate-700 rounded-lg flex items-center justify-center text-slate-400 hover:text-white"
-                            >
-                              <i className="fas fa-pen text-xs"></i>
-                            </button>
-                            <button
-                              onClick={() => deleteStep(idx)}
-                              className="w-7 h-7 bg-slate-700 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-400"
-                            >
-                              <i className="fas fa-trash text-xs"></i>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
+                      </div>
+                    )}
+                  </div>
+                ))}
 
                 {/* Add step button */}
                 {proposedSteps.length > 0 && (
                   <button
                     onClick={addStep}
-                    className="w-full py-2 border-2 border-dashed border-slate-700 rounded-xl text-slate-500 hover:border-slate-600 hover:text-slate-400 transition-colors text-sm"
+                    className="w-full py-1.5 md:py-2 border-2 border-dashed border-slate-700 rounded-xl text-slate-500 hover:border-slate-600 hover:text-slate-400 transition-colors text-xs md:text-sm"
                   >
-                    <i className="fas fa-plus mr-2"></i>
-                    Add step
+                    <i className="fas fa-plus mr-1 md:mr-2"></i>
+                    Add
                   </button>
                 )}
               </div>
 
               {/* Start recording button */}
-              <div className="p-4 border-t border-slate-800">
+              <div className="p-3 md:p-4 border-t border-slate-800">
                 <button
                   onClick={skipToRecording}
                   disabled={proposedSteps.length === 0}
-                  className={`w-full py-4 font-bold text-lg rounded-xl transition-colors ${
+                  className={`w-full py-3 md:py-4 font-bold text-base md:text-lg rounded-xl transition-colors ${
                     proposedSteps.length > 0
                       ? 'bg-red-600 text-white hover:bg-red-500'
                       : 'bg-slate-700 text-slate-400 cursor-not-allowed'
@@ -1330,31 +1324,32 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                   <i className="fas fa-video mr-2"></i>
                   {proposedSteps.length > 0 ? 'Start Recording' : 'Create steps first...'}
                 </button>
-                {proposedSteps.length === 0 && (
-                  <button
-                    onClick={skipToRecording}
-                    className="w-full mt-2 py-2 text-slate-500 hover:text-slate-400 text-sm"
-                  >
-                    Or record without a plan
-                  </button>
-                )}
               </div>
             </div>
 
-            {/* Right: Chat panel */}
-            <div className="md:w-1/2 flex flex-col">
-              <div className="p-4 border-b border-slate-800">
-                <h3 className="text-white font-bold flex items-center gap-2">
+            {/* Right: Chat panel (top on mobile - primary UI) */}
+            <div className="md:w-1/2 flex flex-col flex-1 md:flex-initial">
+              <div className="p-3 md:p-4 border-b border-slate-800 flex items-center justify-between">
+                <h3 className="text-white font-bold flex items-center gap-2 text-sm md:text-base">
                   <i className="fas fa-comments text-indigo-400"></i>
-                  AI-assistent
+                  AI Assistant
                 </h3>
+                {/* Mobile: Skip to free recording */}
+                {proposedSteps.length === 0 && (
+                  <button
+                    onClick={skipToRecording}
+                    className="text-slate-400 text-xs md:hidden"
+                  >
+                    Skip <i className="fas fa-arrow-right ml-1"></i>
+                  </button>
+                )}
               </div>
 
               {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2 md:space-y-3">
                 {chatMessages.map((msg, idx) => (
                   <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] p-3 rounded-xl text-sm whitespace-pre-line ${
+                    <div className={`max-w-[90%] md:max-w-[85%] p-2.5 md:p-3 rounded-xl text-xs md:text-sm whitespace-pre-line ${
                       msg.role === 'user'
                         ? 'bg-indigo-600 text-white'
                         : 'bg-slate-800 text-slate-100'
@@ -1365,7 +1360,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 ))}
                 {isGeneratingGuide && (
                   <div className="flex justify-start">
-                    <div className="bg-slate-800 text-slate-100 p-3 rounded-xl text-sm">
+                    <div className="bg-slate-800 text-slate-100 p-2.5 md:p-3 rounded-xl text-xs md:text-sm">
                       <i className="fas fa-circle-notch fa-spin mr-2"></i>
                       Thinking...
                     </div>
@@ -1375,21 +1370,21 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               </div>
 
               {/* Chat input */}
-              <div className="p-4 border-t border-slate-800">
+              <div className="p-3 md:p-4 border-t border-slate-800 safe-area-bottom">
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && userInput.trim() && handleSetupChat(userInput.trim())}
-                    placeholder="Describe what you'll record..."
-                    className="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none text-sm"
+                    placeholder="What will you show?"
+                    className="flex-1 bg-slate-800 text-white px-3 md:px-4 py-2.5 md:py-3 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none text-sm"
                     disabled={isGeneratingGuide}
                   />
                   <button
                     onClick={() => userInput.trim() && handleSetupChat(userInput.trim())}
                     disabled={!userInput.trim() || isGeneratingGuide}
-                    className="px-5 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50"
+                    className="px-4 md:px-5 py-2.5 md:py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50"
                   >
                     <i className="fas fa-paper-plane"></i>
                   </button>
@@ -1423,8 +1418,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       {/* SPLIT-SCREEN Recording view - Steps left, Camera right */}
       {(phase === 'setup' || phase === 'recording') && cameraStarted && (
         <div className="absolute inset-0 flex z-25">
-          {/* Left: Steps panel (only if we have steps) */}
-          {proposedSteps.length > 0 && (
+          {/* Left: Steps panel (only if we have steps) - HIDDEN on mobile, shown as overlay */}
+          {proposedSteps.length > 0 && !isMobile && (
             <div className="w-80 bg-slate-900/95 backdrop-blur-sm flex flex-col border-r border-slate-800 z-30">
               {/* Recording indicator */}
               {isRecording && (
@@ -1544,35 +1539,149 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
             </div>
           )}
 
-          {/* Right: Camera area with controls overlay */}
+          {/* MOBILE: Floating current step indicator + controls */}
+          {proposedSteps.length > 0 && isMobile && isRecording && (
+            <div className="absolute top-0 left-0 right-0 z-30 safe-area-top">
+              {/* Recording time bar */}
+              <div className="flex items-center justify-center gap-2 py-2 bg-black/60 backdrop-blur-sm">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                <span className="text-white font-mono text-sm font-bold">{formatTime(recordingTime)}</span>
+              </div>
+
+              {/* Current step card */}
+              <div className="mx-3 mt-2 p-3 bg-indigo-600/90 backdrop-blur-sm rounded-xl">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">{currentRecordingStep + 1}</span>
+                  </div>
+                  <span className="text-white/70 text-xs">of {proposedSteps.length}</span>
+                </div>
+                <p className="text-white font-medium text-sm leading-tight">
+                  {proposedSteps[currentRecordingStep]}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* MOBILE: Bottom controls during recording */}
+          {proposedSteps.length > 0 && isMobile && isRecording && (
+            <div className="absolute bottom-0 left-0 right-0 z-30 safe-area-bottom p-4 bg-gradient-to-t from-black/80 to-transparent">
+              {/* Progress dots */}
+              <div className="flex justify-center gap-1.5 mb-4">
+                {proposedSteps.map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`w-2 h-2 rounded-full ${
+                      idx < currentRecordingStep
+                        ? 'bg-emerald-500'
+                        : idx === currentRecordingStep
+                        ? 'bg-indigo-500'
+                        : 'bg-white/30'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={togglePause}
+                  className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
+                >
+                  <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'}`}></i>
+                </button>
+
+                {currentRecordingStep < proposedSteps.length - 1 ? (
+                  <button
+                    onClick={() => setCurrentRecordingStep(prev => prev + 1)}
+                    className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl"
+                  >
+                    <i className="fas fa-check mr-2"></i>
+                    Next Step
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleStopRecording}
+                    className="px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl"
+                  >
+                    <i className="fas fa-flag-checkered mr-2"></i>
+                    Finish
+                  </button>
+                )}
+
+                <button
+                  onClick={handleStopRecording}
+                  className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center"
+                >
+                  <div className="w-4 h-4 rounded bg-white"></div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* MOBILE: Start recording button (before recording starts) */}
+          {proposedSteps.length > 0 && isMobile && !isRecording && (
+            <div className="absolute inset-0 flex items-center justify-center z-30">
+              <div className="text-center">
+                <button
+                  onClick={() => { setCurrentRecordingStep(0); handleStartRecording(); }}
+                  className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto"
+                >
+                  <div className="w-16 h-16 rounded-full bg-red-500"></div>
+                </button>
+                <p className="text-white/70 text-sm mt-3">{proposedSteps.length} steps to record</p>
+              </div>
+            </div>
+          )}
+
+          {/* Right: Camera area with controls overlay (desktop only when steps exist) */}
           <div className="flex-1 relative">
-            {/* Recording controls overlay */}
-            {!isRecording ? (
+            {/* Recording controls overlay - desktop with steps */}
+            {!isMobile && proposedSteps.length > 0 && (
+              <>
+                {!isRecording ? (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <button
+                        onClick={() => { setCurrentRecordingStep(0); handleStartRecording(); }}
+                        className="w-24 h-24 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto"
+                      >
+                        <div className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-400 transition-colors"></div>
+                      </button>
+                      <p className="text-white/60 text-sm mt-4">Press to start</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 z-30">
+                    <button
+                      onClick={togglePause}
+                      className="w-14 h-14 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
+                    >
+                      <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'} text-lg`}></i>
+                    </button>
+                    <button
+                      onClick={handleStopRecording}
+                      className="w-16 h-16 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center"
+                    >
+                      <div className="w-6 h-6 rounded bg-white"></div>
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Recording controls - no steps (freestyle recording) */}
+            {proposedSteps.length === 0 && !isRecording && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
                   <button
-                    onClick={() => { setCurrentRecordingStep(0); handleStartRecording(); }}
+                    onClick={handleStartRecording}
                     className="w-24 h-24 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto"
                   >
                     <div className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-400 transition-colors"></div>
                   </button>
                   <p className="text-white/60 text-sm mt-4">Press to start</p>
                 </div>
-              </div>
-            ) : (
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 z-30">
-                <button
-                  onClick={togglePause}
-                  className="w-14 h-14 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
-                >
-                  <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'} text-lg`}></i>
-                </button>
-                <button
-                  onClick={handleStopRecording}
-                  className="w-16 h-16 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center"
-                >
-                  <div className="w-6 h-6 rounded bg-white"></div>
-                </button>
               </div>
             )}
           </div>
@@ -1652,24 +1761,25 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       {phase === 'review' && !isReRecording && (
         <div className="absolute inset-0 bg-slate-900 flex flex-col z-30">
           {/* Header */}
-          <div className="p-4 flex items-center justify-between border-b border-slate-800 bg-slate-900/95 backdrop-blur-sm">
-            <button onClick={() => setPhase('setup')} className="text-slate-400 hover:text-white">
-              <i className="fas fa-arrow-left text-xl"></i>
+          <div className="p-3 md:p-4 flex items-center justify-between border-b border-slate-800 bg-slate-900/95 backdrop-blur-sm safe-area-top">
+            <button onClick={() => setPhase('setup')} className="text-slate-400 hover:text-white p-2">
+              <i className="fas fa-arrow-left text-lg"></i>
             </button>
-            <span className="text-white font-bold">Review SOP</span>
+            <span className="text-white font-bold text-sm md:text-base">Review SOP</span>
             <button
               onClick={finalizeSOP}
-              className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 text-sm"
+              className="px-3 py-1.5 md:px-4 md:py-2 bg-emerald-600 text-white font-bold rounded-lg md:rounded-xl hover:bg-emerald-500 text-xs md:text-sm"
             >
-              <i className="fas fa-check mr-2"></i>
-              Finalize
+              <i className="fas fa-check mr-1 md:mr-2"></i>
+              <span className="hidden sm:inline">Finalize</span>
+              <span className="sm:hidden">Done</span>
             </button>
           </div>
 
-          {/* Two-column layout on desktop, tabs on mobile */}
+          {/* Two-column layout on desktop, stacked on mobile */}
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             {/* Left: Draft SOP steps */}
-            <div className="flex-1 overflow-y-auto p-4 md:border-r md:border-slate-800">
+            <div className="flex-1 overflow-y-auto p-3 md:p-4 md:border-r md:border-slate-800">
               <h3 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-4">
                 <i className="fas fa-list-check mr-2"></i>
                 Draft ({draftSOP?.length || 0} steps)
@@ -1678,29 +1788,30 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               {draftSOP && draftSOP.map((step, idx) => (
                 <div
                   key={idx}
-                  className={`mb-3 bg-slate-800/50 rounded-xl p-3 border ${
+                  className={`mb-2 md:mb-3 bg-slate-800/50 rounded-xl p-2 md:p-3 border ${
                     stepsToReRecord.includes(idx)
                       ? 'border-amber-500/50 bg-amber-900/20'
                       : 'border-slate-700'
                   }`}
                 >
-                  <div className="flex gap-3">
+                  <div className="flex gap-2 md:gap-3">
                     <img
                       src={step.thumbnail}
                       alt=""
-                      className="w-24 h-16 object-cover rounded-lg flex-shrink-0"
+                      className="w-16 h-12 md:w-24 md:h-16 object-cover rounded-lg flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-indigo-400 text-xs font-bold">Step {idx + 1}</span>
+                      <div className="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
+                        <span className="text-indigo-400 text-[10px] md:text-xs font-bold">{idx + 1}</span>
                         {stepsToReRecord.includes(idx) && (
-                          <span className="text-amber-400 text-xs">
-                            <i className="fas fa-redo mr-1"></i>Markerad
+                          <span className="text-amber-400 text-[10px] md:text-xs">
+                            <i className="fas fa-redo mr-1"></i>
+                            <span className="hidden md:inline">Marked</span>
                           </span>
                         )}
                       </div>
-                      <p className="text-white text-sm font-medium line-clamp-1">{step.title}</p>
-                      <p className="text-slate-400 text-xs line-clamp-2">{step.description}</p>
+                      <p className="text-white text-xs md:text-sm font-medium line-clamp-1">{step.title}</p>
+                      <p className="text-slate-400 text-[10px] md:text-xs line-clamp-1 md:line-clamp-2 hidden sm:block">{step.description}</p>
                     </div>
                     <button
                       onClick={() => {
@@ -1710,14 +1821,14 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                           setStepsToReRecord(prev => [...prev, idx]);
                         }
                       }}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                         stepsToReRecord.includes(idx)
                           ? 'bg-amber-600 text-white'
                           : 'bg-slate-700 text-slate-400 hover:text-white'
                       }`}
                       title={stepsToReRecord.includes(idx) ? 'Remove mark' : 'Mark for re-recording'}
                     >
-                      <i className={`fas ${stepsToReRecord.includes(idx) ? 'fa-check' : 'fa-redo'} text-xs`}></i>
+                      <i className={`fas ${stepsToReRecord.includes(idx) ? 'fa-check' : 'fa-redo'} text-[10px] md:text-xs`}></i>
                     </button>
                   </div>
                 </div>
@@ -1736,19 +1847,28 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
             </div>
 
             {/* Right: Chat/discussion */}
-            <div className="md:w-96 flex flex-col border-t md:border-t-0 border-slate-800 bg-slate-900/50">
-              <div className="p-3 border-b border-slate-800">
-                <h3 className="text-slate-400 text-sm font-bold">
+            <div className="md:w-96 flex flex-col border-t md:border-t-0 border-slate-800 bg-slate-900/50 min-h-[200px] md:min-h-0">
+              <div className="p-2 md:p-3 border-b border-slate-800 flex items-center justify-between">
+                <h3 className="text-slate-400 text-xs md:text-sm font-bold">
                   <i className="fas fa-comments mr-2"></i>
                   Discuss
                 </h3>
+                {/* Quick actions on mobile */}
+                {isMobile && stepsToReRecord.length === 0 && (
+                  <button
+                    onClick={finalizeSOP}
+                    className="text-emerald-400 text-xs font-bold"
+                  >
+                    Looks good ✓
+                  </button>
+                )}
               </div>
 
               {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-64 md:max-h-none">
+              <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2 md:space-y-3 min-h-[120px] max-h-[200px] md:max-h-none">
                 {reviewChatMessages.map((msg, idx) => (
                   <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] p-3 rounded-xl text-sm whitespace-pre-line ${
+                    <div className={`max-w-[90%] md:max-w-[85%] p-2 md:p-3 rounded-xl text-xs md:text-sm whitespace-pre-line ${
                       msg.role === 'user'
                         ? 'bg-indigo-600 text-white'
                         : 'bg-slate-800 text-slate-100'
@@ -1760,22 +1880,22 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               </div>
 
               {/* Chat input */}
-              <div className="p-3 border-t border-slate-800">
+              <div className="p-2 md:p-3 border-t border-slate-800 safe-area-bottom">
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={reviewInput}
                     onChange={(e) => setReviewInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleReviewChat(reviewInput)}
-                    placeholder="Say e.g. 'redo step 3'..."
-                    className="flex-1 bg-slate-800 text-white px-3 py-2 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none text-sm"
+                    placeholder="e.g. 'redo step 3'..."
+                    className="flex-1 bg-slate-800 text-white px-3 py-2 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none text-xs md:text-sm"
                   />
                   <button
                     onClick={() => handleReviewChat(reviewInput)}
                     disabled={!reviewInput.trim()}
-                    className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50"
+                    className="px-3 md:px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50"
                   >
-                    <i className="fas fa-paper-plane"></i>
+                    <i className="fas fa-paper-plane text-sm"></i>
                   </button>
                 </div>
               </div>
@@ -1788,19 +1908,19 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       {isReRecording && reRecordStepIndex !== null && draftSOP && (
         <div className="absolute inset-0 z-35">
           {/* Video still showing in background */}
-          <div className="absolute top-20 left-4 right-4 z-20">
-            <div className="bg-amber-600/90 backdrop-blur-sm rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold">{reRecordStepIndex + 1}</span>
+          <div className="absolute top-16 md:top-20 left-3 right-3 md:left-4 md:right-4 z-20 safe-area-top">
+            <div className="bg-amber-600/90 backdrop-blur-sm rounded-xl p-3 md:p-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm md:text-base">{reRecordStepIndex + 1}</span>
                 </div>
-                <div className="flex-1">
-                  <p className="text-white/80 text-xs uppercase tracking-wider">Re-recording step</p>
-                  <p className="text-white font-medium">{draftSOP[reRecordStepIndex]?.title}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white/80 text-[10px] md:text-xs uppercase tracking-wider">Re-recording</p>
+                  <p className="text-white font-medium text-sm md:text-base truncate">{draftSOP[reRecordStepIndex]?.title}</p>
                 </div>
                 <button
                   onClick={handleReRecordComplete}
-                  className="px-4 py-2 bg-white text-amber-600 font-bold rounded-lg"
+                  className="px-3 md:px-4 py-1.5 md:py-2 bg-white text-amber-600 font-bold rounded-lg text-sm"
                 >
                   <i className="fas fa-check mr-1"></i>
                   Done
