@@ -7,7 +7,7 @@
 ## ✅ KLART
 
 ### Production Deployment
-- [x] **Frontend live:** https://frameops.vercel.app
+- [x] **Frontend live:** https://frameops.ai
 - [x] **Backend live:** https://frameops-production.up.railway.app
 - [x] **API Docs live:** https://frameops-production.up.railway.app/api/docs
 - [x] GitHub auto-deploy till Vercel (main branch)
@@ -138,8 +138,8 @@ vercel.json                 # Added SPA routing fallback
 
 | Service | URL |
 |---------|-----|
-| Frontend | https://frameops.vercel.app |
-| Creator Page | https://frameops.vercel.app (For Creators link) |
+| Frontend | https://frameops.ai |
+| Creator Page | https://frameops.ai (For Creators link) |
 | API Base | https://frameops-production.up.railway.app/api/v1 |
 | API Docs | https://frameops-production.up.railway.app/api/docs |
 | Health Check | https://frameops-production.up.railway.app/api/v1/health |
