@@ -855,18 +855,26 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 
       const finalTranscript = spokenContext || audioTranscript;
 
-      // Create context - TRANSCRIPT IS PRIMARY SOURCE, but validate against planned steps
+      // Create context - VISUAL CONTENT IS PRIMARY, transcript secondary
       let contextWithTranscript = '';
+
+      // CRITICAL: Force AI to analyze actual visual content
+      const visualValidationPrefix = `CRITICAL INSTRUCTION: You MUST analyze the actual visual content of these ${frames.length} video frames.
+DO NOT generate steps based on the title alone.
+DESCRIBE WHAT YOU ACTUALLY SEE in the images - if you see a computer screen, code, text chat, or something unrelated to "${title}", you must say so.
+If the frames show something completely different from the title (e.g., title says "brush teeth" but frames show a computer screen), respond with steps describing what is ACTUALLY visible, and include a WARNING that the content doesn't match the title.
+
+`;
 
       // Include planned steps for validation
       const plannedStepsContext = proposedSteps.length > 0
-        ? `\n\nPLANNED STEPS (user intended to record these):\n${proposedSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\nIMPORTANT: Compare what you see in the video with the planned steps above. If the video content does NOT match the planned steps (e.g., user filmed something completely different), you MUST note this discrepancy.`
+        ? `\n\nUSER PLANNED STEPS: ${proposedSteps.join(', ')}\nWARNING: If the video content does NOT show these activities, you MUST note this in your response. Do NOT make up steps that aren't visible in the frames.`
         : '';
 
       if (finalTranscript) {
-        contextWithTranscript = `EXPERT TRANSCRIPT (this is the primary source - use what the expert says):\n"""\n${finalTranscript}\n"""\n\nINSTRUCTION: Convert this transcript into a formal step-by-step manual. Each step must be a direct command. The expert's words are the source of truth.${plannedStepsContext}`;
-      } else if (proposedSteps.length > 0) {
-        contextWithTranscript = `User planned to record these steps: ${proposedSteps.join(', ')}. Analyze the actual video content and create steps based on what you SEE, not what was planned. If the video doesn't match the plan, describe what was actually recorded.${plannedStepsContext}`;
+        contextWithTranscript = `${visualValidationPrefix}AUDIO TRANSCRIPT:\n"${finalTranscript}"\n\nUse the transcript to inform step descriptions, but verify that the visual content matches.${plannedStepsContext}`;
+      } else {
+        contextWithTranscript = `${visualValidationPrefix}No audio transcript available. Base your analysis ENTIRELY on what you see in the video frames.${plannedStepsContext}`;
       }
 
       const result = await analyzeSOPFrames(frames, title, contextWithTranscript, [], []);
@@ -1868,12 +1876,12 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
               )}
             </div>
 
-            {/* Right: Chat/discussion */}
-            <div className="md:w-96 flex flex-col border-t md:border-t-0 border-slate-800 bg-slate-900/50 min-h-[200px] md:min-h-0">
-              <div className="p-2 md:p-3 border-b border-slate-800 flex items-center justify-between">
-                <h3 className="text-slate-400 text-xs md:text-sm font-bold">
-                  <i className="fas fa-comments mr-2"></i>
-                  Discuss
+            {/* Right: Chat/discussion - compact on mobile */}
+            <div className="md:w-96 flex flex-col border-t md:border-t-0 border-slate-800 bg-slate-900/50 max-h-[35vh] md:max-h-none md:min-h-0">
+              <div className="p-2 border-b border-slate-800 flex items-center justify-between">
+                <h3 className="text-slate-400 text-[10px] md:text-sm font-bold uppercase">
+                  <i className="fas fa-lightbulb mr-1 text-amber-400"></i>
+                  Tips
                 </h3>
                 {/* Quick actions on mobile */}
                 {isMobile && stepsToReRecord.length === 0 && (
@@ -1881,13 +1889,13 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                     onClick={finalizeSOP}
                     className="text-emerald-400 text-xs font-bold"
                   >
-                    Looks good ✓
+                    OK ✓
                   </button>
                 )}
               </div>
 
-              {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2 md:space-y-3 min-h-[120px] max-h-[200px] md:max-h-none">
+              {/* Chat messages - smaller on mobile with visible scrollbar */}
+              <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-2 max-h-[120px] md:max-h-none scrollbar-thin">
                 {reviewChatMessages.map((msg, idx) => (
                   <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[90%] md:max-w-[85%] p-2 md:p-3 rounded-xl text-xs md:text-sm whitespace-pre-line ${
@@ -1901,23 +1909,23 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
                 ))}
               </div>
 
-              {/* Chat input */}
-              <div className="p-2 md:p-3 border-t border-slate-800 safe-area-bottom">
-                <div className="flex gap-2">
+              {/* Chat input - compact on mobile */}
+              <div className="p-1.5 md:p-3 border-t border-slate-800 safe-area-bottom">
+                <div className="flex gap-1.5">
                   <input
                     type="text"
                     value={reviewInput}
                     onChange={(e) => setReviewInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleReviewChat(reviewInput)}
-                    placeholder="e.g. 'redo step 3'..."
-                    className="flex-1 bg-slate-800 text-white px-3 py-2 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none text-xs md:text-sm"
+                    placeholder="'redo step 3'..."
+                    className="flex-1 bg-slate-800 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl border border-slate-700 focus:border-indigo-500 outline-none text-[11px] md:text-sm"
                   />
                   <button
                     onClick={() => handleReviewChat(reviewInput)}
                     disabled={!reviewInput.trim()}
-                    className="px-3 md:px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50"
+                    className="px-2.5 md:px-4 py-1.5 md:py-2 bg-indigo-600 text-white font-bold rounded-lg md:rounded-xl hover:bg-indigo-500 disabled:opacity-50"
                   >
-                    <i className="fas fa-paper-plane text-sm"></i>
+                    <i className="fas fa-paper-plane text-xs md:text-sm"></i>
                   </button>
                 </div>
               </div>
