@@ -108,13 +108,17 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
                   <img
                     src={user.user_metadata.avatar_url}
                     alt={user.user_metadata.full_name || 'User'}
-                    className="w-9 h-9 rounded-full border-2 border-slate-200"
+                    className="w-9 h-9 rounded-full border-2 border-slate-200 object-cover"
+                    onError={(e) => {
+                      // Fallback to initials if image fails to load
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                    }}
                   />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold">
-                    {(user.email?.[0] || 'U').toUpperCase()}
-                  </div>
-                )}
+                ) : null}
+                <div className={`w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold ${user.user_metadata?.avatar_url ? 'hidden' : ''}`}>
+                  {(user.user_metadata?.full_name?.[0] || user.email?.[0] || 'U').toUpperCase()}
+                </div>
               </button>
 
               {showUserMenu && (
