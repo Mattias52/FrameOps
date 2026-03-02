@@ -53,10 +53,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
   ];
 
   const useCases = [
-    { industry: 'Manufacturing', example: 'Machine setup, maintenance procedures, quality checks', icon: 'fa-industry' },
-    { industry: 'Healthcare', example: 'Clinical procedures, equipment operation, sterilization', icon: 'fa-hospital' },
-    { industry: 'Food Service', example: 'Health code compliance, recipes, cleaning procedures', icon: 'fa-utensils' },
-    { industry: 'Training & HR', example: 'Onboarding, safety training, compliance documentation', icon: 'fa-graduation-cap' },
+    { industry: 'Manufacturing', example: 'Machine setup, maintenance procedures, quality checks', icon: 'fa-industry', view: AppView.MANUFACTURING },
+    { industry: 'Healthcare', example: 'Clinical procedures, equipment operation, sterilization', icon: 'fa-hospital', view: AppView.HEALTHCARE },
+    { industry: 'Food Service', example: 'Health code compliance, recipes, cleaning procedures', icon: 'fa-utensils', view: null },
+    { industry: 'Training & HR', example: 'Onboarding, safety training, compliance documentation', icon: 'fa-graduation-cap', view: AppView.TRAINING },
   ];
 
   const pricing = [
@@ -400,10 +400,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             {useCases.map((useCase, i) => (
-              <div key={i} className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-700 text-sm font-medium">
-                <i className={`fas ${useCase.icon} text-indigo-600`}></i>
-                {useCase.industry}
-              </div>
+              useCase.view ? (
+                <button
+                  key={i}
+                  onClick={() => onNavigate(useCase.view!)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-700 text-sm font-medium hover:border-indigo-300 hover:bg-indigo-50 transition-colors cursor-pointer"
+                >
+                  <i className={`fas ${useCase.icon} text-indigo-600`}></i>
+                  {useCase.industry}
+                  <i className="fas fa-arrow-right text-xs text-slate-400"></i>
+                </button>
+              ) : (
+                <div key={i} className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-700 text-sm font-medium">
+                  <i className={`fas ${useCase.icon} text-indigo-600`}></i>
+                  {useCase.industry}
+                </div>
+              )
             ))}
           </div>
         </div>
