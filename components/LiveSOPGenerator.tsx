@@ -92,6 +92,9 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const [showStepsPanel, setShowStepsPanel] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Language detection - based on user's chat input
+  const [detectedLanguage, setDetectedLanguage] = useState<string>('en');
+
   // Fullscreen image preview
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -708,6 +711,21 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     }
   };
 
+  // Simple language detection based on common words
+  const detectLanguage = (text: string): string => {
+    const lower = text.toLowerCase();
+    // Swedish indicators
+    const swedishWords = ['jag', 'ska', 'hur', 'man', 'och', 'att', 'det', 'en', 'på', 'för', 'med', 'som', 'är', 'av', 'till', 'den', 'har', 'vi', 'kan', 'om', 'så', 'eller', 'när', 'från', 'vara', 'vill', 'göra', 'visa', 'börja', 'sedan', 'efter', 'före', 'steg', 'första', 'nästa'];
+    const swedishCount = swedishWords.filter(w => lower.includes(w)).length;
+
+    // If multiple Swedish words detected, it's Swedish
+    if (swedishCount >= 2) return 'sv';
+    // Check for Swedish characters
+    if (/[åäö]/i.test(text)) return 'sv';
+
+    return 'en';
+  };
+
   // Handle chat message in setup phase - always use structured response
   const handleSetupChat = async (message: string) => {
     if (!message.trim()) return;
@@ -715,6 +733,13 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     setUserInput(''); // Clear input immediately
     setIsGeneratingGuide(true);
     setChatMessages(prev => [...prev, { role: 'user', content: message }]);
+
+    // Detect language from user's message
+    const lang = detectLanguage(message);
+    if (detectedLanguage !== lang) {
+      setDetectedLanguage(lang);
+      console.log('Detected language:', lang);
+    }
 
     // Set title from first message if not set
     if (!title) {
@@ -729,7 +754,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
           message,
           phase: 'setup',
           steps: proposedSteps.map(s => ({ title: s, description: s })),
-          previousMessages: chatMessages.slice(-6)
+          previousMessages: chatMessages.slice(-6),
+          language: lang // Pass detected language to backend
         })
       });
 
@@ -858,8 +884,15 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       // Create context - VISUAL CONTENT IS PRIMARY, transcript secondary
       let contextWithTranscript = '';
 
+      // Language instruction based on detected language
+      const languageInstruction = detectedLanguage === 'sv'
+        ? 'LANGUAGE: Respond in Swedish (Svenska). All step titles and descriptions must be in Swedish.'
+        : 'LANGUAGE: Respond in English. All step titles and descriptions must be in English.';
+
       // CRITICAL: Force AI to analyze actual visual content
-      const visualValidationPrefix = `CRITICAL INSTRUCTION: You MUST analyze the actual visual content of these ${frames.length} video frames.
+      const visualValidationPrefix = `${languageInstruction}
+
+CRITICAL INSTRUCTION: You MUST analyze the actual visual content of these ${frames.length} video frames.
 DO NOT generate steps based on the title alone.
 DESCRIBE WHAT YOU ACTUALLY SEE in the images - if you see a computer screen, code, text chat, or something unrelated to "${title}", you must say so.
 If the frames show something completely different from the title (e.g., title says "brush teeth" but frames show a computer screen), respond with steps describing what is ACTUALLY visible, and include a WARNING that the content doesn't match the title.
