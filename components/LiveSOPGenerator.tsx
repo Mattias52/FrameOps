@@ -855,15 +855,18 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 
       const finalTranscript = spokenContext || audioTranscript;
 
-      // Create context - TRANSCRIPT IS PRIMARY SOURCE
+      // Create context - TRANSCRIPT IS PRIMARY SOURCE, but validate against planned steps
       let contextWithTranscript = '';
+
+      // Include planned steps for validation
+      const plannedStepsContext = proposedSteps.length > 0
+        ? `\n\nPLANNED STEPS (user intended to record these):\n${proposedSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\nIMPORTANT: Compare what you see in the video with the planned steps above. If the video content does NOT match the planned steps (e.g., user filmed something completely different), you MUST note this discrepancy.`
+        : '';
+
       if (finalTranscript) {
-        contextWithTranscript = `EXPERT TRANSCRIPT (this is the primary source - use what the expert says):\n"""\n${finalTranscript}\n"""\n\nINSTRUCTION: Convert this transcript into a formal step-by-step manual. Each step must be a direct command. The expert's words are the source of truth.`;
-      } else {
-        // Add soft tips if user provided description
-        if (softTips.length > 0) {
-          contextWithTranscript = `User mentioned they would show: ${softTips.join(', ')}. But analyze the actual video content to create steps.`;
-        }
+        contextWithTranscript = `EXPERT TRANSCRIPT (this is the primary source - use what the expert says):\n"""\n${finalTranscript}\n"""\n\nINSTRUCTION: Convert this transcript into a formal step-by-step manual. Each step must be a direct command. The expert's words are the source of truth.${plannedStepsContext}`;
+      } else if (proposedSteps.length > 0) {
+        contextWithTranscript = `User planned to record these steps: ${proposedSteps.join(', ')}. Analyze the actual video content and create steps based on what you SEE, not what was planned. If the video doesn't match the plan, describe what was actually recorded.${plannedStepsContext}`;
       }
 
       const result = await analyzeSOPFrames(frames, title, contextWithTranscript, [], []);
@@ -911,7 +914,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     }
   };
 
-  // Get AI feedback on draft SOP
+  // Get AI feedback on draft SOP - compare with planned steps
   const getAIFeedbackOnDraft = async (steps: SOPStep[], transcript: string): Promise<string[]> => {
     try {
       const response = await fetch('https://frameops-production.up.railway.app/review-sop', {
@@ -919,6 +922,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           steps: steps.map(s => ({ title: s.title, description: s.description })),
+          plannedSteps: proposedSteps, // Include what was planned
           transcript,
           frameCount: allFramesRef.current.length
         })
@@ -930,6 +934,23 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       }
     } catch (error) {
       console.error('Error getting AI feedback:', error);
+    }
+
+    // Local validation if API fails - check if recorded matches planned
+    if (proposedSteps.length > 0 && steps.length > 0) {
+      const recordedTitles = steps.map(s => s.title.toLowerCase());
+      const plannedTitles = proposedSteps.map(s => s.toLowerCase());
+
+      // Simple check: do any recorded steps mention keywords from planned steps?
+      const hasMatch = plannedTitles.some(planned =>
+        recordedTitles.some(recorded =>
+          planned.split(' ').some(word => word.length > 3 && recorded.includes(word))
+        )
+      );
+
+      if (!hasMatch) {
+        return [`⚠️ Warning: The recording doesn't seem to match your plan. You planned to show "${proposedSteps[0]}" but I detected different content. Consider re-recording.`];
+      }
     }
     return [];
   };
@@ -1163,14 +1184,15 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black">
-      {/* Full screen video */}
+    <div className="fixed inset-0 z-50 bg-black overflow-hidden" style={{ width: '100vw', height: '100dvh' }}>
+      {/* Full screen video - use dvh for mobile viewport */}
       <video
         ref={videoRef}
         autoPlay
         muted
         playsInline
         className="absolute inset-0 w-full h-full object-cover"
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       />
       <canvas ref={canvasRef} className="hidden" />
 
