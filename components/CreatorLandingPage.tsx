@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AppView } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,7 +8,15 @@ interface CreatorLandingPageProps {
 }
 
 const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, onNavigate }) => {
-  const { user, signInGoogle } = useAuth();
+  const { user, loading, signInGoogle } = useAuth();
+
+  // Auto-enter app when user is logged in (e.g., after OAuth redirect)
+  useEffect(() => {
+    if (!loading && user) {
+      console.log('User logged in, auto-entering app');
+      onGetStarted();
+    }
+  }, [user, loading, onGetStarted]);
 
   const useCases = [
     {
