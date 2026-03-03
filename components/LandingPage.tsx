@@ -193,7 +193,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                 View Pricing
               </button>
             </div>
-            <p className="mt-6 text-sm text-slate-500">
+            <p className="mt-6 text-sm text-slate-600">
               <i className="fas fa-check-circle text-emerald-500 mr-1"></i>
               No credit card required
               <span className="mx-3 text-slate-300">|</span>
@@ -221,7 +221,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                       </div>
                       <div>
                         <p className="font-semibold text-slate-900">Machine Setup Procedure</p>
-                        <p className="text-xs text-slate-500">12 steps extracted</p>
+                        <p className="text-xs text-slate-600">12 steps extracted</p>
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -238,14 +238,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                   </div>
                   <div className="space-y-4">
                     <div className="bg-white rounded-xl p-4 shadow-sm">
-                      <p className="text-xs font-semibold text-slate-500 mb-2">PPE Required</p>
+                      <p className="text-xs font-semibold text-slate-600 mb-2">PPE Required</p>
                       <div className="flex flex-wrap gap-2">
                         <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs">Safety Glasses</span>
                         <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs">Gloves</span>
                       </div>
                     </div>
                     <div className="bg-white rounded-xl p-4 shadow-sm">
-                      <p className="text-xs font-semibold text-slate-500 mb-2">Tools Detected</p>
+                      <p className="text-xs font-semibold text-slate-600 mb-2">Tools Detected</p>
                       <div className="flex flex-wrap gap-2">
                         <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs">Wrench</span>
                         <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs">Torque Driver</span>
@@ -453,7 +453,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                     {plan.price === 'Custom' ? '' : '$'}{plan.price}
                   </span>
                   {plan.period && (
-                    <span className={plan.highlighted ? 'text-indigo-200' : 'text-slate-500'}>
+                    <span className={plan.highlighted ? 'text-indigo-200' : 'text-slate-600'}>
                       {plan.period}
                     </span>
                   )}
@@ -501,7 +501,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
             <i className="fas fa-rocket mr-2"></i>
             Get Started Free
           </button>
-          <p className="mt-6 text-slate-500 text-sm">
+          <p className="mt-6 text-slate-600 text-sm">
             No credit card required. Preview any video instantly.
           </p>
         </div>
@@ -522,7 +522,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
               <button onClick={() => onNavigate(AppView.TERMS)} className="hover:text-white transition-colors">Terms of Service</button>
               <a href="mailto:support@frameops.ai" className="hover:text-white transition-colors">Contact</a>
             </div>
-            <p className="text-slate-500 text-sm">
+            <p className="text-slate-600 text-sm">
               &copy; {new Date().getFullYear()} FrameOps. All rights reserved.
             </p>
           </div>
