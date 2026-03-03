@@ -18,6 +18,15 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
     }
   }, [user, loading, onGetStarted]);
 
+  // SEO for creator page
+  useEffect(() => {
+    document.title = 'FrameOps for Creators - Turn Your Videos Into Downloadable Guides';
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) {
+      metaDesc.setAttribute('content', 'Give your followers more than just videos. Turn your YouTube tutorials into professional step-by-step guides they can download and follow. Free, takes minutes.');
+    }
+  }, []);
+
   const useCases = [
     {
       icon: "fa-hammer",
