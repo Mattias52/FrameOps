@@ -1,20 +1,22 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { AppView, SOP } from './types';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import Dashboard from './components/Dashboard';
-import SOPGenerator from './components/SOPGenerator';
-import LiveSOPGenerator from './components/LiveSOPGenerator';
-import SOPLibrary from './components/SOPLibrary';
-import SubscriptionPlans from './components/SubscriptionPlans';
-import ErrorBoundary from './components/ErrorBoundary';
 import LandingPage from './components/LandingPage';
-import CreatorLandingPage from './components/CreatorLandingPage';
-import IndustryPage from './components/IndustryPage';
-import APIKeysPage from './components/APIKeysPage';
-import PrivacyPage from './components/PrivacyPage';
-import TermsPage from './components/TermsPage';
+import ErrorBoundary from './components/ErrorBoundary';
+
+// Lazy load components not needed for landing page
+const Sidebar = lazy(() => import('./components/Sidebar'));
+const Header = lazy(() => import('./components/Header'));
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const SOPGenerator = lazy(() => import('./components/SOPGenerator'));
+const LiveSOPGenerator = lazy(() => import('./components/LiveSOPGenerator'));
+const SOPLibrary = lazy(() => import('./components/SOPLibrary'));
+const SubscriptionPlans = lazy(() => import('./components/SubscriptionPlans'));
+const CreatorLandingPage = lazy(() => import('./components/CreatorLandingPage'));
+const IndustryPage = lazy(() => import('./components/IndustryPage'));
+const APIKeysPage = lazy(() => import('./components/APIKeysPage'));
+const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
+const TermsPage = lazy(() => import('./components/TermsPage'));
 import { fetchSOPsList, fetchSOPSteps, saveSOP, isSupabaseConfigured } from './services/supabaseService';
 import { getSubscriptionStatus, checkPaymentStatus, getSOPUsage, incrementSOPUsage } from './services/stripeService';
 import { useAuth } from './contexts/AuthContext';
@@ -255,30 +257,37 @@ const App: React.FC = () => {
     return <LandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
   }
 
+  // Lazy-loaded pages - wrap in Suspense
+  const LazyFallback = (
+    <div className="flex h-screen bg-slate-50 items-center justify-center">
+      <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
+
   // Creator landing page - show without app chrome
   if (currentView === AppView.CREATOR_LANDING) {
-    return <CreatorLandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
+    return <Suspense fallback={LazyFallback}><CreatorLandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} /></Suspense>;
   }
 
   // Privacy page - show without app chrome
   if (currentView === AppView.PRIVACY) {
-    return <PrivacyPage onNavigate={setCurrentView} />;
+    return <Suspense fallback={LazyFallback}><PrivacyPage onNavigate={setCurrentView} /></Suspense>;
   }
 
   // Terms page - show without app chrome
   if (currentView === AppView.TERMS) {
-    return <TermsPage onNavigate={setCurrentView} />;
+    return <Suspense fallback={LazyFallback}><TermsPage onNavigate={setCurrentView} /></Suspense>;
   }
 
   // Industry SEO pages - show without app chrome
   if (currentView === AppView.MANUFACTURING) {
-    return <IndustryPage industry="manufacturing" onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
+    return <Suspense fallback={LazyFallback}><IndustryPage industry="manufacturing" onNavigate={setCurrentView} onGetStarted={handleEnterApp} /></Suspense>;
   }
   if (currentView === AppView.HEALTHCARE) {
-    return <IndustryPage industry="healthcare" onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
+    return <Suspense fallback={LazyFallback}><IndustryPage industry="healthcare" onNavigate={setCurrentView} onGetStarted={handleEnterApp} /></Suspense>;
   }
   if (currentView === AppView.TRAINING) {
-    return <IndustryPage industry="training" onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
+    return <Suspense fallback={LazyFallback}><IndustryPage industry="training" onNavigate={setCurrentView} onGetStarted={handleEnterApp} /></Suspense>;
   }
 
   // Loading screen
@@ -294,6 +303,7 @@ const App: React.FC = () => {
   }
 
   return (
+    <Suspense fallback={LazyFallback}>
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Sidebar
         currentView={currentView}
@@ -366,6 +376,7 @@ const App: React.FC = () => {
         </div>
       )}
     </div>
+    </Suspense>
   );
 };
 
