@@ -205,55 +205,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
           {/* Hero Image/Demo */}
           <div className="mt-16 relative">
             <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10 pointer-events-none"></div>
-            <div className="bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-800">
-              <div className="flex items-center gap-2 px-4 py-3 bg-slate-800 border-b border-slate-700">
-                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                <span className="ml-4 text-slate-400 text-sm">FrameOps Dashboard</span>
-              </div>
-              <div className="p-6 bg-slate-50">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-2 bg-white rounded-xl p-4 shadow-sm">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                        <i className="fas fa-video text-indigo-600"></i>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-900">Machine Setup Procedure</p>
-                        <p className="text-xs text-slate-600">12 steps extracted</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg">
-                          <div className="w-16 h-10 bg-slate-200 rounded"></div>
-                          <div className="flex-1">
-                            <div className="h-3 bg-slate-200 rounded w-3/4 mb-1"></div>
-                            <div className="h-2 bg-slate-100 rounded w-1/2"></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="bg-white rounded-xl p-4 shadow-sm">
-                      <p className="text-xs font-semibold text-slate-600 mb-2">PPE Required</p>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs">Safety Glasses</span>
-                        <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs">Gloves</span>
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-xl p-4 shadow-sm">
-                      <p className="text-xs font-semibold text-slate-600 mb-2">Tools Detected</p>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs">Wrench</span>
-                        <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs">Torque Driver</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+              <img
+                src="/dashboard-screenshot.png"
+                alt="FrameOps Dashboard showing SOPs with AI-extracted steps"
+                className="w-full h-auto"
+                loading="eager"
+              />
             </div>
           </div>
         </div>
