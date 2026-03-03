@@ -202,19 +202,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
             </p>
           </div>
 
-          {/* Hero Image/Demo */}
-          <div className="mt-16 relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10 pointer-events-none"></div>
-            <div className="rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
-              <img
-                src="/dashboard-screenshot.png"
-                alt="FrameOps Dashboard showing SOPs with AI-extracted steps"
-                className="w-full h-auto"
-                loading="eager"
-              />
-            </div>
-          </div>
-        </div>
+                  </div>
       </section>
 
       {/* Live SOP Feature Highlight */}
