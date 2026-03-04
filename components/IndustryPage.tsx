@@ -16,27 +16,22 @@ interface IndustryConfig {
 const industries: Record<string, IndustryConfig> = {
   manufacturing: {
     industry: 'Manufacturing',
-    headline: 'Turn Factory Floor Videos into Professional SOPs',
-    subheadline: 'AI-powered standard operating procedures for machine setup, maintenance, and quality control. Reduce training time by 60%.',
-    heroImage: 'fa-industry',
-    keywords: ['manufacturing sop software', 'factory sop generator', 'machine setup procedures', 'quality control documentation'],
+    headline: 'Film Your Repairs. Get Documentation.',
+    subheadline: 'Built by a service technician who got tired of filming repairs and never turning them into actual guides. Now you can.',
+    heroImage: 'fa-wrench',
+    keywords: ['manufacturing sop software', 'repair documentation', 'maintenance procedures', 'service technician tools'],
     benefits: [
-      { icon: 'fa-clock', title: 'Save 10+ Hours Per SOP', description: 'Record once, get complete documentation. No more writing procedures from scratch.' },
-      { icon: 'fa-shield-halved', title: 'Automatic Safety Detection', description: 'AI identifies PPE requirements, hazards, and safety steps from your videos.' },
-      { icon: 'fa-language', title: 'Multi-Language Support', description: 'Generate SOPs in any language for your global workforce.' },
-      { icon: 'fa-file-pdf', title: 'Print-Ready PDFs', description: 'Professional documentation ready for the shop floor or audits.' }
+      { icon: 'fa-video', title: 'Just Film It', description: 'Do the repair like you normally would. Your phone camera is enough.' },
+      { icon: 'fa-magic', title: 'AI Does The Rest', description: 'Scene detection finds the key steps. Audio captures what you say. Done.' },
+      { icon: 'fa-share', title: 'Share With The Team', description: 'Send the guide to colleagues or new techs. No more explaining the same thing twice.' },
+      { icon: 'fa-file-pdf', title: 'Export to PDF', description: 'Print it out for the shop floor if you need to.' }
     ],
     useCases: [
-      { title: 'Machine Setup & Changeover', description: 'Document complex setup procedures with visual step-by-step guides.' },
-      { title: 'Preventive Maintenance', description: 'Create maintenance checklists with photos from actual procedures.' },
-      { title: 'Quality Inspections', description: 'Standardize inspection processes with clear visual references.' },
-      { title: 'New Employee Training', description: 'Onboard faster with video-based SOPs they can follow along.' }
-    ],
-    testimonial: {
-      quote: 'We reduced our SOP creation time from 8 hours to 30 minutes. Game changer for our lean initiatives.',
-      author: 'Operations Manager',
-      role: 'Automotive Parts Manufacturer'
-    }
+      { title: 'That Tricky Adjustment', description: 'The one you always forget how you did it last time. Film it once, have it forever.' },
+      { title: 'Training New Techs', description: 'Stop explaining the same repair for the 100th time. Send them the guide.' },
+      { title: 'Maintenance Procedures', description: 'Document how YOU do it, so others can follow your method.' },
+      { title: 'Cover Your Ass', description: 'When someone asks "how did you fix that?" - you have proof.' }
+    ]
   },
   healthcare: {
     industry: 'Healthcare',
@@ -228,7 +223,7 @@ const IndustryPage: React.FC<IndustryPageProps> = ({ industry, onNavigate, onGet
           Ready to Transform Your {config.industry} Documentation?
         </h2>
         <p className="text-slate-400 mb-8">
-          Join thousands of professionals creating better SOPs with AI.
+          Free during beta. No credit card required.
         </p>
         <button
           onClick={onGetStarted}
@@ -242,7 +237,7 @@ const IndustryPage: React.FC<IndustryPageProps> = ({ industry, onNavigate, onGet
       <footer className="px-6 py-8 border-t border-white/10">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-slate-500 text-sm">
-            &copy; 2025 FrameOps. AI-powered SOP generation.
+            &copy; 2026 FrameOps. AI-powered SOP generation.
           </p>
           <div className="flex gap-6">
             <button onClick={() => onNavigate(AppView.PRIVACY)} className="text-slate-500 hover:text-white text-sm">
