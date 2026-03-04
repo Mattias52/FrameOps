@@ -711,7 +711,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                   <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700 rounded-full" style={{ width: `${progress}%` }}></div>
                   </div>
-                  <p className="text-slate-400 text-xs">This usually takes 1-2 minutes</p>
+                  <p className="text-slate-400 text-xs">This usually takes 2-5 minutes</p>
                 </div>
               </div>
             ) : (

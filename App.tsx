@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { AppView, SOP } from './types';
 import LandingPage from './components/LandingPage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -93,9 +93,24 @@ const App: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const INITIAL_LOAD = 20;
 
+  // Track if initial load is done to avoid unmounting components during reload
+  const initialLoadDoneRef = useRef(false);
+  // Track last user ID to prevent duplicate loads
+  const lastUserIdRef = useRef<string | null | undefined>(undefined);
+
   useEffect(() => {
+    // Only reload if user actually changed (not just object reference)
+    const currentUserId = user?.id ?? null;
+    if (initialLoadDoneRef.current && lastUserIdRef.current === currentUserId) {
+      return; // Skip reload - same user
+    }
+    lastUserIdRef.current = currentUserId;
+
     const loadData = async () => {
-      setIsLoading(true);
+      // Only show full-screen loading on initial load, not on reloads
+      if (!initialLoadDoneRef.current) {
+        setIsLoading(true);
+      }
 
       if (isSupabaseConfigured()) {
         // Load from Supabase - only metadata first (no steps)
@@ -114,6 +129,7 @@ const App: React.FC = () => {
       }
 
       setIsLoading(false);
+      initialLoadDoneRef.current = true;
     };
 
     loadData();
