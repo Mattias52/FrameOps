@@ -170,10 +170,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
               Powered by Advanced AI
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-tight mb-6">
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-tight mb-4">
               Turn Videos Into <br />
               <span className="text-indigo-600">Professional SOPs</span>
             </h1>
+            <p className="text-slate-500 text-lg mb-6 italic">
+              SOPs, tutorials, manuals, how-to guides — whatever you call them.
+            </p>
             <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
               <strong className="text-slate-900">Record live</strong> with your phone, <strong className="text-slate-900">upload a video</strong>, or <strong className="text-slate-900">paste a YouTube link</strong> — AI creates the SOP in minutes.
             </p>
