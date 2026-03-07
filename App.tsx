@@ -40,6 +40,7 @@ const getViewFromUrl = (): AppView | null => {
 const App: React.FC = () => {
   const { user, signInGoogle } = useAuth();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [startWithScreenMode, setStartWithScreenMode] = useState(false);
 
   // Check if user has entered the app before
   const hasVisited = typeof window !== 'undefined' && window.localStorage.getItem('frameops_visited');
@@ -217,7 +218,14 @@ const App: React.FC = () => {
           <ErrorBoundary>
             <SOPGenerator
               onComplete={handleAddSOP}
-              onLiveMode={() => setCurrentView(AppView.LIVE_GENERATOR)}
+              onLiveMode={() => {
+                setStartWithScreenMode(false);
+                setCurrentView(AppView.LIVE_GENERATOR);
+              }}
+              onScreenMode={() => {
+                setStartWithScreenMode(true);
+                setCurrentView(AppView.LIVE_GENERATOR);
+              }}
               onNavigateToLibrary={() => setCurrentView(AppView.LIBRARY)}
               onOpenSOP={(sopId) => {
                 setSelectedSopId(sopId);
@@ -236,8 +244,13 @@ const App: React.FC = () => {
               onComplete={(sop) => {
                 handleAddSOP(sop);
                 setCurrentView(AppView.LIBRARY);
+                setStartWithScreenMode(false);
               }}
-              onCancel={() => setCurrentView(AppView.GENERATOR)}
+              onCancel={() => {
+                setCurrentView(AppView.GENERATOR);
+                setStartWithScreenMode(false);
+              }}
+              startWithScreenMode={startWithScreenMode}
               freeSOPsRemaining={freeSOPsRemaining}
               isPro={isPro}
               onUpgrade={() => setCurrentView(AppView.SUBSCRIPTION)}

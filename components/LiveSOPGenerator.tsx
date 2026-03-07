@@ -5,6 +5,7 @@ import { analyzeSOPFrames, transcribeAudioFile } from '../services/geminiService
 interface LiveSOPGeneratorProps {
   onComplete: (sop: SOP) => void;
   onCancel: () => void;
+  startWithScreenMode?: boolean;
   freeSOPsRemaining?: number;
   isPro?: boolean;
   onUpgrade?: () => void;
@@ -35,6 +36,7 @@ interface ChatMessage {
 const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   onComplete,
   onCancel,
+  startWithScreenMode = false,
   freeSOPsRemaining = 3,
   isPro = false,
   onUpgrade
@@ -103,7 +105,17 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   // Recording mode: camera or screen
-  const [recordingMode, setRecordingMode] = useState<'camera' | 'screen' | null>(null);
+  const [recordingMode, setRecordingMode] = useState<'camera' | 'screen' | null>(
+    startWithScreenMode ? 'screen' : null
+  );
+
+  // If starting with screen mode, skip to recording phase and start screen capture
+  useEffect(() => {
+    if (startWithScreenMode && phase === 'setup') {
+      setPhase('recording');
+      startScreenCapture();
+    }
+  }, [startWithScreenMode]);
 
   // Scene detection settings (user-controllable)
   const [sceneSensitivity, setSceneSensitivity] = useState(50); // 0-100, 50 = balanced

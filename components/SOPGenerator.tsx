@@ -8,6 +8,7 @@ import { extractYoutubeId, fetchYoutubeMetadata, extractFramesFromUploadedVideo,
 interface SOPGeneratorProps {
   onComplete: (sop: SOP) => void;
   onLiveMode?: () => void;
+  onScreenMode?: () => void;
   onNavigateToLibrary?: () => void;
   onOpenSOP?: (sopId: string) => void;
   freeSOPsRemaining?: number;
@@ -18,6 +19,7 @@ interface SOPGeneratorProps {
 const SOPGenerator: React.FC<SOPGeneratorProps> = ({
   onComplete,
   onLiveMode,
+  onScreenMode,
   onNavigateToLibrary,
   onOpenSOP,
   freeSOPsRemaining = 3,
@@ -27,7 +29,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
   const canCreate = isPro || freeSOPsRemaining > 0;
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [createdSopId, setCreatedSopId] = useState<string | null>(null);
-  const [sourceType, setSourceType] = useState<'live' | 'upload' | 'youtube' | null>(null);
+  const [sourceType, setSourceType] = useState<'live' | 'upload' | 'youtube' | 'screen' | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -404,62 +406,81 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
           )}
 
           {/* Source Type Selection */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {/* Live Recording Card */}
             <button
               type="button"
               onClick={() => setSourceType('live')}
-              className={`group relative rounded-2xl p-6 text-center transition-all ${
+              className={`group relative rounded-2xl p-4 text-center transition-all ${
                 sourceType === 'live'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
                   : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent hover:border-indigo-200'
               }`}
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-all ${
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2 transition-all ${
                 sourceType === 'live' ? 'bg-white/20' : 'bg-slate-200 group-hover:bg-indigo-100'
               }`}>
-                <i className={`fas fa-video text-lg ${sourceType === 'live' ? 'text-white' : 'text-slate-500 group-hover:text-indigo-600'}`}></i>
+                <i className={`fas fa-video text-base ${sourceType === 'live' ? 'text-white' : 'text-slate-500 group-hover:text-indigo-600'}`}></i>
               </div>
-              <p className={`text-sm font-bold ${sourceType === 'live' ? 'text-white' : 'text-slate-900'}`}>Live</p>
-              <p className={`text-[10px] mt-1 ${sourceType === 'live' ? 'text-indigo-200' : 'text-slate-400'}`}>Spela in nu</p>
+              <p className={`text-sm font-bold ${sourceType === 'live' ? 'text-white' : 'text-slate-900'}`}>Camera</p>
+              <p className={`text-[10px] mt-0.5 ${sourceType === 'live' ? 'text-indigo-200' : 'text-slate-400'}`}>Film yourself</p>
+            </button>
+
+            {/* Screen Recording Card */}
+            <button
+              type="button"
+              onClick={() => setSourceType('screen')}
+              className={`group relative rounded-2xl p-4 text-center transition-all ${
+                sourceType === 'screen'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
+                  : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent hover:border-indigo-200'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2 transition-all ${
+                sourceType === 'screen' ? 'bg-white/20' : 'bg-slate-200 group-hover:bg-indigo-100'
+              }`}>
+                <i className={`fas fa-desktop text-base ${sourceType === 'screen' ? 'text-white' : 'text-slate-500 group-hover:text-indigo-600'}`}></i>
+              </div>
+              <p className={`text-sm font-bold ${sourceType === 'screen' ? 'text-white' : 'text-slate-900'}`}>Screen</p>
+              <p className={`text-[10px] mt-0.5 ${sourceType === 'screen' ? 'text-indigo-200' : 'text-slate-400'}`}>Record screen</p>
             </button>
 
             {/* Upload Card */}
             <button
               type="button"
               onClick={() => setSourceType('upload')}
-              className={`group relative rounded-2xl p-6 text-center transition-all ${
+              className={`group relative rounded-2xl p-4 text-center transition-all ${
                 sourceType === 'upload'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
                   : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent hover:border-indigo-200'
               }`}
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-all ${
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2 transition-all ${
                 sourceType === 'upload' ? 'bg-white/20' : 'bg-slate-200 group-hover:bg-indigo-100'
               }`}>
-                <i className={`fas fa-cloud-upload-alt text-lg ${sourceType === 'upload' ? 'text-white' : 'text-slate-500 group-hover:text-indigo-600'}`}></i>
+                <i className={`fas fa-cloud-upload-alt text-base ${sourceType === 'upload' ? 'text-white' : 'text-slate-500 group-hover:text-indigo-600'}`}></i>
               </div>
-              <p className={`text-sm font-bold ${sourceType === 'upload' ? 'text-white' : 'text-slate-900'}`}>Ladda upp</p>
-              <p className={`text-[10px] mt-1 ${sourceType === 'upload' ? 'text-indigo-200' : 'text-slate-400'}`}>MP4, MOV, WebM</p>
+              <p className={`text-sm font-bold ${sourceType === 'upload' ? 'text-white' : 'text-slate-900'}`}>Upload</p>
+              <p className={`text-[10px] mt-0.5 ${sourceType === 'upload' ? 'text-indigo-200' : 'text-slate-400'}`}>MP4, MOV</p>
             </button>
 
             {/* YouTube Card */}
             <button
               type="button"
               onClick={() => setSourceType('youtube')}
-              className={`group relative rounded-2xl p-6 text-center transition-all ${
+              className={`group relative rounded-2xl p-4 text-center transition-all ${
                 sourceType === 'youtube'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
                   : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent hover:border-indigo-200'
               }`}
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-all ${
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2 transition-all ${
                 sourceType === 'youtube' ? 'bg-white/20' : 'bg-slate-200 group-hover:bg-rose-100'
               }`}>
-                <i className={`fab fa-youtube text-lg ${sourceType === 'youtube' ? 'text-white' : 'text-rose-500'}`}></i>
+                <i className={`fab fa-youtube text-base ${sourceType === 'youtube' ? 'text-white' : 'text-rose-500'}`}></i>
               </div>
               <p className={`text-sm font-bold ${sourceType === 'youtube' ? 'text-white' : 'text-slate-900'}`}>YouTube</p>
-              <p className={`text-[10px] mt-1 ${sourceType === 'youtube' ? 'text-indigo-200' : 'text-slate-400'}`}>Paste link</p>
+              <p className={`text-[10px] mt-0.5 ${sourceType === 'youtube' ? 'text-indigo-200' : 'text-slate-400'}`}>Paste link</p>
             </button>
           </div>
 
@@ -475,8 +496,22 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                   <div className="w-16 h-16 bg-rose-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-rose-200">
                     <i className="fas fa-circle text-2xl"></i>
                   </div>
-                  <p className="text-lg font-bold text-slate-900">Start Recording</p>
-                  <p className="text-sm text-slate-500 mt-1">Click to open camera and start recording</p>
+                  <p className="text-lg font-bold text-slate-900">Start Camera Recording</p>
+                  <p className="text-sm text-slate-500 mt-1">Film yourself or your work with camera</p>
+                </div>
+              )}
+
+              {/* Screen - Start Screen Recording */}
+              {sourceType === 'screen' && (
+                <div
+                  onClick={onScreenMode || onLiveMode}
+                  className="border-2 border-dashed border-indigo-300 bg-indigo-50/50 rounded-2xl p-8 text-center cursor-pointer hover:bg-indigo-50 transition-all"
+                >
+                  <div className="w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
+                    <i className="fas fa-desktop text-2xl"></i>
+                  </div>
+                  <p className="text-lg font-bold text-slate-900">Start Screen Recording</p>
+                  <p className="text-sm text-slate-500 mt-1">Record your screen for software tutorials</p>
                 </div>
               )}
 
