@@ -1936,8 +1936,8 @@ If the frames show something completely different from the title (e.g., title sa
               </>
             )}
 
-            {/* Recording controls - no steps (freestyle recording) */}
-            {proposedSteps.length === 0 && !isRecording && (
+            {/* Recording controls - no steps (freestyle recording) - NOT for screen mode (has its own UI) */}
+            {proposedSteps.length === 0 && !isRecording && recordingMode !== 'screen' && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
                   <button
