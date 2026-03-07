@@ -212,7 +212,16 @@ const App: React.FC = () => {
       case AppView.LANDING:
         return <LandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
       case AppView.DASHBOARD:
-        return <Dashboard sops={sops} onNavigate={setCurrentView} />;
+        return (
+          <Dashboard
+            sops={sops}
+            onNavigate={setCurrentView}
+            onScreenMode={() => {
+              setStartWithScreenMode(true);
+              setCurrentView(AppView.LIVE_GENERATOR);
+            }}
+          />
+        );
       case AppView.GENERATOR:
         return (
           <ErrorBoundary>

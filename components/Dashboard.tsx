@@ -4,9 +4,10 @@ import { SOP, AppView } from '../types';
 interface DashboardProps {
   sops: SOP[];
   onNavigate: (view: AppView) => void;
+  onScreenMode?: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode }) => {
   // Calculate real stats from actual data (use numSteps for lazy loaded SOPs)
   const totalSteps = sops.reduce((sum, sop) => sum + (sop.numSteps || sop.steps?.length || 0), 0);
   const youtubeSOPs = sops.filter(s => s.source === 'youtube' || s.sourceType === 'youtube').length;
@@ -21,25 +22,32 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate }) => {
 
   const quickActions = [
     {
+      title: 'Camera Recording',
+      description: 'Film yourself or physical tasks',
+      icon: 'fa-video',
+      color: 'bg-emerald-500',
+      action: () => onNavigate(AppView.LIVE_GENERATOR)
+    },
+    {
+      title: 'Screen Recording',
+      description: 'Record your screen for tutorials',
+      icon: 'fa-desktop',
+      color: 'bg-purple-500',
+      action: onScreenMode || (() => onNavigate(AppView.LIVE_GENERATOR))
+    },
+    {
       title: 'Upload Video',
-      description: 'Upload an MP4, MOV, or WebM file',
+      description: 'Upload MP4, MOV, or WebM',
       icon: 'fa-upload',
       color: 'bg-indigo-500',
       action: () => onNavigate(AppView.GENERATOR)
     },
     {
       title: 'YouTube Import',
-      description: 'Paste a YouTube URL to extract SOP',
+      description: 'Paste a YouTube URL',
       icon: 'fa-youtube',
       color: 'bg-red-500',
       action: () => onNavigate(AppView.GENERATOR)
-    },
-    {
-      title: 'Live Recording',
-      description: 'Record a procedure in real-time',
-      icon: 'fa-video',
-      color: 'bg-emerald-500',
-      action: () => onNavigate(AppView.LIVE_GENERATOR)
     }
   ];
 
@@ -71,7 +79,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate }) => {
       {/* Quick Actions */}
       <div>
         <h2 className="text-lg font-bold text-slate-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {quickActions.map((action, i) => (
             <button
               key={i}
