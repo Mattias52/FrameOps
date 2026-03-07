@@ -5,6 +5,37 @@
 
 const RAILWAY_URL = import.meta.env.VITE_RAILWAY_URL || 'https://frameops-production.up.railway.app';
 
+// Retry fetch with exponential backoff
+const fetchWithRetry = async (
+  url: string,
+  options: RequestInit,
+  maxRetries = 3,
+  onProgress?: (msg: string) => void
+): Promise<Response> => {
+  const log = onProgress || console.log;
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      return response;
+    } catch (error: any) {
+      lastError = error;
+      const isLastAttempt = attempt === maxRetries;
+
+      if (isLastAttempt) {
+        throw new Error(`Failed to fetch (${RAILWAY_URL.replace('https://', '')})`);
+      }
+
+      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 8000); // 1s, 2s, 4s, max 8s
+      log(`Connection failed, retrying in ${waitTime/1000}s... (attempt ${attempt}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+  }
+
+  throw lastError || new Error('Fetch failed');
+};
+
 // Check if Railway is reachable
 export const checkRailwayHealth = async (): Promise<boolean> => {
   try {
@@ -97,13 +128,11 @@ export const extractFramesWithSceneDetection = async (
   log("Connecting to Railway frame extraction service...");
   log(`Railway URL: ${RAILWAY_URL}/extract-frames-scene-detect`);
 
-  let response: Response;
-  try {
-    response = await fetch(`${RAILWAY_URL}/extract-frames-scene-detect`, {
+  const response = await fetchWithRetry(
+    `${RAILWAY_URL}/extract-frames-scene-detect`,
+    {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         youtubeUrl,
         sceneThreshold: options?.sceneThreshold ?? 0.2,
@@ -111,11 +140,10 @@ export const extractFramesWithSceneDetection = async (
         minFrames: options?.minFrames ?? 10,
         skipWhisper: true,
       }),
-    });
-  } catch (fetchError: any) {
-    log(`Network error: ${fetchError.message}`);
-    throw new Error(`Network error connecting to Railway: ${fetchError.message}`);
-  }
+    },
+    3,
+    log
+  );
 
   log(`Railway response status: ${response.status}`);
 
@@ -161,10 +189,12 @@ export const extractFramesFromUploadedVideo = async (
   formData.append('minFrames', String(options?.minFrames ?? 10));
   formData.append('skipWhisper', 'true');
 
-  const response = await fetch(`${RAILWAY_URL}/extract-frames-scene-detect`, {
-    method: 'POST',
-    body: formData,
-  });
+  const response = await fetchWithRetry(
+    `${RAILWAY_URL}/extract-frames-scene-detect`,
+    { method: 'POST', body: formData },
+    3,
+    log
+  );
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -195,22 +225,25 @@ export const matchFramesToSteps = async (
 
   log(`Matching ${frames.length} frames to ${stepTexts.length} steps using VIT...`);
 
-  const response = await fetch(`${RAILWAY_URL}/match-frames`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+  const response = await fetchWithRetry(
+    `${RAILWAY_URL}/match-frames`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        frames: frames.map(f => ({
+          imageBase64: f.imageBase64,
+          timestamp: f.timestamp,
+          timestampSeconds: f.timestampSeconds,
+          transcription: f.transcription || '',
+        })),
+        steps: stepTexts,
+        topK: 3,
+      }),
     },
-    body: JSON.stringify({
-      frames: frames.map(f => ({
-        imageBase64: f.imageBase64,
-        timestamp: f.timestamp,
-        timestampSeconds: f.timestampSeconds,
-        transcription: f.transcription || '',
-      })),
-      steps: stepTexts,
-      topK: 3,
-    }),
-  });
+    3,
+    log
+  );
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -408,10 +441,12 @@ export const analyzeVideoNative = async (
     imageBase64: f.imageBase64
   }))));
 
-  const response = await fetch(`${RAILWAY_URL}/analyze-video-native`, {
-    method: 'POST',
-    body: formData,
-  });
+  const response = await fetchWithRetry(
+    `${RAILWAY_URL}/analyze-video-native`,
+    { method: 'POST', body: formData },
+    3,
+    log
+  );
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -466,19 +501,22 @@ export const analyzeYoutubeNative = async (
 
   log("Downloading YouTube video and analyzing with Gemini native...");
 
-  const response = await fetch(`${RAILWAY_URL}/analyze-youtube-native`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+  const response = await fetchWithRetry(
+    `${RAILWAY_URL}/analyze-youtube-native`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        youtubeUrl,
+        title,
+        sceneThreshold: options?.sceneThreshold ?? 0.2,
+        maxFrames: options?.maxFrames ?? 30,
+        minFrames: options?.minFrames ?? 10,
+      }),
     },
-    body: JSON.stringify({
-      youtubeUrl,
-      title,
-      sceneThreshold: options?.sceneThreshold ?? 0.2,
-      maxFrames: options?.maxFrames ?? 30,
-      minFrames: options?.minFrames ?? 10,
-    }),
-  });
+    3,
+    log
+  );
 
   if (!response.ok) {
     const errorText = await response.text();

@@ -106,9 +106,7 @@ const IndustryPage: React.FC<IndustryPageProps> = ({ industry, onNavigate, onGet
       {/* Nav */}
       <nav className="px-6 py-4 flex items-center justify-between max-w-7xl mx-auto">
         <button onClick={() => onNavigate(AppView.LANDING)} className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-bold text-xl">F</span>
-          </div>
+          <img src="/logo.png" alt="FrameOps" className="w-12 h-12" />
           <span className="text-white font-bold text-xl">FrameOps</span>
         </button>
         <div className="flex items-center gap-4">

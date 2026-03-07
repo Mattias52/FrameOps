@@ -146,81 +146,73 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       </nav>
 
       {/* Beta Banner */}
-      <div className="fixed top-16 left-0 right-0 bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-2.5 px-4 text-center z-40">
+      <div className="fixed top-16 left-0 right-0 bg-slate-800 text-white py-2 px-4 text-center z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 text-sm">
-          <i className="fas fa-flask"></i>
-          <span className="font-medium">
-            🚀 We're in beta! Get <strong>free access</strong> and help shape the future of SOP creation.
+          <span>
+            Still building this thing. Free while I figure out what works.
           </span>
-          <button
-            onClick={onGetStarted}
-            className="ml-2 px-4 py-1 bg-white/20 hover:bg-white/30 rounded-full font-semibold transition-colors"
-          >
-            Join Beta
-          </button>
         </div>
       </div>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white">
+      <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold mb-6">
-              <i className="fas fa-sparkles"></i>
-              Powered by Advanced AI
-            </div>
+          <div className="text-center max-w-2xl mx-auto">
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-tight mb-4">
-              Turn Videos Into <br />
-              <span className="text-indigo-600">Professional SOPs</span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 leading-tight mb-8">
+              You've filmed repairs before.
             </h1>
-            <p className="text-slate-500 text-lg mb-6 italic">
-              SOPs, tutorials, manuals, how-to guides — whatever you call them.
-            </p>
-            <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
-              <strong className="text-slate-900">Record live</strong> with your phone, <strong className="text-slate-900">upload a video</strong>, or <strong className="text-slate-900">paste a YouTube link</strong> — AI creates the SOP in minutes.
+
+            <p className="text-xl text-slate-600 mb-4 leading-relaxed">
+              Phone in one hand. Tool in the other. Talking through what you're doing.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <p className="text-xl text-slate-600 mb-4 leading-relaxed">
+              Then the video just... sits there. You'll "write it up later."
+            </p>
+
+            <p className="text-xl text-slate-900 font-semibold mb-10">
+              You never do.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
               <button
                 onClick={onGetStarted}
-                className="w-full sm:w-auto px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 hover:shadow-2xl hover:shadow-indigo-300 hover:-translate-y-0.5"
+                className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-xl font-bold text-lg hover:bg-slate-800 transition-all"
               >
-                <i className="fas fa-play mr-2"></i>
-                Create Your First SOP
-              </button>
-              <button
-                onClick={() => onNavigate(AppView.SUBSCRIPTION)}
-                className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 rounded-2xl font-bold text-lg border-2 border-slate-200 hover:border-slate-300 transition-colors"
-              >
-                View Pricing
+                Try It Free
               </button>
             </div>
-            <p className="mt-6 text-sm text-slate-600">
-              <i className="fas fa-check-circle text-emerald-500 mr-1"></i>
-              No credit card required
-              <span className="mx-3 text-slate-300">|</span>
-              <i className="fas fa-check-circle text-emerald-500 mr-1"></i>
-              Unlimited free previews
-            </p>
-          </div>
 
-                  </div>
+            <p className="text-slate-500">
+              Upload a video. A step-by-step guide is created automatically in minutes.
+            </p>
+
+          </div>
+        </div>
+      </section>
+
+      {/* Who it's for */}
+      <section className="py-12 px-4 sm:px-6 lg:px-8 bg-slate-50">
+        <div className="max-w-2xl mx-auto text-center">
+          <p className="text-slate-600">
+            Built for service technicians, but works for anyone doing hands-on stuff.
+          </p>
+          <p className="text-slate-500 text-sm mt-2">
+            Work. Hobbies. Content creation. If you can film it, you can turn it into a guide.
+          </p>
+        </div>
       </section>
 
       {/* Live SOP Feature Highlight */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
+      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white scroll-mt-24">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-400 text-sm font-semibold mb-6">
-                <i className="fas fa-star"></i>
-                Our Killer Feature
-              </div>
-              <h2 className="text-4xl font-bold mb-4">
-                Live SOP Recording
+              <h2 className="text-3xl font-bold mb-4">
+                The easy way: just record yourself
               </h2>
-              <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-                Just do the task. AI creates the SOP while you work.
+              <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+                Open camera. Do the job. Talk through what you're doing. Done.
               </p>
             </div>
 
@@ -319,12 +311,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
 
 
       {/* Features Section */}
-      <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 scroll-mt-24">
+      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 scroll-mt-24">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Everything You Need</h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              From video capture to professional PDF export, FrameOps handles the entire SOP creation workflow.
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">How it works</h2>
+            <p className="text-lg text-slate-600 max-w-xl mx-auto">
+              Three ways to get your video in. Same result: a guide you can actually use.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -341,42 +333,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
         </div>
       </section>
 
-      {/* Use Cases - Compact */}
-      <section id="use-cases" className="py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 scroll-mt-24">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-slate-600 mb-6">
-            Used in:
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {useCases.map((useCase, i) => (
-              useCase.view ? (
-                <button
-                  key={i}
-                  onClick={() => onNavigate(useCase.view!)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-700 text-sm font-medium hover:border-indigo-300 hover:bg-indigo-50 transition-colors cursor-pointer"
-                >
-                  <i className={`fas ${useCase.icon} text-indigo-600`}></i>
-                  {useCase.industry}
-                  <i className="fas fa-arrow-right text-xs text-slate-400"></i>
-                </button>
-              ) : (
-                <div key={i} className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-700 text-sm font-medium">
-                  <i className={`fas ${useCase.icon} text-indigo-600`}></i>
-                  {useCase.industry}
-                </div>
-              )
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 scroll-mt-24">
+      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 scroll-mt-24">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Start free, upgrade when you need more. No hidden fees.
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Pricing</h2>
+            <p className="text-lg text-slate-600 max-w-xl mx-auto">
+              Free during beta. I'll figure out pricing when I know what this is worth to people.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
@@ -435,24 +399,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-900">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">
-            Ready to Save Hours on Documentation?
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-900">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">
+            Next time you film something, don't let it sit there.
           </h2>
-          <p className="text-xl text-slate-400 mb-10">
-            Join teams who've replaced manual SOP writing with AI-powered automation.
+          <p className="text-lg text-slate-400 mb-8">
+            Upload it. Get a guide. Actually use it.
           </p>
           <button
             onClick={onGetStarted}
-            className="px-10 py-5 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-500 transition-colors shadow-xl"
+            className="px-8 py-4 bg-white text-slate-900 rounded-xl font-bold text-lg hover:bg-slate-100 transition-colors"
           >
-            <i className="fas fa-rocket mr-2"></i>
-            Get Started Free
+            Try It Free
           </button>
-          <p className="mt-6 text-slate-600 text-sm">
-            No credit card required. Preview any video instantly.
-          </p>
         </div>
       </section>
 

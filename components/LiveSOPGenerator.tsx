@@ -102,6 +102,9 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const [cameraStarted, setCameraStarted] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
+  // Recording mode: camera or screen
+  const [recordingMode, setRecordingMode] = useState<'camera' | 'screen' | null>(null);
+
   // Scene detection settings (user-controllable)
   const [sceneSensitivity, setSceneSensitivity] = useState(50); // 0-100, 50 = balanced
   const [showSettings, setShowSettings] = useState(false);
@@ -272,6 +275,94 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       }
 
       setCameraError(errorMessage);
+    }
+  };
+
+  // Start screen capture
+  const startScreenCapture = async () => {
+    setCameraError(null);
+
+    // Check if getDisplayMedia is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      setCameraError('Screen recording is not supported in this browser.');
+      return;
+    }
+
+    try {
+      console.log('Requesting screen capture access...');
+
+      // Get screen with audio
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 }
+        },
+        audio: true // Try to capture system audio
+      });
+
+      console.log('Screen capture access granted, tracks:', stream.getTracks().map(t => t.kind));
+
+      // Check if we got audio - if not, try to add microphone
+      const hasAudio = stream.getAudioTracks().length > 0;
+      if (!hasAudio) {
+        console.log('No system audio captured, adding microphone...');
+        try {
+          const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          micStream.getAudioTracks().forEach(track => stream.addTrack(track));
+          console.log('Microphone added to stream');
+        } catch (micErr) {
+          console.log('Could not add microphone:', micErr);
+        }
+      }
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await new Promise<void>((resolve) => {
+          const timeoutId = setTimeout(() => resolve(), 2000);
+          if (videoRef.current) {
+            videoRef.current.onloadedmetadata = () => {
+              clearTimeout(timeoutId);
+              resolve();
+            };
+          } else {
+            resolve();
+          }
+        });
+      }
+
+      // Listen for when user stops sharing via browser UI
+      stream.getVideoTracks()[0].onended = () => {
+        console.log('User stopped screen sharing');
+        // The component will handle stopping gracefully
+      };
+
+      setCameraStarted(true);
+      console.log('Screen capture started successfully');
+    } catch (err: any) {
+      console.error("Screen capture error:", err);
+
+      let errorMessage = `${err.name || 'Error'}: ${err.message}`;
+
+      if (err.name === 'NotAllowedError') {
+        errorMessage = 'Screen sharing was cancelled or denied.';
+      } else if (err.name === 'NotFoundError') {
+        errorMessage = 'No screen available for capture.';
+      } else if (err.name === 'NotSupportedError') {
+        errorMessage = 'Screen recording is not supported in this browser.';
+      }
+
+      setCameraError(errorMessage);
+    }
+  };
+
+  // Start capture based on recording mode
+  const startCapture = async () => {
+    if (recordingMode === 'screen') {
+      await startScreenCapture();
+    } else {
+      await startCamera();
     }
   };
 
@@ -1374,7 +1465,7 @@ If the frames show something completely different from the title (e.g., title sa
               </div>
 
               {/* Start recording button */}
-              <div className="p-3 md:p-4 border-t border-slate-800">
+              <div className="p-3 md:p-4 border-t border-slate-800 space-y-2">
                 <button
                   onClick={skipToRecording}
                   disabled={proposedSteps.length === 0}
@@ -1387,6 +1478,14 @@ If the frames show something completely different from the title (e.g., title sa
                   <i className="fas fa-video mr-2"></i>
                   {proposedSteps.length > 0 ? 'Start Recording' : 'Create steps first...'}
                 </button>
+                {proposedSteps.length === 0 && (
+                  <button
+                    onClick={skipToRecording}
+                    className="w-full py-2 text-slate-400 hover:text-white text-sm transition-colors"
+                  >
+                    or just record without a plan →
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1458,20 +1557,56 @@ If the frames show something completely different from the title (e.g., title sa
         </div>
       )}
 
-      {/* Recording phase - start camera button (if not started yet) */}
+      {/* Recording phase - choose recording mode and start */}
       {phase === 'recording' && !cameraStarted && (
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-black flex items-center justify-center z-30">
-          <div className="text-center">
-            <button
-              onClick={startCamera}
-              className="px-8 py-4 bg-indigo-600 text-white font-bold text-lg rounded-2xl hover:bg-indigo-500 transition-colors"
-            >
-              <i className="fas fa-video mr-3"></i>
-              Start Camera
-            </button>
+          <div className="text-center max-w-md px-4">
+            {!recordingMode ? (
+              <>
+                <h3 className="text-white text-xl font-bold mb-6">How do you want to record?</h3>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button
+                    onClick={() => {
+                      setRecordingMode('camera');
+                      startCamera();
+                    }}
+                    className="px-6 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-500 transition-colors"
+                  >
+                    <i className="fas fa-video mr-3"></i>
+                    Camera
+                    <p className="text-indigo-200 text-sm font-normal mt-1">Film yourself or your work</p>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRecordingMode('screen');
+                      startScreenCapture();
+                    }}
+                    className="px-6 py-4 bg-slate-700 text-white font-bold rounded-2xl hover:bg-slate-600 transition-colors"
+                  >
+                    <i className="fas fa-desktop mr-3"></i>
+                    Screen
+                    <p className="text-slate-300 text-sm font-normal mt-1">Record your screen</p>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-white">Starting {recordingMode === 'screen' ? 'screen capture' : 'camera'}...</p>
+              </div>
+            )}
             {cameraError && (
-              <div className="mt-4 bg-red-600/20 border border-red-500/50 rounded-xl p-4 max-w-md">
+              <div className="mt-4 bg-red-600/20 border border-red-500/50 rounded-xl p-4">
                 <p className="text-red-400 text-sm">{cameraError}</p>
+                <button
+                  onClick={() => {
+                    setCameraError(null);
+                    setRecordingMode(null);
+                  }}
+                  className="mt-3 text-slate-400 hover:text-white text-sm"
+                >
+                  Try again
+                </button>
               </div>
             )}
           </div>
