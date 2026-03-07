@@ -1330,15 +1330,71 @@ If the frames show something completely different from the title (e.g., title sa
   return (
     <div className="fixed inset-0 z-50 bg-black overflow-hidden" style={{ width: '100vw', height: '100dvh' }}>
       {/* Full screen video - use dvh for mobile viewport */}
+      {/* For screen recording, hide video to avoid infinite mirror effect */}
       <video
         ref={videoRef}
         autoPlay
         muted
         playsInline
-        className="absolute inset-0 w-full h-full object-cover"
+        className={`absolute inset-0 w-full h-full object-cover ${recordingMode === 'screen' && cameraStarted ? 'opacity-0 pointer-events-none' : ''}`}
         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       />
       <canvas ref={canvasRef} className="hidden" />
+
+      {/* Screen recording mode UI - show when screen capture is active */}
+      {recordingMode === 'screen' && cameraStarted && (
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 flex items-center justify-center">
+          <div className="text-center max-w-lg px-6">
+            {/* Recording indicator */}
+            {isRecording ? (
+              <>
+                <div className="w-32 h-32 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6 animate-pulse">
+                  <div className="w-24 h-24 rounded-full bg-red-500/30 flex items-center justify-center">
+                    <i className="fas fa-desktop text-red-400 text-4xl"></i>
+                  </div>
+                </div>
+                <p className="text-white text-2xl font-bold mb-2">Recording Screen</p>
+                <p className="text-red-400 font-mono text-3xl font-bold mb-4">{formatTime(recordingTime)}</p>
+                <p className="text-slate-400 mb-8">Your screen is being captured. Work in other windows.</p>
+
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    onClick={togglePause}
+                    className="w-14 h-14 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-white transition-colors"
+                  >
+                    <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'} text-xl`}></i>
+                  </button>
+                  <button
+                    onClick={handleStopRecording}
+                    className="px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-2xl transition-colors"
+                  >
+                    <i className="fas fa-stop mr-2"></i>
+                    Stop Recording
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-32 h-32 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-6">
+                  <div className="w-24 h-24 rounded-full bg-indigo-500/30 flex items-center justify-center">
+                    <i className="fas fa-desktop text-indigo-400 text-4xl"></i>
+                  </div>
+                </div>
+                <p className="text-white text-2xl font-bold mb-2">Screen Ready</p>
+                <p className="text-slate-400 mb-8">Press the button to start recording your screen.</p>
+
+                <button
+                  onClick={handleStartRecording}
+                  className="w-24 h-24 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto mb-4 hover:bg-white/20 transition-colors"
+                >
+                  <div className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-400 transition-colors"></div>
+                </button>
+                <p className="text-slate-500 text-sm">Press to start</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Top bar - minimal (hide during split-screen recording - steps panel has time) */}
       {!(proposedSteps.length > 0 && cameraStarted && isRecording) && (
