@@ -2,6 +2,39 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { SOP, SOPStep } from '../types';
 import { analyzeSOPFrames, transcribeAudioFile } from '../services/geminiService';
 
+// Burn visible frame number onto a copy of the image (for Gemini - helps it identify which frame is which)
+const addFrameLabel = (base64Image: string, frameNumber: number, totalFrames: number): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+
+      // Draw label background in top-left corner
+      const label = `FRAME ${frameNumber}/${totalFrames}`;
+      ctx.font = 'bold 32px Arial';
+      const metrics = ctx.measureText(label);
+      const padding = 10;
+      const bgWidth = metrics.width + padding * 2;
+      const bgHeight = 42 + padding * 2;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillRect(0, 0, bgWidth, bgHeight);
+
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 32px Arial';
+      ctx.fillText(label, padding, 38);
+
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => resolve(base64Image); // fallback to original
+    img.src = base64Image;
+  });
+};
+
 interface LiveSOPGeneratorProps {
   onComplete: (sop: SOP) => void;
   onCancel: () => void;
@@ -967,14 +1000,26 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 
     // Generate draft SOP for review
     try {
-      const frames = allFramesRef.current.map(f => f.image);
+      const originalFrames = allFramesRef.current.map(f => f.image);
       const spokenContext = transcriptRef.current.trim();
 
-      if (frames.length === 0) {
+      if (originalFrames.length === 0) {
         alert('No frames captured. Please try again.');
         setIsAnalyzingReview(false);
         setPhase('setup');
         return;
+      }
+
+      // For screen recordings: add visible frame numbers to help Gemini identify frames
+      let frames: string[];
+      if (recordingMode === 'screen') {
+        console.log(`Adding frame labels to ${originalFrames.length} frames for Gemini...`);
+        frames = await Promise.all(
+          originalFrames.map((img, i) => addFrameLabel(img, i + 1, originalFrames.length))
+        );
+        console.log('Frame labels added successfully');
+      } else {
+        frames = originalFrames;
       }
 
       // Transcribe audio
@@ -1097,7 +1142,7 @@ If the frames show something completely different from the title (e.g., title sa
 
         return {
           ...step,
-          thumbnail: frames[frameIndex],
+          thumbnail: originalFrames[frameIndex],
           timestamp: allFramesRef.current[frameIndex]?.timestamp
             ? formatTime(allFramesRef.current[frameIndex].timestamp)
             : step.timestamp

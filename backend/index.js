@@ -2559,13 +2559,14 @@ app.post('/analyze-sop', async (req, res) => {
       - CRITICAL: Select the frameIndex (0 to ${validImageParts.length - 1}) that BEST SHOWS this specific step action
 
       FRAME INDEX SELECTION (CRITICAL FOR IMAGE-TEXT MATCHING):
-      Look at ALL ${validImageParts.length} frames. For EACH step, you MUST specify which frame best represents that action.
-      - frameIndex 0 = first frame, frameIndex ${validImageParts.length - 1} = last frame
-      - Pick the frame where the action described in the step is MOST CLEARLY visible
+      Each frame has a visible YELLOW label "FRAME X/${validImageParts.length}" in the top-left corner.
+      READ THE LABEL ON EACH FRAME to know its number. Use this to assign frameIndex correctly.
+      - The label shows 1-indexed numbers, but frameIndex is 0-indexed: "FRAME 1" = frameIndex 0, "FRAME 2" = frameIndex 1, etc.
+      - For each step, pick the frame whose VISUAL CONTENT best matches the step description
+      - READ the yellow label text on that frame, subtract 1, and use that as frameIndex
       - CRITICAL: Each step MUST have a DIFFERENT frameIndex - NO duplicate frameIndex values allowed!
       - Create AT MOST ${validImageParts.length} steps (one per frame maximum)
       - Do NOT create multiple steps for the same screen/page - combine them into one step
-      - Do NOT just assign sequential indices - actually LOOK at which frame matches each step
 
       ${hasShotContext
         ? `You MUST return exactly the number of steps matching the AI Guide shots above.`
