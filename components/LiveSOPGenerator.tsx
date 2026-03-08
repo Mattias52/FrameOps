@@ -1063,26 +1063,37 @@ If the frames show something completely different from the title (e.g., title sa
       const numSteps = result.steps.length;
       const numFrames = frames.length;
 
-      const draftSteps: SOPStep[] = result.steps.map((step, idx) => {
-        // Use Gemini's selected frame index if available, otherwise fall back to calculation
+      // For screen recordings: enforce 1 step per frame max
+      // If Gemini created more steps than frames, trim to match
+      let stepsToMap = result.steps;
+      if (recordingMode === 'screen' && numSteps > numFrames) {
+        console.log(`Trimming ${numSteps} steps to ${numFrames} frames for screen recording`);
+        stepsToMap = result.steps.slice(0, numFrames);
+      }
+
+      // Track used frames to enforce unique assignment
+      const usedFrames = new Set<number>();
+
+      const draftSteps: SOPStep[] = stepsToMap.map((step, idx) => {
         let frameIndex: number;
 
-        if (typeof step.frameIndex === 'number' && step.frameIndex >= 0 && step.frameIndex < numFrames) {
-          // Gemini specified which frame shows this step - use it
+        if (typeof step.frameIndex === 'number' && step.frameIndex >= 0 && step.frameIndex < numFrames && !usedFrames.has(step.frameIndex)) {
+          // Gemini specified a unique frame - use it
           frameIndex = step.frameIndex;
-          console.log(`Step ${idx + 1}/${numSteps}: Gemini selected frame ${frameIndex + 1}/${numFrames}`);
-        } else if (recordingMode === 'screen' && numFrames > numSteps * 2) {
-          // Fallback: Screen recording with many frames - distribute evenly
-          const framesPerStep = numFrames / numSteps;
-          frameIndex = Math.min(
-            Math.floor(idx * framesPerStep + framesPerStep / 2),
-            numFrames - 1
-          );
-          console.log(`Step ${idx + 1}/${numSteps}: fallback to frame ${frameIndex + 1}/${numFrames}`);
+          console.log(`Step ${idx + 1}/${stepsToMap.length}: Gemini selected frame ${frameIndex + 1}/${numFrames}`);
         } else {
-          // Fallback: Camera recording or few frames - sequential mapping
-          frameIndex = Math.min(idx, numFrames - 1);
+          // Fallback: assign next unused frame sequentially
+          frameIndex = 0;
+          for (let i = 0; i < numFrames; i++) {
+            if (!usedFrames.has(i)) {
+              frameIndex = i;
+              break;
+            }
+          }
+          console.log(`Step ${idx + 1}/${stepsToMap.length}: assigned unused frame ${frameIndex + 1}/${numFrames}`);
         }
+
+        usedFrames.add(frameIndex);
 
         return {
           ...step,

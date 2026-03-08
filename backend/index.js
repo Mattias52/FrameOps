@@ -2562,12 +2562,14 @@ app.post('/analyze-sop', async (req, res) => {
       Look at ALL ${validImageParts.length} frames. For EACH step, you MUST specify which frame best represents that action.
       - frameIndex 0 = first frame, frameIndex ${validImageParts.length - 1} = last frame
       - Pick the frame where the action described in the step is MOST CLEARLY visible
-      - Different steps CAN have the same frameIndex if multiple actions happen in the same scene
+      - CRITICAL: Each step MUST have a DIFFERENT frameIndex - NO duplicate frameIndex values allowed!
+      - Create AT MOST ${validImageParts.length} steps (one per frame maximum)
+      - Do NOT create multiple steps for the same screen/page - combine them into one step
       - Do NOT just assign sequential indices - actually LOOK at which frame matches each step
 
       ${hasShotContext
         ? `You MUST return exactly the number of steps matching the AI Guide shots above.`
-        : `Create as many steps as needed to cover ALL actions in the procedure. Use the transcript to identify every step. Minimum 3 steps, but create more if the procedure has more actions.`}
+        : `Create as many steps as needed to cover ALL actions in the procedure. Use the transcript to identify every step. Minimum 3 steps, but create more if the procedure has more actions. MAXIMUM ${validImageParts.length} steps.`}
 
       THUMBNAIL SELECTION:
       Also select the BEST frame to use as the cover image/thumbnail for this SOP.
