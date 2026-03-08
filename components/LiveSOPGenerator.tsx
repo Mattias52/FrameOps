@@ -2,37 +2,49 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { SOP, SOPStep } from '../types';
 import { analyzeSOPFrames, transcribeAudioFile } from '../services/geminiService';
 
-// Burn visible frame number onto a copy of the image (for Gemini - helps it identify which frame is which)
-const addFrameLabel = (base64Image: string, frameNumber: number, totalFrames: number): Promise<string> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0);
+// Deduplicate frames by comparing adjacent frames for similarity
+// Returns indices of unique frames to keep
+const deduplicateFrames = async (frames: string[], threshold: number = 0.02): Promise<number[]> => {
+  if (frames.length <= 1) return frames.map((_, i) => i);
 
-      // Draw label background in top-left corner
-      const label = `FRAME ${frameNumber}/${totalFrames}`;
-      ctx.font = 'bold 32px Arial';
-      const metrics = ctx.measureText(label);
-      const padding = 10;
-      const bgWidth = metrics.width + padding * 2;
-      const bgHeight = 42 + padding * 2;
+  const keepIndices: number[] = [0]; // Always keep first frame
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-      ctx.fillRect(0, 0, bgWidth, bgHeight);
+  // Load frames into canvases for comparison
+  const getPixelData = (base64: string): Promise<Uint8ClampedArray> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        // Use small size for fast comparison
+        canvas.width = 64;
+        canvas.height = 36;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, 64, 36);
+        resolve(ctx.getImageData(0, 0, 64, 36).data);
+      };
+      img.onerror = () => resolve(new Uint8ClampedArray(64 * 36 * 4));
+      img.src = base64;
+    });
+  };
 
-      ctx.fillStyle = '#FFD700';
-      ctx.font = 'bold 32px Arial';
-      ctx.fillText(label, padding, 38);
+  // Load all pixel data in parallel
+  const pixelDataArr = await Promise.all(frames.map(f => getPixelData(f)));
 
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
-    };
-    img.onerror = () => resolve(base64Image); // fallback to original
-    img.src = base64Image;
-  });
+  for (let i = 1; i < frames.length; i++) {
+    const prev = pixelDataArr[keepIndices[keepIndices.length - 1]];
+    const curr = pixelDataArr[i];
+    let diff = 0;
+    const len = prev.length;
+    for (let j = 0; j < len; j += 4) {
+      diff += Math.abs(prev[j] - curr[j]) + Math.abs(prev[j + 1] - curr[j + 1]) + Math.abs(prev[j + 2] - curr[j + 2]);
+    }
+    const normalizedDiff = diff / (len * 0.75 * 255);
+    if (normalizedDiff > threshold) {
+      keepIndices.push(i);
+    }
+  }
+
+  return keepIndices;
 };
 
 interface LiveSOPGeneratorProps {
@@ -1000,26 +1012,31 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 
     // Generate draft SOP for review
     try {
-      const originalFrames = allFramesRef.current.map(f => f.image);
+      const allCapturedFrames = allFramesRef.current.map(f => f.image);
       const spokenContext = transcriptRef.current.trim();
 
-      if (originalFrames.length === 0) {
+      if (allCapturedFrames.length === 0) {
         alert('No frames captured. Please try again.');
         setIsAnalyzingReview(false);
         setPhase('setup');
         return;
       }
 
-      // For screen recordings: add visible frame numbers to help Gemini identify frames
+      // For screen recordings: deduplicate frames to get only distinct screens
       let frames: string[];
+      let originalFrames: string[]; // Clean frames for thumbnails
       if (recordingMode === 'screen') {
-        console.log(`Adding frame labels to ${originalFrames.length} frames for Gemini...`);
-        frames = await Promise.all(
-          originalFrames.map((img, i) => addFrameLabel(img, i + 1, originalFrames.length))
-        );
-        console.log('Frame labels added successfully');
+        console.log(`Deduplicating ${allCapturedFrames.length} frames...`);
+        const uniqueIndices = await deduplicateFrames(allCapturedFrames, 0.03);
+        frames = uniqueIndices.map(i => allCapturedFrames[i]);
+        originalFrames = frames; // Already clean - no labels needed
+        // Update allFramesRef to match deduplicated set
+        const dedupedFrameData = uniqueIndices.map(i => allFramesRef.current[i]);
+        allFramesRef.current = dedupedFrameData;
+        console.log(`Deduplicated to ${frames.length} unique frames (from ${allCapturedFrames.length})`);
       } else {
-        frames = originalFrames;
+        frames = allCapturedFrames;
+        originalFrames = allCapturedFrames;
       }
 
       // Transcribe audio
@@ -1046,36 +1063,24 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         ? 'LANGUAGE: Respond in Swedish (Svenska). All step titles and descriptions must be in Swedish.'
         : 'LANGUAGE: Respond in English. All step titles and descriptions must be in English.';
 
-      // Special instructions for screen recordings - detect UI interactions + use voice
+      // Special instructions for screen recordings - 1 step per frame, sequential
       const screenRecordingInstructions = recordingMode === 'screen' ? `
-SCREEN RECORDING MODE - CLICK DETECTION + VOICE NARRATION:
-This is a screen recording of software/website usage. You are receiving many frames (captured every 0.5 seconds).
-Your task is to IDENTIFY USER ACTIONS and combine them with the user's voice narration.
+SCREEN RECORDING MODE - ONE STEP PER FRAME:
+This is a screen recording. You are receiving ${frames.length} pre-deduplicated frames. Each frame shows a DIFFERENT screen/page.
 
-VOICE NARRATION IS PRIORITY:
-- If the user speaks and explains what they're doing, USE THEIR WORDS for step descriptions
-- The audio transcript contains what the user said - match their explanations to the visual actions
-- Example: If user says "Now I click on Save" and you see a Save button being clicked, use their explanation
-- If no voice narration, describe based on visual cues only
+CRITICAL RULES:
+- Create EXACTLY ${frames.length} steps - one for each frame, in order
+- Step 1 describes what you see in Frame 1 (first image)
+- Step 2 describes what you see in Frame 2 (second image)
+- Step N describes what you see in Frame N
+- The frameIndex for step 1 MUST be 0, step 2 MUST be 1, step 3 MUST be 2, etc.
+- Do NOT reorder or skip frames
+- Do NOT create more or fewer steps than frames
 
-VISUAL CUES TO DETECT CLICKS:
-- Mouse cursor position changes followed by UI response
-- Buttons changing state (hover, pressed, active)
-- Menus opening or closing
-- Dropdown lists appearing
-- Modal dialogs or popups appearing
-- Form fields becoming active (focus indicators)
-- Checkboxes or radio buttons being selected
-- Tabs or navigation items changing
-- Pages or views transitioning
-- Text appearing in input fields
-
-STEP CREATION RULES:
-1. If user narrates: Create step based on what they SAY + what you SEE
-2. If no narration: Describe the visual action (e.g., "Click the 'Save' button")
-3. Include WHERE they clicked and the RESULT of the action
-4. Skip frames where nothing happens
-5. Group related frames into single meaningful steps
+FOR EACH STEP:
+- Describe what is shown on the screen in that specific frame
+- If voice narration exists, use the user's words to enhance the description
+- Use clear, actionable language ("Navigate to...", "Click on...", "View the...")
 
 ` : '';
 
@@ -1103,51 +1108,52 @@ If the frames show something completely different from the title (e.g., title sa
       const result = await analyzeSOPFrames(frames, title, contextWithTranscript, [], []);
       console.log('Gemini returned steps:', result.steps.length);
 
-      // Map to draft steps with thumbnails
-      // Use Gemini's selected frameIndex for accurate text-image matching
-      const numSteps = result.steps.length;
       const numFrames = frames.length;
+      let draftSteps: SOPStep[];
 
-      // For screen recordings: enforce 1 step per frame max
-      // If Gemini created more steps than frames, trim to match
-      let stepsToMap = result.steps;
-      if (recordingMode === 'screen' && numSteps > numFrames) {
-        console.log(`Trimming ${numSteps} steps to ${numFrames} frames for screen recording`);
-        stepsToMap = result.steps.slice(0, numFrames);
-      }
+      if (recordingMode === 'screen') {
+        // SCREEN RECORDING: Sequential assignment - ignore Gemini's frameIndex entirely
+        // Trim or pad steps to match frame count
+        const stepsToUse = result.steps.slice(0, numFrames);
+        console.log(`Screen recording: mapping ${stepsToUse.length} steps to ${numFrames} frames sequentially`);
 
-      // Track used frames to enforce unique assignment
-      const usedFrames = new Set<number>();
+        draftSteps = stepsToUse.map((step, idx) => {
+          console.log(`Step ${idx + 1}: "${step.title}" → Frame ${idx + 1}/${numFrames}`);
+          return {
+            ...step,
+            thumbnail: originalFrames[idx],
+            timestamp: allFramesRef.current[idx]?.timestamp
+              ? formatTime(allFramesRef.current[idx].timestamp)
+              : step.timestamp
+          };
+        });
+      } else {
+        // NON-SCREEN: Use Gemini's frameIndex with unique assignment
+        const numSteps = result.steps.length;
+        const usedFrames = new Set<number>();
 
-      const draftSteps: SOPStep[] = stepsToMap.map((step, idx) => {
-        let frameIndex: number;
-
-        if (typeof step.frameIndex === 'number' && step.frameIndex >= 0 && step.frameIndex < numFrames && !usedFrames.has(step.frameIndex)) {
-          // Gemini specified a unique frame - use it
-          frameIndex = step.frameIndex;
-          console.log(`Step ${idx + 1}/${stepsToMap.length}: Gemini selected frame ${frameIndex + 1}/${numFrames}`);
-        } else {
-          // Fallback: assign next unused frame sequentially
-          frameIndex = 0;
-          for (let i = 0; i < numFrames; i++) {
-            if (!usedFrames.has(i)) {
-              frameIndex = i;
-              break;
+        draftSteps = result.steps.map((step, idx) => {
+          let frameIndex: number;
+          if (typeof step.frameIndex === 'number' && step.frameIndex >= 0 && step.frameIndex < numFrames && !usedFrames.has(step.frameIndex)) {
+            frameIndex = step.frameIndex;
+            console.log(`Step ${idx + 1}/${numSteps}: Gemini selected frame ${frameIndex + 1}/${numFrames}`);
+          } else {
+            frameIndex = 0;
+            for (let i = 0; i < numFrames; i++) {
+              if (!usedFrames.has(i)) { frameIndex = i; break; }
             }
+            console.log(`Step ${idx + 1}/${numSteps}: assigned unused frame ${frameIndex + 1}/${numFrames}`);
           }
-          console.log(`Step ${idx + 1}/${stepsToMap.length}: assigned unused frame ${frameIndex + 1}/${numFrames}`);
-        }
-
-        usedFrames.add(frameIndex);
-
-        return {
-          ...step,
-          thumbnail: originalFrames[frameIndex],
-          timestamp: allFramesRef.current[frameIndex]?.timestamp
-            ? formatTime(allFramesRef.current[frameIndex].timestamp)
-            : step.timestamp
-        };
-      });
+          usedFrames.add(frameIndex);
+          return {
+            ...step,
+            thumbnail: originalFrames[frameIndex],
+            timestamp: allFramesRef.current[frameIndex]?.timestamp
+              ? formatTime(allFramesRef.current[frameIndex].timestamp)
+              : step.timestamp
+          };
+        });
+      }
 
       setDraftSOP(draftSteps);
       setDraftTitle(result.title || title);
