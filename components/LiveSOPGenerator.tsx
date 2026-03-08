@@ -1343,7 +1343,7 @@ If the frames show something completely different from the title (e.g., title sa
 
       {/* Screen recording mode UI - show when screen capture is active */}
       {recordingMode === 'screen' && cameraStarted && (
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 flex items-center justify-center z-40">
           <div className="text-center max-w-lg px-6">
             {/* Recording indicator */}
             {isRecording ? (
@@ -1681,8 +1681,8 @@ If the frames show something completely different from the title (e.g., title sa
         </div>
       )}
 
-      {/* SPLIT-SCREEN Recording view - Steps left, Camera right */}
-      {(phase === 'setup' || phase === 'recording') && cameraStarted && (
+      {/* SPLIT-SCREEN Recording view - Steps left, Camera right (NOT for screen recording mode) */}
+      {(phase === 'setup' || phase === 'recording') && cameraStarted && recordingMode !== 'screen' && (
         <div className="absolute inset-0 flex z-25">
           {/* Left: Steps panel (only if we have steps) - HIDDEN on mobile, shown as overlay */}
           {proposedSteps.length > 0 && !isMobile && (
