@@ -1053,13 +1053,39 @@ If the frames show something completely different from the title (e.g., title sa
       console.log('Gemini returned steps:', result.steps.length);
 
       // Map to draft steps with thumbnails
-      const draftSteps: SOPStep[] = result.steps.map((step, idx) => ({
-        ...step,
-        thumbnail: frames[Math.min(idx, frames.length - 1)],
-        timestamp: allFramesRef.current[Math.min(idx, allFramesRef.current.length - 1)]?.timestamp
-          ? formatTime(allFramesRef.current[Math.min(idx, allFramesRef.current.length - 1)].timestamp)
-          : step.timestamp
-      }));
+      // For screen recordings: spread frames evenly across steps
+      // For camera: use sequential mapping (fewer frames captured)
+      const numSteps = result.steps.length;
+      const numFrames = frames.length;
+
+      const draftSteps: SOPStep[] = result.steps.map((step, idx) => {
+        // Calculate which frame to use for this step
+        // Spread frames evenly: step 0 gets early frame, last step gets late frame
+        let frameIndex: number;
+
+        if (recordingMode === 'screen' && numFrames > numSteps * 2) {
+          // Screen recording with many frames: distribute evenly
+          // Each step gets a frame from its "time slice" of the recording
+          const framesPerStep = numFrames / numSteps;
+          // Use frame from middle of this step's time slice
+          frameIndex = Math.min(
+            Math.floor(idx * framesPerStep + framesPerStep / 2),
+            numFrames - 1
+          );
+          console.log(`Step ${idx + 1}/${numSteps}: using frame ${frameIndex + 1}/${numFrames}`);
+        } else {
+          // Camera recording or few frames: sequential mapping
+          frameIndex = Math.min(idx, numFrames - 1);
+        }
+
+        return {
+          ...step,
+          thumbnail: frames[frameIndex],
+          timestamp: allFramesRef.current[frameIndex]?.timestamp
+            ? formatTime(allFramesRef.current[frameIndex].timestamp)
+            : step.timestamp
+        };
+      });
 
       setDraftSOP(draftSteps);
       setDraftTitle(result.title || title);
