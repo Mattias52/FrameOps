@@ -601,14 +601,20 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     if (!isFirstFrame) {
       // Enforce minimum time between captures
       if (timeSinceLastCapture < minInterval) {
-        console.log(`Only ${timeSinceLastCapture.toFixed(1)}s since last capture, need ${minInterval}s, skipping`);
         return;
       }
 
-      // Check if scene changed enough
-      if (!isSignificantChange) {
-        console.log(`Scene change ${diff.toFixed(3)} below threshold ${currentThreshold.toFixed(3)}, skipping`);
+      // For screen recordings: force capture every 5s even without scene change
+      // This ensures we don't miss pages where the UI looks similar
+      const isScreen = recordingMode === 'screen';
+      const forceCapture = isScreen && timeSinceLastCapture >= 5;
+
+      // Check if scene changed enough (skip if force capture)
+      if (!isSignificantChange && !forceCapture) {
         return;
+      }
+      if (forceCapture && !isSignificantChange) {
+        console.log(`Force capture at ${recordingTimeRef.current.toFixed(1)}s (${timeSinceLastCapture.toFixed(1)}s since last)`);
       }
       // Only skip blurry if we already have enough frames
       if (blurry && allFramesRef.current.length >= 5) {
