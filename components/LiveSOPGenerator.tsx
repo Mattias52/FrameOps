@@ -995,37 +995,36 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         ? 'LANGUAGE: Respond in Swedish (Svenska). All step titles and descriptions must be in Swedish.'
         : 'LANGUAGE: Respond in English. All step titles and descriptions must be in English.';
 
-      // Special instructions for screen recordings - detect UI interactions
+      // Special instructions for screen recordings - detect UI interactions + use voice
       const screenRecordingInstructions = recordingMode === 'screen' ? `
-SCREEN RECORDING MODE - CLICK DETECTION:
+SCREEN RECORDING MODE - CLICK DETECTION + VOICE NARRATION:
 This is a screen recording of software/website usage. You are receiving many frames (captured every 0.5 seconds).
-Your task is to IDENTIFY USER ACTIONS by looking for visual changes that indicate clicks or interactions:
+Your task is to IDENTIFY USER ACTIONS and combine them with the user's voice narration.
 
-1. LOOK FOR THESE VISUAL CUES OF CLICKS:
-   - Mouse cursor position changes followed by UI response
-   - Buttons changing state (hover, pressed, active)
-   - Menus opening or closing
-   - Dropdown lists appearing
-   - Modal dialogs or popups appearing
-   - Form fields becoming active (focus indicators)
-   - Checkboxes or radio buttons being selected
-   - Tabs or navigation items changing
-   - Pages or views transitioning
-   - Text appearing in input fields
+VOICE NARRATION IS PRIORITY:
+- If the user speaks and explains what they're doing, USE THEIR WORDS for step descriptions
+- The audio transcript contains what the user said - match their explanations to the visual actions
+- Example: If user says "Now I click on Save" and you see a Save button being clicked, use their explanation
+- If no voice narration, describe based on visual cues only
 
-2. CREATE ONE STEP FOR EACH USER ACTION:
-   - Each step should describe what the user clicked/did
-   - Include WHERE they clicked (e.g., "Click the 'Save' button in the top toolbar")
-   - Describe the RESULT of the action (e.g., "A confirmation dialog appears")
+VISUAL CUES TO DETECT CLICKS:
+- Mouse cursor position changes followed by UI response
+- Buttons changing state (hover, pressed, active)
+- Menus opening or closing
+- Dropdown lists appearing
+- Modal dialogs or popups appearing
+- Form fields becoming active (focus indicators)
+- Checkboxes or radio buttons being selected
+- Tabs or navigation items changing
+- Pages or views transitioning
+- Text appearing in input fields
 
-3. SKIP FRAMES WHERE NOTHING HAPPENS:
-   - Many frames will be identical or show no user action
-   - Only create steps for frames showing actual user interactions
-   - Group related frames into single meaningful steps
-
-4. FRAME SELECTION:
-   - For each step, choose the frame that BEST shows the result of the action
-   - Return the frame INDEX (0-based) that should be the thumbnail for each step
+STEP CREATION RULES:
+1. If user narrates: Create step based on what they SAY + what you SEE
+2. If no narration: Describe the visual action (e.g., "Click the 'Save' button")
+3. Include WHERE they clicked and the RESULT of the action
+4. Skip frames where nothing happens
+5. Group related frames into single meaningful steps
 
 ` : '';
 
