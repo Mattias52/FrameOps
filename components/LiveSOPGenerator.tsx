@@ -1343,45 +1343,18 @@ If the frames show something completely different from the title (e.g., title sa
 
       {/* Screen recording mode UI - show when screen capture is active */}
       {recordingMode === 'screen' && cameraStarted && (
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 flex items-center justify-center z-40">
-          <div className="text-center max-w-lg px-6">
-            {/* Recording indicator */}
-            {isRecording ? (
-              <>
-                <div className="w-32 h-32 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6 animate-pulse">
-                  <div className="w-24 h-24 rounded-full bg-red-500/30 flex items-center justify-center">
-                    <i className="fas fa-desktop text-red-400 text-4xl"></i>
-                  </div>
-                </div>
-                <p className="text-white text-2xl font-bold mb-2">Recording Screen</p>
-                <p className="text-red-400 font-mono text-3xl font-bold mb-4">{formatTime(recordingTime)}</p>
-                <p className="text-slate-400 mb-8">Your screen is being captured. Work in other windows.</p>
-
-                <div className="flex items-center justify-center gap-4">
-                  <button
-                    onClick={togglePause}
-                    className="w-14 h-14 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-white transition-colors"
-                  >
-                    <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'} text-xl`}></i>
-                  </button>
-                  <button
-                    onClick={handleStopRecording}
-                    className="px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-2xl transition-colors"
-                  >
-                    <i className="fas fa-stop mr-2"></i>
-                    Stop Recording
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
+        <>
+          {/* Before recording: Full screen start UI */}
+          {!isRecording && (
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 flex items-center justify-center z-40">
+              <div className="text-center max-w-lg px-6">
                 <div className="w-32 h-32 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-6">
                   <div className="w-24 h-24 rounded-full bg-indigo-500/30 flex items-center justify-center">
                     <i className="fas fa-desktop text-indigo-400 text-4xl"></i>
                   </div>
                 </div>
                 <p className="text-white text-2xl font-bold mb-2">Screen Ready</p>
-                <p className="text-slate-400 mb-8">Press the button to start recording your screen.</p>
+                <p className="text-slate-400 mb-8">Press to start recording</p>
 
                 <button
                   onClick={handleStartRecording}
@@ -1389,11 +1362,35 @@ If the frames show something completely different from the title (e.g., title sa
                 >
                   <div className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-400 transition-colors"></div>
                 </button>
-                <p className="text-slate-500 text-sm">Press to start</p>
-              </>
-            )}
-          </div>
-        </div>
+              </div>
+            </div>
+          )}
+
+          {/* During recording: Small floating control bar */}
+          {isRecording && (
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40">
+              <div className="bg-black/80 backdrop-blur-sm rounded-2xl px-6 py-4 flex items-center gap-4 shadow-2xl">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
+                  <span className="text-red-400 font-mono font-bold text-lg">{formatTime(recordingTime)}</span>
+                </div>
+                <button
+                  onClick={togglePause}
+                  className="w-10 h-10 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-white transition-colors"
+                >
+                  <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'}`}></i>
+                </button>
+                <button
+                  onClick={handleStopRecording}
+                  className="px-5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors"
+                >
+                  <i className="fas fa-stop mr-2"></i>
+                  Stop
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Top bar - minimal (hide during split-screen recording - steps panel has time) */}
