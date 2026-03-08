@@ -150,17 +150,20 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const audioChunksRef = useRef<Blob[]>([]);
   const audioBlobRef = useRef<Blob | null>(null);
 
-  // Scene detection settings
-  const FRAME_INTERVAL_MS = 1000; // Check for scene change every 1 second
+  // Scene detection settings - different for screen vs camera recording
+  // Screen recording: capture more frequently, let Gemini find the click moments
+  const isScreenMode = recordingMode === 'screen';
+  const FRAME_INTERVAL_MS = isScreenMode ? 500 : 1000; // Screen: every 0.5s, Camera: every 1s
   // Convert sensitivity (0-100) to threshold: high sensitivity = low threshold
   // sensitivity 0 = threshold 0.20 (very few frames - only major changes)
   // sensitivity 50 = threshold 0.08 (balanced - captures more)
   // sensitivity 100 = threshold 0.02 (many frames - capture small changes)
-  const SCENE_THRESHOLD = 0.20 - (sceneSensitivity / 100) * 0.18;
+  const SCENE_THRESHOLD = isScreenMode ? 0.02 : (0.20 - (sceneSensitivity / 100) * 0.18); // Screen: very low threshold
   // Minimum seconds between captures (even if scene changes)
-  // sensitivity 0 = 8 sec, sensitivity 50 = 4 sec, sensitivity 100 = 1.5 sec
-  const MIN_CAPTURE_INTERVAL = Math.max(1.5, 8 - (sceneSensitivity / 100) * 6.5);
-  const MAX_FRAMES = 60; // Max frames to capture (increased)
+  // Screen: capture every 0.5s to catch all UI changes
+  // Camera: sensitivity-based interval
+  const MIN_CAPTURE_INTERVAL = isScreenMode ? 0.5 : Math.max(1.5, 8 - (sceneSensitivity / 100) * 6.5);
+  const MAX_FRAMES = isScreenMode ? 120 : 60; // Screen recordings may need more frames
 
   // Start camera with video + audio
   // NOTE: On iOS Safari, this MUST be called from a user gesture (button click)
@@ -992,9 +995,43 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         ? 'LANGUAGE: Respond in Swedish (Svenska). All step titles and descriptions must be in Swedish.'
         : 'LANGUAGE: Respond in English. All step titles and descriptions must be in English.';
 
+      // Special instructions for screen recordings - detect UI interactions
+      const screenRecordingInstructions = recordingMode === 'screen' ? `
+SCREEN RECORDING MODE - CLICK DETECTION:
+This is a screen recording of software/website usage. You are receiving many frames (captured every 0.5 seconds).
+Your task is to IDENTIFY USER ACTIONS by looking for visual changes that indicate clicks or interactions:
+
+1. LOOK FOR THESE VISUAL CUES OF CLICKS:
+   - Mouse cursor position changes followed by UI response
+   - Buttons changing state (hover, pressed, active)
+   - Menus opening or closing
+   - Dropdown lists appearing
+   - Modal dialogs or popups appearing
+   - Form fields becoming active (focus indicators)
+   - Checkboxes or radio buttons being selected
+   - Tabs or navigation items changing
+   - Pages or views transitioning
+   - Text appearing in input fields
+
+2. CREATE ONE STEP FOR EACH USER ACTION:
+   - Each step should describe what the user clicked/did
+   - Include WHERE they clicked (e.g., "Click the 'Save' button in the top toolbar")
+   - Describe the RESULT of the action (e.g., "A confirmation dialog appears")
+
+3. SKIP FRAMES WHERE NOTHING HAPPENS:
+   - Many frames will be identical or show no user action
+   - Only create steps for frames showing actual user interactions
+   - Group related frames into single meaningful steps
+
+4. FRAME SELECTION:
+   - For each step, choose the frame that BEST shows the result of the action
+   - Return the frame INDEX (0-based) that should be the thumbnail for each step
+
+` : '';
+
       // CRITICAL: Force AI to analyze actual visual content
       const visualValidationPrefix = `${languageInstruction}
-
+${screenRecordingInstructions}
 CRITICAL INSTRUCTION: You MUST analyze the actual visual content of these ${frames.length} video frames.
 DO NOT generate steps based on the title alone.
 DESCRIBE WHAT YOU ACTUALLY SEE in the images - if you see a computer screen, code, text chat, or something unrelated to "${title}", you must say so.
