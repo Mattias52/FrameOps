@@ -1053,28 +1053,28 @@ If the frames show something completely different from the title (e.g., title sa
       console.log('Gemini returned steps:', result.steps.length);
 
       // Map to draft steps with thumbnails
-      // For screen recordings: spread frames evenly across steps
-      // For camera: use sequential mapping (fewer frames captured)
+      // Use Gemini's selected frameIndex for accurate text-image matching
       const numSteps = result.steps.length;
       const numFrames = frames.length;
 
       const draftSteps: SOPStep[] = result.steps.map((step, idx) => {
-        // Calculate which frame to use for this step
-        // Spread frames evenly: step 0 gets early frame, last step gets late frame
+        // Use Gemini's selected frame index if available, otherwise fall back to calculation
         let frameIndex: number;
 
-        if (recordingMode === 'screen' && numFrames > numSteps * 2) {
-          // Screen recording with many frames: distribute evenly
-          // Each step gets a frame from its "time slice" of the recording
+        if (typeof step.frameIndex === 'number' && step.frameIndex >= 0 && step.frameIndex < numFrames) {
+          // Gemini specified which frame shows this step - use it
+          frameIndex = step.frameIndex;
+          console.log(`Step ${idx + 1}/${numSteps}: Gemini selected frame ${frameIndex + 1}/${numFrames}`);
+        } else if (recordingMode === 'screen' && numFrames > numSteps * 2) {
+          // Fallback: Screen recording with many frames - distribute evenly
           const framesPerStep = numFrames / numSteps;
-          // Use frame from middle of this step's time slice
           frameIndex = Math.min(
             Math.floor(idx * framesPerStep + framesPerStep / 2),
             numFrames - 1
           );
-          console.log(`Step ${idx + 1}/${numSteps}: using frame ${frameIndex + 1}/${numFrames}`);
+          console.log(`Step ${idx + 1}/${numSteps}: fallback to frame ${frameIndex + 1}/${numFrames}`);
         } else {
-          // Camera recording or few frames: sequential mapping
+          // Fallback: Camera recording or few frames - sequential mapping
           frameIndex = Math.min(idx, numFrames - 1);
         }
 

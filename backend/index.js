@@ -2556,6 +2556,14 @@ app.post('/analyze-sop', async (req, res) => {
       - Include specific details: measurements, settings, tool names
       - Include specific visual details (hand positions, component alignment)
       - Add safety warnings where appropriate
+      - CRITICAL: Select the frameIndex (0 to ${validImageParts.length - 1}) that BEST SHOWS this specific step action
+
+      FRAME INDEX SELECTION (CRITICAL FOR IMAGE-TEXT MATCHING):
+      Look at ALL ${validImageParts.length} frames. For EACH step, you MUST specify which frame best represents that action.
+      - frameIndex 0 = first frame, frameIndex ${validImageParts.length - 1} = last frame
+      - Pick the frame where the action described in the step is MOST CLEARLY visible
+      - Different steps CAN have the same frameIndex if multiple actions happen in the same scene
+      - Do NOT just assign sequential indices - actually LOOK at which frame matches each step
 
       ${hasShotContext
         ? `You MUST return exactly the number of steps matching the AI Guide shots above.`
@@ -2606,6 +2614,7 @@ app.post('/analyze-sop', async (req, res) => {
                   timestamp: { type: Type.STRING },
                   title: { type: Type.STRING },
                   description: { type: Type.STRING },
+                  frameIndex: { type: Type.INTEGER },
                   safetyWarnings: {
                     type: Type.ARRAY,
                     items: { type: Type.STRING }
@@ -2615,7 +2624,7 @@ app.post('/analyze-sop', async (req, res) => {
                     items: { type: Type.STRING }
                   }
                 },
-                required: ["id", "title", "description", "timestamp"]
+                required: ["id", "title", "description", "timestamp", "frameIndex"]
               }
             },
             bestThumbnailIndex: { type: Type.INTEGER }

@@ -26,6 +26,7 @@ export interface SOPStep {
   toolsRequired?: string[];
   thumbnail?: string;
   image_url?: string;
+  frameIndex?: number; // Gemini-selected frame index for this step (used during mapping)
 }
 
 export interface FrameOption {
