@@ -203,7 +203,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   // sensitivity 0 = threshold 0.20 (very few frames - only major changes)
   // sensitivity 50 = threshold 0.08 (balanced - captures more)
   // sensitivity 100 = threshold 0.02 (many frames - capture small changes)
-  const SCENE_THRESHOLD = isScreenMode ? 0.02 : (0.20 - (sceneSensitivity / 100) * 0.18); // Screen: very low threshold
+  const SCENE_THRESHOLD = isScreenMode ? 0.08 : (0.20 - (sceneSensitivity / 100) * 0.18); // Screen: moderate threshold to avoid capturing tiny changes
   // Minimum seconds between captures (even if scene changes)
   // Screen: capture every 0.5s to catch all UI changes
   // Camera: sensitivity-based interval
@@ -652,7 +652,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       // For screen recordings: force capture every 5s even without scene change
       // This ensures we don't miss pages where the UI looks similar
       const isScreen = recordingMode === 'screen';
-      const forceCapture = isScreen && timeSinceLastCapture >= 5;
+      const forceCapture = isScreen && timeSinceLastCapture >= 15;
 
       // Check if scene changed enough (skip if force capture)
       if (!isSignificantChange && !forceCapture) {
@@ -1027,13 +1027,20 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       let originalFrames: string[]; // Clean frames for thumbnails
       if (recordingMode === 'screen') {
         console.log(`Deduplicating ${allCapturedFrames.length} frames...`);
-        const uniqueIndices = await deduplicateFrames(allCapturedFrames, 0.03);
+        const uniqueIndices = await deduplicateFrames(allCapturedFrames, 0.15);
         frames = uniqueIndices.map(i => allCapturedFrames[i]);
-        originalFrames = frames; // Already clean - no labels needed
+        originalFrames = frames;
         // Update allFramesRef to match deduplicated set
         const dedupedFrameData = uniqueIndices.map(i => allFramesRef.current[i]);
         allFramesRef.current = dedupedFrameData;
         console.log(`Deduplicated to ${frames.length} unique frames (from ${allCapturedFrames.length})`);
+        // Hard cap at 10 frames for screen recordings
+        if (frames.length > 10) {
+          console.log(`Capping ${frames.length} frames to 10`);
+          frames = frames.slice(0, 10);
+          originalFrames = originalFrames.slice(0, 10);
+          allFramesRef.current = allFramesRef.current.slice(0, 10);
+        }
       } else {
         frames = allCapturedFrames;
         originalFrames = allCapturedFrames;
