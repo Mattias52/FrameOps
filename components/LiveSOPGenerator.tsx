@@ -1812,10 +1812,28 @@ If the frames show something completely different from the title (e.g., title sa
                   </button>
                 </div>
               </>
+            ) : recordingMode === 'screen' ? (
+              <div className="text-center">
+                <h3 className="text-white text-xl font-bold mb-4">Screen Recording</h3>
+                <p className="text-slate-300 mb-6">Click below to choose which screen or window to share</p>
+                <button
+                  onClick={() => startScreenCapture()}
+                  className="px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-500 transition-colors"
+                >
+                  <i className="fas fa-desktop mr-3"></i>
+                  Start Screen Capture
+                </button>
+                <button
+                  onClick={() => setRecordingMode(null)}
+                  className="block mx-auto mt-4 text-slate-400 hover:text-white text-sm"
+                >
+                  ← Back to options
+                </button>
+              </div>
             ) : (
               <div className="text-center">
                 <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-white">Starting {recordingMode === 'screen' ? 'screen capture' : 'camera'}...</p>
+                <p className="text-white">Starting camera...</p>
               </div>
             )}
             {cameraError && (
