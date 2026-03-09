@@ -1018,6 +1018,13 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     setIsRecording(false);
     setIsAnalyzingReview(true);
 
+    // Stop stream tracks immediately so browser's sharing indicator disappears
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setCameraStarted(false);
+
     console.log('Stopping recording. Total frames captured:', allFramesRef.current.length);
 
     // Generate draft SOP for review

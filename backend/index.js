@@ -3268,7 +3268,8 @@ Svara ENDAST med JSON:`;
 // AI REVIEW - Check SOP quality
 // ============================================
 
-app.post('/review-sop', async (req, res) => {
+// Renamed from /review-sop to avoid duplicate route (first handler at ~line 2146 handles frontend feedback)
+app.post('/review-sop-quality', async (req, res) => {
   const { title, description, steps } = req.body;
 
   if (!steps || !Array.isArray(steps) || steps.length === 0) {
