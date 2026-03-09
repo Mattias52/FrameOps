@@ -197,6 +197,10 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioBlobRef = useRef<Blob | null>(null);
+  // Manual step marking for screen recordings
+  const markedFramesRef = useRef<{ timestamp: number; image: string }[]>([]);
+  const [markedStepCount, setMarkedStepCount] = useState(0);
+  const [stepMarkedFlash, setStepMarkedFlash] = useState(false);
 
   // Keep refs in sync with state for use in callbacks
   recordingModeRef.current = recordingMode;
@@ -433,6 +437,32 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     } else {
       await startCamera();
     }
+  };
+
+  // Mark current screen as a step (screen recording only)
+  const markStep = () => {
+    if (!streamRef.current || !isRecordingRef.current) return;
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0);
+    const image = canvas.toDataURL('image/jpeg', 0.85);
+    const timestamp = recordingTimeRef.current;
+
+    markedFramesRef.current.push({ timestamp, image });
+    setMarkedStepCount(markedFramesRef.current.length);
+
+    // Visual flash feedback
+    setStepMarkedFlash(true);
+    setTimeout(() => setStepMarkedFlash(false), 500);
+
+    console.log(`Step ${markedFramesRef.current.length} marked at ${timestamp}s`);
   };
 
   // Cleanup on unmount (camera started manually via button click for iOS Safari)
@@ -825,6 +855,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         // Reset state
         recordedChunksRef.current = [];
         allFramesRef.current = [];
+        markedFramesRef.current = [];
+        setMarkedStepCount(0);
         setLiveSteps([]);
         setRecordingTime(0);
         recordingTimeRef.current = 0;
@@ -1026,41 +1058,52 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     setCameraStarted(false);
 
     console.log('Stopping recording. Total frames captured:', allFramesRef.current.length);
+    console.log('Manually marked steps:', markedFramesRef.current.length);
 
     // Generate draft SOP for review
     try {
-      const allCapturedFrames = allFramesRef.current.map(f => f.image);
       const spokenContext = transcriptRef.current.trim();
 
-      if (allCapturedFrames.length === 0) {
-        alert('No frames captured. Please try again.');
-        setIsAnalyzingReview(false);
-        setPhase('setup');
-        return;
-      }
-
-      // For screen recordings: deduplicate frames to get only distinct screens
+      // For screen recordings: use manually marked frames if available, otherwise auto-deduplicate
       let frames: string[];
-      let originalFrames: string[]; // Clean frames for thumbnails
-      if (recordingMode === 'screen') {
-        console.log(`Deduplicating ${allCapturedFrames.length} frames...`);
-        const uniqueIndices = await deduplicateFrames(allCapturedFrames, 0.15);
-        frames = uniqueIndices.map(i => allCapturedFrames[i]);
+      let originalFrames: string[];
+
+      if (recordingMode === 'screen' && markedFramesRef.current.length > 0) {
+        // USER MARKED STEPS: use exactly these frames
+        console.log(`Using ${markedFramesRef.current.length} manually marked step frames`);
+        frames = markedFramesRef.current.map(f => f.image);
         originalFrames = frames;
-        // Update allFramesRef to match deduplicated set
-        const dedupedFrameData = uniqueIndices.map(i => allFramesRef.current[i]);
-        allFramesRef.current = dedupedFrameData;
-        console.log(`Deduplicated to ${frames.length} unique frames (from ${allCapturedFrames.length})`);
-        // Hard cap at 10 frames for screen recordings
-        if (frames.length > 10) {
-          console.log(`Capping ${frames.length} frames to 10`);
-          frames = frames.slice(0, 10);
-          originalFrames = originalFrames.slice(0, 10);
-          allFramesRef.current = allFramesRef.current.slice(0, 10);
-        }
+        // Replace allFramesRef with marked frames for timestamp mapping
+        allFramesRef.current = markedFramesRef.current;
       } else {
-        frames = allCapturedFrames;
-        originalFrames = allCapturedFrames;
+        const allCapturedFrames = allFramesRef.current.map(f => f.image);
+
+        if (allCapturedFrames.length === 0) {
+          alert('No frames captured. Please try again.');
+          setIsAnalyzingReview(false);
+          setPhase('setup');
+          return;
+        }
+
+        if (recordingMode === 'screen') {
+          // AUTO MODE: deduplicate frames to get only distinct screens
+          console.log(`No manual steps marked. Deduplicating ${allCapturedFrames.length} frames...`);
+          const uniqueIndices = await deduplicateFrames(allCapturedFrames, 0.15);
+          frames = uniqueIndices.map(i => allCapturedFrames[i]);
+          originalFrames = frames;
+          const dedupedFrameData = uniqueIndices.map(i => allFramesRef.current[i]);
+          allFramesRef.current = dedupedFrameData;
+          console.log(`Deduplicated to ${frames.length} unique frames (from ${allCapturedFrames.length})`);
+          if (frames.length > 10) {
+            console.log(`Capping ${frames.length} frames to 10`);
+            frames = frames.slice(0, 10);
+            originalFrames = originalFrames.slice(0, 10);
+            allFramesRef.current = allFramesRef.current.slice(0, 10);
+          }
+        } else {
+          frames = allCapturedFrames;
+          originalFrames = allCapturedFrames;
+        }
       }
 
       // Transcribe audio
@@ -1524,29 +1567,50 @@ If the frames show something completely different from the title (e.g., title sa
             </div>
           )}
 
-          {/* During recording: Small floating control bar */}
+          {/* During recording: Floating control bar with Mark Step */}
           {isRecording && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40">
-              <div className="bg-black/80 backdrop-blur-sm rounded-2xl px-6 py-4 flex items-center gap-4 shadow-2xl">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
-                  <span className="text-red-400 font-mono font-bold text-lg">{formatTime(recordingTime)}</span>
+            <>
+              {/* Flash overlay when step is marked */}
+              {stepMarkedFlash && (
+                <div className="absolute inset-0 bg-indigo-500/20 z-50 pointer-events-none animate-pulse" />
+              )}
+              {/* Step counter badge - top center */}
+              {markedStepCount > 0 && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40">
+                  <div className="bg-indigo-600/90 backdrop-blur-sm rounded-full px-4 py-2 text-white font-bold text-sm">
+                    {markedStepCount} step{markedStepCount !== 1 ? 's' : ''} marked
+                  </div>
                 </div>
-                <button
-                  onClick={togglePause}
-                  className="w-10 h-10 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-white transition-colors"
-                >
-                  <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'}`}></i>
-                </button>
-                <button
-                  onClick={handleStopRecording}
-                  className="px-5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors"
-                >
-                  <i className="fas fa-stop mr-2"></i>
-                  Stop
-                </button>
+              )}
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40">
+                <div className="bg-black/80 backdrop-blur-sm rounded-2xl px-6 py-4 flex items-center gap-4 shadow-2xl">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
+                    <span className="text-red-400 font-mono font-bold text-lg">{formatTime(recordingTime)}</span>
+                  </div>
+                  <button
+                    onClick={markStep}
+                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-colors flex items-center gap-2"
+                  >
+                    <i className="fas fa-bookmark"></i>
+                    Mark Step
+                  </button>
+                  <button
+                    onClick={togglePause}
+                    className="w-10 h-10 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-white transition-colors"
+                  >
+                    <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'}`}></i>
+                  </button>
+                  <button
+                    onClick={handleStopRecording}
+                    className="px-5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors"
+                  >
+                    <i className="fas fa-stop mr-2"></i>
+                    Stop
+                  </button>
+                </div>
               </div>
-            </div>
+            </>
           )}
         </>
       )}
