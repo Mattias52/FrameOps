@@ -88,8 +88,9 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 }) => {
   const canCreate = isPro || freeSOPsRemaining > 0;
 
-  // Phase state: setup -> recording -> review -> finishing
-  const [phase, setPhase] = useState<'setup' | 'recording' | 'review' | 'finishing'>('setup');
+  // Phase state: setup -> recording -> frame_selection (screen only) -> review -> finishing
+  const [phase, setPhase] = useState<'setup' | 'recording' | 'frame_selection' | 'review' | 'finishing'>('setup');
+  const [selectedFrameIndices, setSelectedFrameIndices] = useState<Set<number>>(new Set());
 
   // Initial chat message
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([{
@@ -1020,6 +1021,101 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     setPhase('recording');
   };
 
+  // Analyze selected frames (called from frame_selection phase)
+  const analyzeSelectedFrames = async () => {
+    setIsAnalyzingReview(true);
+    setPhase('review');
+
+    try {
+      // Get only the selected frames
+      const selectedFrames = Array.from(selectedFrameIndices)
+        .sort((a, b) => a - b)
+        .map(i => allFramesRef.current[i]);
+
+      if (selectedFrames.length === 0) {
+        alert('Please select at least one frame.');
+        setIsAnalyzingReview(false);
+        setPhase('frame_selection');
+        return;
+      }
+
+      // Replace allFramesRef with selected frames
+      allFramesRef.current = selectedFrames;
+      const frames = selectedFrames.map(f => f.image);
+      const originalFrames = frames;
+
+      console.log(`Analyzing ${frames.length} user-selected frames`);
+
+      // Transcribe audio
+      let audioTranscript = '';
+      const hasAudioBlob = audioBlobRef.current && audioBlobRef.current.size > 0;
+      if (hasAudioBlob) {
+        try {
+          audioTranscript = await transcribeAudioFile(audioBlobRef.current!);
+        } catch (err) {
+          console.error('Audio transcription failed:', err);
+        }
+      }
+
+      const spokenContext = transcriptRef.current.trim();
+      const finalTranscript = spokenContext || audioTranscript;
+
+      const languageInstruction = detectedLanguage === 'sv'
+        ? 'LANGUAGE: Respond in Swedish (Svenska). All step titles and descriptions must be in Swedish.'
+        : 'LANGUAGE: Respond in English. All step titles and descriptions must be in English.';
+
+      const screenInstructions = `
+SCREEN RECORDING MODE - ONE STEP PER FRAME:
+You are receiving ${frames.length} user-selected frames. Each frame shows a DIFFERENT screen/page.
+
+CRITICAL RULES:
+- Create EXACTLY ${frames.length} steps - one for each frame, in order
+- Step 1 describes Frame 1, Step 2 describes Frame 2, etc.
+- The frameIndex for step N MUST be N-1 (0-indexed)
+- Do NOT create more or fewer steps than frames
+
+FOR EACH STEP:
+- Describe what is shown on the screen in that specific frame
+- Use clear, actionable language ("Navigate to...", "Click on...", "View the...")
+`;
+
+      const contextWithTranscript = finalTranscript
+        ? `${languageInstruction}\n${screenInstructions}\nVIDEO TRANSCRIPT:\n"${finalTranscript}"\n\nUse the transcript to enhance descriptions.`
+        : `${languageInstruction}\n${screenInstructions}\nNo audio transcript. Base analysis on visual content only.`;
+
+      const result = await analyzeSOPFrames(frames, title, contextWithTranscript, [], []);
+      console.log('Gemini returned steps:', result.steps.length);
+
+      const stepsToUse = result.steps.slice(0, frames.length);
+      const draftSteps: SOPStep[] = stepsToUse.map((step, idx) => ({
+        ...step,
+        thumbnail: originalFrames[idx],
+        timestamp: allFramesRef.current[idx]?.timestamp
+          ? formatTime(allFramesRef.current[idx].timestamp)
+          : step.timestamp
+      }));
+
+      setDraftSOP(draftSteps);
+      setDraftTitle(result.title || title);
+      setDraftDescription(result.description || '');
+
+      const feedback = await getAIFeedbackOnDraft(draftSteps, finalTranscript);
+      setAiFeedback(feedback);
+      setReviewChatMessages([{
+        role: 'ai',
+        content: feedback.length > 0
+          ? `Here's your SOP with ${draftSteps.length} steps. I have some suggestions:\n\n${feedback.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nWant to re-record any step, or are you satisfied?`
+          : `Great job! Here's your SOP with ${draftSteps.length} steps. Does it look good, or would you like to change something?`
+      }]);
+    } catch (err: any) {
+      console.error('Error analyzing frames:', err);
+      alert('Error analyzing recording: ' + (err.message || 'Unknown error'));
+      setPhase('frame_selection');
+    } finally {
+      setIsAnalyzingReview(false);
+    }
+  };
+
   // Stop recording and go to review phase
   const handleStopRecording = async () => {
     if (!isRecording) return;
@@ -1060,51 +1156,48 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     console.log('Stopping recording. Total frames captured:', allFramesRef.current.length);
     console.log('Manually marked steps:', markedFramesRef.current.length);
 
-    // Generate draft SOP for review
-    try {
-      const spokenContext = transcriptRef.current.trim();
+    // SCREEN RECORDINGS: Go to frame selection step first
+    if (recordingMode === 'screen') {
+      const allCapturedFrames = allFramesRef.current.map(f => f.image);
 
-      // For screen recordings: use manually marked frames if available, otherwise auto-deduplicate
-      let frames: string[];
-      let originalFrames: string[];
+      if (allCapturedFrames.length === 0 && markedFramesRef.current.length === 0) {
+        alert('No frames captured. Please try again.');
+        setIsAnalyzingReview(false);
+        setPhase('setup');
+        return;
+      }
 
-      if (recordingMode === 'screen' && markedFramesRef.current.length > 0) {
-        // USER MARKED STEPS: use exactly these frames
-        console.log(`Using ${markedFramesRef.current.length} manually marked step frames`);
-        frames = markedFramesRef.current.map(f => f.image);
-        originalFrames = frames;
-        // Replace allFramesRef with marked frames for timestamp mapping
+      // If user marked steps, use those. Otherwise deduplicate auto-captured frames.
+      if (markedFramesRef.current.length > 0) {
         allFramesRef.current = markedFramesRef.current;
       } else {
-        const allCapturedFrames = allFramesRef.current.map(f => f.image);
-
-        if (allCapturedFrames.length === 0) {
-          alert('No frames captured. Please try again.');
-          setIsAnalyzingReview(false);
-          setPhase('setup');
-          return;
-        }
-
-        if (recordingMode === 'screen') {
-          // AUTO MODE: deduplicate frames to get only distinct screens
-          console.log(`No manual steps marked. Deduplicating ${allCapturedFrames.length} frames...`);
-          const uniqueIndices = await deduplicateFrames(allCapturedFrames, 0.15);
-          frames = uniqueIndices.map(i => allCapturedFrames[i]);
-          originalFrames = frames;
-          const dedupedFrameData = uniqueIndices.map(i => allFramesRef.current[i]);
-          allFramesRef.current = dedupedFrameData;
-          console.log(`Deduplicated to ${frames.length} unique frames (from ${allCapturedFrames.length})`);
-          if (frames.length > 10) {
-            console.log(`Capping ${frames.length} frames to 10`);
-            frames = frames.slice(0, 10);
-            originalFrames = originalFrames.slice(0, 10);
-            allFramesRef.current = allFramesRef.current.slice(0, 10);
-          }
-        } else {
-          frames = allCapturedFrames;
-          originalFrames = allCapturedFrames;
+        const uniqueIndices = await deduplicateFrames(allCapturedFrames, 0.12);
+        allFramesRef.current = uniqueIndices.map(i => allFramesRef.current[i]);
+        if (allFramesRef.current.length > 15) {
+          allFramesRef.current = allFramesRef.current.slice(0, 15);
         }
       }
+
+      console.log(`Frame selection: showing ${allFramesRef.current.length} frames to user`);
+      // Select all by default
+      setSelectedFrameIndices(new Set(allFramesRef.current.map((_, i) => i)));
+      setIsAnalyzingReview(false);
+      setPhase('frame_selection');
+      return;
+    }
+
+    // NON-SCREEN: Go straight to analysis
+    // Generate draft SOP for review
+    try {
+      const allCapturedFrames = allFramesRef.current.map(f => f.image);
+      if (allCapturedFrames.length === 0) {
+        alert('No frames captured. Please try again.');
+        setIsAnalyzingReview(false);
+        setPhase('setup');
+        return;
+      }
+      const frames = allCapturedFrames;
+      const originalFrames = allCapturedFrames;
 
       // Transcribe audio
       let audioTranscript = '';
@@ -1120,7 +1213,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         }
       }
 
-      const finalTranscript = spokenContext || audioTranscript;
+      const finalTranscript = transcriptRef.current.trim() || audioTranscript;
 
       // Create context - VISUAL CONTENT IS PRIMARY, transcript secondary
       let contextWithTranscript = '';
@@ -2255,6 +2348,81 @@ If the frames show something completely different from the title (e.g., title sa
               aria-label="Stop recording"
             >
               <div className="w-8 h-8 rounded-lg bg-white"></div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Frame Selection phase - screen recordings only */}
+      {phase === 'frame_selection' && (
+        <div className="absolute inset-0 bg-slate-900 flex flex-col z-30">
+          <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+            <div>
+              <h3 className="text-white text-lg font-bold">Select frames for your SOP</h3>
+              <p className="text-slate-400 text-sm">Click to deselect frames you don't want. Each selected frame = one step.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-indigo-400 font-bold">{selectedFrameIndices.size} selected</span>
+              <button
+                onClick={analyzeSelectedFrames}
+                disabled={selectedFrameIndices.size === 0}
+                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl transition-colors"
+              >
+                <i className="fas fa-magic mr-2"></i>
+                Generate SOP ({selectedFrameIndices.size} steps)
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {allFramesRef.current.map((frame, idx) => {
+                const isSelected = selectedFrameIndices.has(idx);
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      setSelectedFrameIndices(prev => {
+                        const next = new Set(prev);
+                        if (next.has(idx)) {
+                          next.delete(idx);
+                        } else {
+                          next.add(idx);
+                        }
+                        return next;
+                      });
+                    }}
+                    className={`relative cursor-pointer rounded-xl overflow-hidden border-3 transition-all ${
+                      isSelected
+                        ? 'border-indigo-500 ring-2 ring-indigo-500/50'
+                        : 'border-transparent opacity-40 grayscale'
+                    }`}
+                  >
+                    <img src={frame.image} alt={`Frame ${idx + 1}`} className="w-full aspect-video object-cover" />
+                    <div className={`absolute top-2 left-2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                      isSelected ? 'bg-indigo-600 text-white' : 'bg-black/60 text-slate-400'
+                    }`}>
+                      {isSelected ? Array.from(selectedFrameIndices).sort((a, b) => a - b).indexOf(idx) + 1 : '—'}
+                    </div>
+                    <div className="absolute bottom-1 right-2 text-xs text-white/70 bg-black/50 px-1 rounded">
+                      {formatTime(frame.timestamp)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="p-3 border-t border-slate-700 flex justify-center gap-4">
+            <button
+              onClick={() => setSelectedFrameIndices(new Set(allFramesRef.current.map((_, i) => i)))}
+              className="px-4 py-2 text-slate-400 hover:text-white text-sm"
+            >
+              Select all
+            </button>
+            <button
+              onClick={() => setSelectedFrameIndices(new Set())}
+              className="px-4 py-2 text-slate-400 hover:text-white text-sm"
+            >
+              Deselect all
             </button>
           </div>
         </div>
