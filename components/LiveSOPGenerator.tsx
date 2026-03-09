@@ -154,11 +154,11 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     startWithScreenMode ? 'screen' : null
   );
 
-  // If starting with screen mode, skip to recording phase and start screen capture
+  // If starting with screen mode, skip to recording phase (user must click to start capture - getDisplayMedia requires user gesture)
   useEffect(() => {
     if (startWithScreenMode && phase === 'setup') {
+      setRecordingMode('screen');
       setPhase('recording');
-      startScreenCapture();
     }
   }, [startWithScreenMode]);
 
@@ -190,10 +190,17 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const recordingTimeRef = useRef(0);
   const speechRecognitionRef = useRef<any>(null);
   const transcriptRef = useRef<string>('');
+  // Refs for stable access in callbacks (avoid stale closures)
+  const recordingModeRef = useRef<'camera' | 'screen' | null>(recordingMode);
+  const isRecordingRef = useRef(false);
   // Audio-only recorder for iOS Safari fallback (when Web Speech API unavailable)
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioBlobRef = useRef<Blob | null>(null);
+
+  // Keep refs in sync with state for use in callbacks
+  recordingModeRef.current = recordingMode;
+  isRecordingRef.current = isRecording;
 
   // Scene detection settings - different for screen vs camera recording
   // Screen recording: capture more frequently, let Gemini find the click moments
@@ -207,7 +214,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   // Minimum seconds between captures (even if scene changes)
   // Screen: capture every 0.5s to catch all UI changes
   // Camera: sensitivity-based interval
-  const MIN_CAPTURE_INTERVAL = isScreenMode ? 0.5 : Math.max(1.5, 8 - (sceneSensitivity / 100) * 6.5);
+  const MIN_CAPTURE_INTERVAL = isScreenMode ? 1.5 : Math.max(1.5, 8 - (sceneSensitivity / 100) * 6.5);
   const MAX_FRAMES = isScreenMode ? 120 : 60; // Screen recordings may need more frames
 
   // Start camera with video + audio
@@ -394,8 +401,10 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 
       // Listen for when user stops sharing via browser UI
       stream.getVideoTracks()[0].onended = () => {
-        console.log('User stopped screen sharing');
-        // The component will handle stopping gracefully
+        console.log('User stopped screen sharing via browser UI');
+        if (isRecordingRef.current) {
+          handleStopRecording();
+        }
       };
 
       setCameraStarted(true);
@@ -626,7 +635,8 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 
     // Check for blur and scene change
     const imageData = ctx.getImageData(0, 0, 1280, 720);
-    const blurry = isFrameBlurry(imageData);
+    // Skip blur detection for screen recordings (screen content like white backgrounds scores as "blurry")
+    const blurry = recordingModeRef.current === 'screen' ? false : isFrameBlurry(imageData);
     const diff = detectSceneChange(imageData);
     
     console.log(`Frame analysis: diff=${diff.toFixed(3)}, blurry=${blurry}`);
@@ -651,7 +661,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 
       // For screen recordings: force capture every 5s even without scene change
       // This ensures we don't miss pages where the UI looks similar
-      const isScreen = recordingMode === 'screen';
+      const isScreen = recordingModeRef.current === 'screen';
       const forceCapture = isScreen && timeSinceLastCapture >= 15;
 
       // Check if scene changed enough (skip if force capture)
@@ -1107,7 +1117,7 @@ If the frames show something completely different from the title (e.g., title sa
         : '';
 
       if (finalTranscript) {
-        contextWithTranscript = `${visualValidationPrefix}AUDIO TRANSCRIPT:\n"${finalTranscript}"\n\nUse the transcript to inform step descriptions, but verify that the visual content matches.${plannedStepsContext}`;
+        contextWithTranscript = `${visualValidationPrefix}VIDEO TRANSCRIPT:\n"${finalTranscript}"\n\nUse the transcript to inform step descriptions, but verify that the visual content matches.${plannedStepsContext}`;
       } else {
         contextWithTranscript = `${visualValidationPrefix}No audio transcript available. Base your analysis ENTIRELY on what you see in the video frames.${plannedStepsContext}`;
       }
@@ -1365,9 +1375,13 @@ If the frames show something completely different from the title (e.g., title sa
     lastCaptureTimeRef.current = 0;
     lastImageDataRef.current = null;
 
-    // Start camera if not running
+    // Start capture if not running (respect recording mode)
     if (!streamRef.current) {
-      await startCamera();
+      if (recordingMode === 'screen') {
+        await startScreenCapture();
+      } else {
+        await startCamera();
+      }
     }
 
     // Start recording

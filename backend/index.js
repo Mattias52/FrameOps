@@ -2559,11 +2559,8 @@ app.post('/analyze-sop', async (req, res) => {
       - CRITICAL: Select the frameIndex (0 to ${validImageParts.length - 1}) that BEST SHOWS this specific step action
 
       FRAME INDEX SELECTION (CRITICAL FOR IMAGE-TEXT MATCHING):
-      Each frame has a visible YELLOW label "FRAME X/${validImageParts.length}" in the top-left corner.
-      READ THE LABEL ON EACH FRAME to know its number. Use this to assign frameIndex correctly.
-      - The label shows 1-indexed numbers, but frameIndex is 0-indexed: "FRAME 1" = frameIndex 0, "FRAME 2" = frameIndex 1, etc.
-      - For each step, pick the frame whose VISUAL CONTENT best matches the step description
-      - READ the yellow label text on that frame, subtract 1, and use that as frameIndex
+      The frames are provided in order: first image = frameIndex 0, second = frameIndex 1, etc.
+      - For each step, select the frameIndex of the frame that BEST SHOWS the action described
       - CRITICAL: Each step MUST have a DIFFERENT frameIndex - NO duplicate frameIndex values allowed!
       - Create AT MOST ${validImageParts.length} steps (one per frame maximum)
       - Do NOT create multiple steps for the same screen/page - combine them into one step
