@@ -1591,10 +1591,28 @@ If the frames show something completely different from the title (e.g., title sa
   const startReRecording = async () => {
     if (stepsToReRecord.length === 0) return;
 
+    if (recordingMode === 'screen') {
+      // Screen mode: open screen share and let user capture new screenshots
+      try {
+        if (!streamRef.current) {
+          await startScreenCapture();
+        }
+        setReRecordStepIndex(stepsToReRecord[0]);
+        setIsReRecording(true);
+        setReviewChatMessages(prev => [...prev, {
+          role: 'ai',
+          content: `Navigate to the correct screen for step ${stepsToReRecord[0] + 1}: "${draftSOP?.[stepsToReRecord[0]]?.title}". Then click "Capture" to replace the screenshot.`
+        }]);
+      } catch (err) {
+        console.error('Screen capture failed:', err);
+      }
+      return;
+    }
+
+    // Camera mode: existing flow
     setReRecordStepIndex(stepsToReRecord[0]);
     setIsReRecording(true);
 
-    // Reset recording state for re-record
     recordedChunksRef.current = [];
     allFramesRef.current = [];
     setRecordingTime(0);
@@ -1602,17 +1620,55 @@ If the frames show something completely different from the title (e.g., title sa
     lastCaptureTimeRef.current = 0;
     lastImageDataRef.current = null;
 
-    // Start capture if not running (respect recording mode)
     if (!streamRef.current) {
-      if (recordingMode === 'screen') {
-        await startScreenCapture();
-      } else {
-        await startCamera();
-      }
+      await startCamera();
     }
-
-    // Start recording
     await handleStartRecording();
+  };
+
+  // Capture replacement screenshot for screen re-record
+  const captureReRecordScreen = () => {
+    if (!streamRef.current || reRecordStepIndex === null || !draftSOP) return;
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    const newImage = canvas.toDataURL('image/jpeg', 0.85);
+
+    // Replace the step's thumbnail
+    const updatedSteps = [...draftSOP];
+    updatedSteps[reRecordStepIndex] = { ...updatedSteps[reRecordStepIndex], thumbnail: newImage };
+    setDraftSOP(updatedSteps);
+
+    // Move to next step to re-record or finish
+    const remaining = stepsToReRecord.filter(i => i !== reRecordStepIndex);
+    setStepsToReRecord(remaining);
+
+    if (remaining.length > 0) {
+      setReRecordStepIndex(remaining[0]);
+      setReviewChatMessages(prev => [...prev, {
+        role: 'ai',
+        content: `Step ${reRecordStepIndex + 1} updated! Now navigate to step ${remaining[0] + 1}: "${draftSOP[remaining[0]]?.title}" and click Capture.`
+      }]);
+    } else {
+      // Done - stop screen share
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      setCameraStarted(false);
+      setIsReRecording(false);
+      setReRecordStepIndex(null);
+      setReviewChatMessages(prev => [...prev, {
+        role: 'ai',
+        content: 'All steps updated! Does it look better now?'
+      }]);
+    }
   };
 
   // Handle re-record completion
@@ -1806,8 +1862,21 @@ If the frames show something completely different from the title (e.g., title sa
                 </button>
               )}
 
-              {markedStepCount < 2 && markedStepCount > 0 && (
+              {markedStepCount > 0 && markedStepCount < 2 && (
                 <p className="text-slate-500 text-sm">Capture at least 2 steps to generate SOP</p>
+              )}
+
+              {markedStepCount > 0 && (
+                <button
+                  onClick={() => {
+                    markedFramesRef.current.pop();
+                    setMarkedStepCount(markedFramesRef.current.length);
+                  }}
+                  className="text-red-400 hover:text-red-300 text-sm transition-colors"
+                >
+                  <i className="fas fa-undo mr-1"></i>
+                  Undo last capture
+                </button>
               )}
             </div>
           </div>
@@ -2630,14 +2699,27 @@ If the frames show something completely different from the title (e.g., title sa
                 </div>
               ))}
 
-              {/* Re-record button */}
-              {stepsToReRecord.length > 0 && (
+              {/* Re-record button / Screen capture button */}
+              {isReRecording && recordingMode === 'screen' && reRecordStepIndex !== null ? (
+                <div className="mt-4 space-y-2">
+                  <p className="text-amber-400 text-xs text-center">
+                    Recapturing step {reRecordStepIndex + 1}: {draftSOP?.[reRecordStepIndex]?.title}
+                  </p>
+                  <button
+                    onClick={captureReRecordScreen}
+                    className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 transition-colors"
+                  >
+                    <i className="fas fa-camera mr-2"></i>
+                    Capture new screenshot
+                  </button>
+                </div>
+              ) : stepsToReRecord.length > 0 && (
                 <button
                   onClick={startReRecording}
                   className="w-full mt-4 py-3 bg-amber-600 text-white font-bold rounded-xl hover:bg-amber-500 transition-colors"
                 >
                   <i className="fas fa-video mr-2"></i>
-                  Re-record {stepsToReRecord.length} steps
+                  Re-record {stepsToReRecord.length} step{stepsToReRecord.length !== 1 ? 's' : ''}
                 </button>
               )}
             </div>

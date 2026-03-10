@@ -341,7 +341,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
           .step-content { flex: 1; }
           .step-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
           .step-desc { color: #475569; line-height: 1.6; margin-bottom: 12px; }
-          .step-image { width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; margin-top: 12px; border: 1px solid #e2e8f0; }
+          .step-image { width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px; margin-top: 12px; }
           .safety-warning { background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px; margin: 12px 0; border-radius: 0 8px 8px 0; }
           .safety-warning-title { color: #dc2626; font-weight: 700; font-size: 12px; text-transform: uppercase; margin-bottom: 4px; }
           .safety-warning-text { color: #7f1d1d; font-size: 13px; }
