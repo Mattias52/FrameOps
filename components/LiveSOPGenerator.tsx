@@ -440,9 +440,9 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     }
   };
 
-  // Mark current screen as a step (screen recording only)
+  // Capture current screen as a step (screen recording wizard)
   const markStep = () => {
-    if (!streamRef.current || !isRecordingRef.current) return;
+    if (!streamRef.current) return;
     const video = videoRef.current;
     if (!video || video.videoWidth === 0) return;
 
@@ -1635,77 +1635,105 @@ If the frames show something completely different from the title (e.g., title sa
       />
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Screen recording mode UI - show when screen capture is active */}
+      {/* Screen recording mode UI - step-by-step capture wizard */}
       {recordingMode === 'screen' && cameraStarted && (
-        <>
-          {/* Before recording: Full screen start UI */}
-          {!isRecording && (
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 flex items-center justify-center z-40">
-              <div className="text-center max-w-lg px-6">
-                <div className="w-32 h-32 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-6">
-                  <div className="w-24 h-24 rounded-full bg-indigo-500/30 flex items-center justify-center">
-                    <i className="fas fa-desktop text-indigo-400 text-4xl"></i>
-                  </div>
-                </div>
-                <p className="text-white text-2xl font-bold mb-2">Screen Ready</p>
-                <p className="text-slate-400 mb-8">Press to start recording</p>
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 flex flex-col items-center justify-center z-40">
+          {/* Flash overlay when step is captured */}
+          {stepMarkedFlash && (
+            <div className="absolute inset-0 bg-green-500/30 z-50 pointer-events-none transition-opacity" />
+          )}
 
-                <button
-                  onClick={handleStartRecording}
-                  className="w-24 h-24 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto mb-4 hover:bg-white/20 transition-colors"
-                >
-                  <div className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-400 transition-colors"></div>
-                </button>
+          {/* Captured steps preview - top */}
+          {markedStepCount > 0 && (
+            <div className="absolute top-4 left-4 right-4 z-40">
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {markedFramesRef.current.map((frame, idx) => (
+                  <div key={idx} className="flex-shrink-0 relative">
+                    <img src={frame.image} alt={`Step ${idx + 1}`} className="h-16 w-28 object-cover rounded-lg border-2 border-indigo-500" />
+                    <div className="absolute top-0.5 left-0.5 bg-indigo-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                      {idx + 1}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* During recording: Floating control bar with Mark Step */}
-          {isRecording && (
-            <>
-              {/* Flash overlay when step is marked */}
-              {stepMarkedFlash && (
-                <div className="absolute inset-0 bg-indigo-500/20 z-50 pointer-events-none animate-pulse" />
+          {/* Main capture area - center */}
+          <div className="text-center max-w-lg px-6">
+            <div className="w-20 h-20 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
+              <i className="fas fa-camera text-indigo-400 text-3xl"></i>
+            </div>
+
+            {markedStepCount === 0 ? (
+              <>
+                <p className="text-white text-2xl font-bold mb-2">Navigate to your first page</p>
+                <p className="text-slate-400 mb-8">Go to the screen you want to capture, then come back and click the button below</p>
+              </>
+            ) : (
+              <>
+                <p className="text-green-400 text-lg font-bold mb-1">Step {markedStepCount} captured!</p>
+                <p className="text-white text-2xl font-bold mb-2">Navigate to the next page</p>
+                <p className="text-slate-400 mb-8">Switch to the next screen, then click capture — or finish if you're done</p>
+              </>
+            )}
+
+            <div className="flex flex-col items-center gap-4">
+              <button
+                onClick={markStep}
+                className="px-10 py-5 bg-indigo-600 hover:bg-indigo-500 text-white text-xl font-bold rounded-2xl transition-colors shadow-lg shadow-indigo-600/30"
+              >
+                <i className="fas fa-camera mr-3"></i>
+                Capture Step {markedStepCount + 1}
+              </button>
+
+              {markedStepCount >= 2 && (
+                <button
+                  onClick={() => {
+                    // Use marked frames directly and go to analysis
+                    allFramesRef.current = markedFramesRef.current;
+                    setSelectedFrameIndices(new Set(markedFramesRef.current.map((_, i) => i)));
+                    // Stop screen share
+                    if (streamRef.current) {
+                      streamRef.current.getTracks().forEach(track => track.stop());
+                      streamRef.current = null;
+                    }
+                    setCameraStarted(false);
+                    setIsRecording(false);
+                    analyzeSelectedFrames();
+                  }}
+                  className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition-colors"
+                >
+                  <i className="fas fa-check mr-2"></i>
+                  Finish — Generate SOP ({markedStepCount} steps)
+                </button>
               )}
-              {/* Step counter badge - top center */}
-              {markedStepCount > 0 && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40">
-                  <div className="bg-indigo-600/90 backdrop-blur-sm rounded-full px-4 py-2 text-white font-bold text-sm">
-                    {markedStepCount} step{markedStepCount !== 1 ? 's' : ''} marked
-                  </div>
-                </div>
+
+              {markedStepCount < 2 && markedStepCount > 0 && (
+                <p className="text-slate-500 text-sm">Capture at least 2 steps to generate SOP</p>
               )}
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40">
-                <div className="bg-black/80 backdrop-blur-sm rounded-2xl px-6 py-4 flex items-center gap-4 shadow-2xl">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
-                    <span className="text-red-400 font-mono font-bold text-lg">{formatTime(recordingTime)}</span>
-                  </div>
-                  <button
-                    onClick={markStep}
-                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-colors flex items-center gap-2"
-                  >
-                    <i className="fas fa-bookmark"></i>
-                    Mark Step
-                  </button>
-                  <button
-                    onClick={togglePause}
-                    className="w-10 h-10 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-white transition-colors"
-                  >
-                    <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'}`}></i>
-                  </button>
-                  <button
-                    onClick={handleStopRecording}
-                    className="px-5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors"
-                  >
-                    <i className="fas fa-stop mr-2"></i>
-                    Stop
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </>
+            </div>
+          </div>
+
+          {/* Cancel button - bottom */}
+          <button
+            onClick={() => {
+              if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+                streamRef.current = null;
+              }
+              setCameraStarted(false);
+              setIsRecording(false);
+              setRecordingMode(null);
+              markedFramesRef.current = [];
+              setMarkedStepCount(0);
+              setPhase('recording');
+            }}
+            className="absolute bottom-6 text-slate-500 hover:text-white text-sm transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
       )}
 
       {/* Top bar - minimal (hide during split-screen recording - steps panel has time) */}
