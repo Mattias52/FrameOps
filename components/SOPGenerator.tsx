@@ -178,7 +178,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const MAX_FILE_SIZE_MB = 500; // Max upload size for customers
+  const MAX_FILE_SIZE_MB = 3000; // Temporarily raised for testing (revert to 500 for production)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = (e.target as any).files?.[0];
     if (file) {
