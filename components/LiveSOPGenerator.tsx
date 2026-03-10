@@ -202,6 +202,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const markedFramesRef = useRef<{ timestamp: number; image: string }[]>([]);
   const [markedStepCount, setMarkedStepCount] = useState(0);
   const [stepMarkedFlash, setStepMarkedFlash] = useState(false);
+  const pipWindowRef = useRef<any>(null);
 
   // Keep refs in sync with state for use in callbacks
   recordingModeRef.current = recordingMode;
@@ -464,6 +465,91 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     setTimeout(() => setStepMarkedFlash(false), 500);
 
     console.log(`Step ${markedFramesRef.current.length} marked at ${timestamp}s`);
+
+    // Update PiP window if open
+    if (pipWindowRef.current && !pipWindowRef.current.closed) {
+      const countEl = pipWindowRef.current.document.getElementById('pip-count');
+      const statusEl = pipWindowRef.current.document.getElementById('pip-status');
+      if (countEl) countEl.textContent = `${markedFramesRef.current.length} steps captured`;
+      if (statusEl) {
+        statusEl.textContent = '✓ Captured!';
+        statusEl.style.color = '#4ade80';
+        setTimeout(() => {
+          if (statusEl) {
+            statusEl.textContent = 'Navigate to next page';
+            statusEl.style.color = '#94a3b8';
+          }
+        }, 1500);
+      }
+    }
+  };
+
+  // Open floating Picture-in-Picture capture window
+  const openPipCapture = async () => {
+    try {
+      // @ts-ignore - documentPictureInPicture is experimental
+      if (!window.documentPictureInPicture) {
+        console.log('Document PiP not supported');
+        return false;
+      }
+      // @ts-ignore
+      const pipWindow = await window.documentPictureInPicture.requestWindow({
+        width: 300,
+        height: 200,
+      });
+      pipWindowRef.current = pipWindow;
+
+      pipWindow.document.body.innerHTML = `
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { background: #1e293b; color: white; font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 12px; }
+          #pip-count { font-size: 14px; color: #818cf8; font-weight: bold; }
+          #pip-status { font-size: 12px; color: #94a3b8; }
+          #pip-btn { background: #4f46e5; color: white; border: none; padding: 14px 28px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; }
+          #pip-btn:hover { background: #6366f1; }
+          #pip-btn:active { transform: scale(0.95); }
+          #pip-finish { background: #16a34a; color: white; border: none; padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; display: none; }
+          #pip-finish:hover { background: #22c55e; }
+        </style>
+        <div id="pip-count">0 steps captured</div>
+        <button id="pip-btn">📸 Capture Step</button>
+        <div id="pip-status">Navigate to first page</div>
+        <button id="pip-finish">✓ Finish</button>
+      `;
+
+      // Wire up the capture button
+      pipWindow.document.getElementById('pip-btn')!.addEventListener('click', () => {
+        markStep();
+        const count = markedFramesRef.current.length;
+        const finishBtn = pipWindow.document.getElementById('pip-finish');
+        if (finishBtn && count >= 2) finishBtn.style.display = 'block';
+      });
+
+      // Wire up finish button
+      pipWindow.document.getElementById('pip-finish')!.addEventListener('click', () => {
+        pipWindow.close();
+        // Trigger finish from main window
+        allFramesRef.current = markedFramesRef.current;
+        setSelectedFrameIndices(new Set(markedFramesRef.current.map((_: any, i: number) => i)));
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+          streamRef.current = null;
+        }
+        setCameraStarted(false);
+        setIsRecording(false);
+        analyzeSelectedFrames();
+      });
+
+      // Cleanup on close
+      pipWindow.addEventListener('pagehide', () => {
+        pipWindowRef.current = null;
+      });
+
+      return true;
+    } catch (err) {
+      console.log('PiP failed:', err);
+      return false;
+    }
   };
 
   // Cleanup on unmount (camera started manually via button click for iOS Safari)
@@ -1099,13 +1185,11 @@ FOR EACH STEP:
       setDraftTitle(result.title || title);
       setDraftDescription(result.description || '');
 
-      const feedback = await getAIFeedbackOnDraft(draftSteps, finalTranscript);
-      setAiFeedback(feedback);
+      // Skip AI feedback for screen recordings — it gives irrelevant suggestions
+      setAiFeedback([]);
       setReviewChatMessages([{
         role: 'ai',
-        content: feedback.length > 0
-          ? `Here's your SOP with ${draftSteps.length} steps. I have some suggestions:\n\n${feedback.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nWant to re-record any step, or are you satisfied?`
-          : `Great job! Here's your SOP with ${draftSteps.length} steps. Does it look good, or would you like to change something?`
+        content: `Here's your SOP with ${draftSteps.length} steps. Review the steps and click Save if it looks good, or re-record any step you want to change.`
       }]);
     } catch (err: any) {
       console.error('Error analyzing frames:', err);
@@ -1686,6 +1770,19 @@ If the frames show something completely different from the title (e.g., title sa
                 <i className="fas fa-camera mr-3"></i>
                 Capture Step {markedStepCount + 1}
               </button>
+
+              {markedStepCount === 0 && (
+                <button
+                  onClick={async () => {
+                    const ok = await openPipCapture();
+                    if (!ok) alert('Floating window not supported in this browser. Use the button here instead.');
+                  }}
+                  className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-xl transition-colors"
+                >
+                  <i className="fas fa-external-link-alt mr-2"></i>
+                  Pop out capture button
+                </button>
+              )}
 
               {markedStepCount >= 2 && (
                 <button
