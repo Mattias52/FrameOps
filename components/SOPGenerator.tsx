@@ -178,9 +178,16 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const MAX_FILE_SIZE_MB = 500; // Max upload size for customers
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = (e.target as any).files?.[0];
     if (file) {
+      const fileSizeMB = file.size / (1024 * 1024);
+      if (fileSizeMB > MAX_FILE_SIZE_MB) {
+        alert(`File too large (${fileSizeMB.toFixed(0)} MB). Maximum upload size is ${MAX_FILE_SIZE_MB} MB. Please compress or trim your video before uploading.`);
+        e.target.value = '';
+        return;
+      }
       setVideoFile(file);
       setVideoUrl(URL.createObjectURL(file));
       if (!title) setTitle(file.name.replace(/\.[^/.]+$/, ""));
@@ -328,7 +335,14 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
 
     } catch (err: any) {
       console.error(err);
-      addLog(`Pipeline Error: ${err.message}`);
+      const msg = err.message || 'Unknown error';
+      const isFileTooLarge = msg.includes('too large') || msg.includes('413') || msg.includes('limit');
+      addLog(`Pipeline Error: ${msg}`);
+      if (isFileTooLarge) {
+        alert(`Upload failed: File is too large. Try compressing or trimming your video.`);
+      } else {
+        alert(`SOP generation failed: ${msg}`);
+      }
       setIsProcessing(false);
       setPipelineStage('idle');
     }

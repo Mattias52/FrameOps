@@ -19,12 +19,14 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// Add file upload middleware for uploaded videos (2GB max for Supabase Pro)
+// Add file upload middleware for uploaded videos (3GB max temporarily for testing)
 app.use(fileUpload({
   limits: {
-    fileSize: 2 * 1024 * 1024 * 1024,  // 2GB for video files
+    fileSize: 3 * 1024 * 1024 * 1024,  // 3GB temporarily (revert to 500MB for production)
     fieldSize: 100 * 1024 * 1024        // 100MB for form fields (ffmpegFrames with base64 images)
   },
+  abortOnLimit: true,
+  responseOnLimit: 'File too large. Maximum upload size is 500MB.',
   useTempFiles: true,
   tempFileDir: path.join(os.tmpdir(), 'uploads')
 }));
