@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import * as Sentry from '@sentry/react';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
+import './i18n';
 import './index.css';
 
 // Initialize Sentry for error tracking

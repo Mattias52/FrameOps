@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { AppView } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 interface LandingPageProps {
   onNavigate: (view: AppView) => void;
@@ -9,6 +10,7 @@ interface LandingPageProps {
 
 const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) => {
   const { user, loading, signInGoogle } = useAuth();
+  const { t } = useTranslation();
 
   // Auto-enter app when user is logged in (e.g., after OAuth redirect)
   useEffect(() => {
@@ -21,73 +23,73 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
   const features = [
     {
       icon: 'fa-youtube',
-      title: 'YouTube Import',
-      description: 'Paste any YouTube URL. AI extracts frames and generates step-by-step instructions automatically.',
+      title: t('landing.youtubeImport'),
+      description: t('landing.youtubeImportDesc'),
       isBrand: true
     },
     {
       icon: 'fa-mobile-screen',
-      title: 'Live Recording',
-      description: 'Record yourself doing the task with your phone. AI watches and creates the SOP as you work.'
+      title: t('landing.liveRecordingTitle'),
+      description: t('landing.liveRecordingDesc')
     },
     {
       icon: 'fa-cloud-upload-alt',
-      title: 'Video Upload',
-      description: 'Upload existing training videos. AI analyzes the footage and extracts clear step-by-step instructions.'
+      title: t('landing.videoUploadTitle'),
+      description: t('landing.videoUploadDesc')
     },
     {
       icon: 'fa-shield-halved',
-      title: 'Safety Detection',
-      description: 'AI automatically identifies hazards and suggests PPE requirements from your footage.'
+      title: t('landing.safetyDetection'),
+      description: t('landing.safetyDetectionDesc')
     },
     {
       icon: 'fa-file-pdf',
-      title: 'PDF Export',
-      description: 'One-click export to professional PDF ready for print or digital distribution.'
+      title: t('landing.pdfExportTitle'),
+      description: t('landing.pdfExportDesc')
     },
     {
       icon: 'fa-images',
-      title: 'Frame Selection',
-      description: 'AI picks the best frames, or manually choose which images to use for each step.'
+      title: t('landing.frameSelectionTitle'),
+      description: t('landing.frameSelectionDesc')
     }
   ];
 
   const useCases = [
-    { industry: 'Manufacturing', example: 'Machine setup, maintenance procedures, quality checks', icon: 'fa-industry', view: AppView.MANUFACTURING },
-    { industry: 'Healthcare', example: 'Clinical procedures, equipment operation, sterilization', icon: 'fa-hospital', view: AppView.HEALTHCARE },
-    { industry: 'Food Service', example: 'Health code compliance, recipes, cleaning procedures', icon: 'fa-utensils', view: null },
-    { industry: 'Training & HR', example: 'Onboarding, safety training, compliance documentation', icon: 'fa-graduation-cap', view: AppView.TRAINING },
+    { industry: t('landing.manufacturing'), example: t('landing.manufacturingExample'), icon: 'fa-industry', view: AppView.MANUFACTURING },
+    { industry: t('landing.healthcare'), example: t('landing.healthcareExample'), icon: 'fa-hospital', view: AppView.HEALTHCARE },
+    { industry: t('landing.foodService'), example: t('landing.foodServiceExample'), icon: 'fa-utensils', view: null },
+    { industry: t('landing.trainingHr'), example: t('landing.trainingHrExample'), icon: 'fa-graduation-cap', view: AppView.TRAINING },
   ];
 
   const pricing = [
     {
-      name: 'Beta Free',
+      name: t('landing.betaFreePriceName'),
       price: '0',
       period: '',
-      description: 'All features included during beta!',
+      description: t('landing.betaFreePriceDesc'),
       features: [
-        'Unlimited SOPs during beta',
-        'YouTube, upload & live recording',
-        'AI-generated step instructions',
-        'Safety & PPE detection',
-        'PDF export',
-        'Manual frame selection'
+        t('landing.betaFreePriceFeature1'),
+        t('landing.betaFreePriceFeature2'),
+        t('landing.betaFreePriceFeature3'),
+        t('landing.betaFreePriceFeature4'),
+        t('landing.betaFreePriceFeature5'),
+        t('landing.betaFreePriceFeature6')
       ],
-      cta: 'Get Started Free',
+      cta: t('landing.getStartedFree'),
       highlighted: true
     },
     {
-      name: 'Pro',
+      name: t('landing.proPriceName'),
       price: '19',
-      period: '/month',
-      description: 'After beta ends',
+      period: t('landing.perMonth'),
+      description: t('landing.proPriceDesc'),
       features: [
-        'Unlimited SOPs forever',
-        'All features from beta',
-        'Priority support',
-        'Early access to new features'
+        t('landing.proPriceFeature1'),
+        t('landing.proPriceFeature2'),
+        t('landing.proPriceFeature3'),
+        t('landing.proPriceFeature4')
       ],
-      cta: 'Coming After Beta',
+      cta: t('landing.comingAfterBeta'),
       highlighted: false
     }
   ];
@@ -105,14 +107,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
               <span className="font-bold text-xl text-slate-900">FrameOps</span>
             </div>
             <div className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-slate-600 hover:text-slate-900 font-medium">Features</a>
-              <a href="#pricing" className="text-slate-600 hover:text-slate-900 font-medium">Pricing</a>
+              <a href="#features" className="text-slate-600 hover:text-slate-900 font-medium">{t('landing.features')}</a>
+              <a href="#pricing" className="text-slate-600 hover:text-slate-900 font-medium">{t('landing.pricing')}</a>
               <button
                 onClick={() => onNavigate(AppView.CREATOR_LANDING)}
                 className="text-amber-600 hover:text-amber-700 font-semibold flex items-center gap-1"
               >
                 <i className="fab fa-youtube text-sm"></i>
-                For Creators
+                {t('landing.forCreators')}
               </button>
             </div>
             <div className="flex items-center gap-3">
@@ -121,7 +123,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                   onClick={onGetStarted}
                   className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
                 >
-                  Go to Dashboard
+                  {t('landing.goToDashboard')}
                 </button>
               ) : (
                 <>
@@ -130,13 +132,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                     className="hidden sm:flex items-center gap-2 px-4 py-2.5 text-slate-700 font-medium hover:text-slate-900"
                   >
                     <i className="fas fa-user"></i>
-                    Sign in
+                    {t('landing.signIn')}
                   </button>
                   <button
                     onClick={onGetStarted}
                     className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
                   >
-                    Get Started Free
+                    {t('landing.getStartedFree')}
                   </button>
                 </>
               )}
@@ -149,7 +151,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       <div className="fixed top-16 left-0 right-0 bg-slate-800 text-white py-2 px-4 text-center z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 text-sm">
           <span>
-            Still building this thing. Free while I figure out what works.
+            {t('landing.betaBanner')}
           </span>
         </div>
       </div>
@@ -160,19 +162,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
           <div className="text-center max-w-2xl mx-auto">
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 leading-tight mb-8">
-              You've filmed repairs before.
+              {t('landing.heroTitle')}
             </h1>
 
             <p className="text-xl text-slate-600 mb-4 leading-relaxed">
-              Phone in one hand. Tool in the other. Talking through what you're doing.
+              {t('landing.heroP1')}
             </p>
 
             <p className="text-xl text-slate-600 mb-4 leading-relaxed">
-              Then the video just... sits there. You'll "write it up later."
+              {t('landing.heroP2')}
             </p>
 
             <p className="text-xl text-slate-900 font-semibold mb-10">
-              You never do.
+              {t('landing.heroP3')}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
@@ -180,12 +182,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                 onClick={onGetStarted}
                 className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-xl font-bold text-lg hover:bg-slate-800 transition-all"
               >
-                Try It Free
+                {t('landing.tryItFree')}
               </button>
             </div>
 
             <p className="text-slate-500">
-              Upload a video. A step-by-step guide is created automatically in minutes.
+              {t('landing.heroSubtext')}
             </p>
 
           </div>
@@ -196,10 +198,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       <section className="py-12 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-2xl mx-auto text-center">
           <p className="text-slate-600">
-            Built for service technicians, but works for anyone doing hands-on stuff.
+            {t('landing.whoItsFor')}
           </p>
           <p className="text-slate-500 text-sm mt-2">
-            Work. Hobbies. Content creation. If you can film it, you can turn it into a guide.
+            {t('landing.whoItsForSub')}
           </p>
         </div>
       </section>
@@ -209,10 +211,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold mb-4">
-                The easy way: just record yourself
+                {t('landing.easyWay')}
               </h2>
               <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-                Open camera. Do the job. Talk through what you're doing. Done.
+                {t('landing.easyWaySub')}
               </p>
             </div>
 
@@ -242,7 +244,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                       {/* Steps counter */}
                       <div className="p-3 bg-slate-800 rounded-b-xl">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-400">Steps captured</span>
+                          <span className="text-slate-400">{t('landing.stepsCaptured')}</span>
                           <span className="text-white font-bold">7</span>
                         </div>
                       </div>
@@ -253,7 +255,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                 <div className="absolute -right-4 top-1/4 bg-white rounded-xl p-3 shadow-xl max-w-[200px] animate-pulse">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold">3</div>
-                    <span className="text-slate-900 text-sm font-semibold">Step detected</span>
+                    <span className="text-slate-900 text-sm font-semibold">{t('landing.stepDetected')}</span>
                   </div>
                   <p className="text-slate-600 text-xs">"Tighten the bolt to 25 Nm..."</p>
                 </div>
@@ -266,8 +268,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                     <i className="fas fa-video text-white text-xl"></i>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold mb-1">Just Record Yourself</h3>
-                    <p className="text-slate-400">Open your phone, hit record, and do the task as you normally would. No special setup needed.</p>
+                    <h3 className="text-lg font-bold mb-1">{t('landing.justRecordYourself')}</h3>
+                    <p className="text-slate-400">{t('landing.justRecordYourselfDesc')}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -275,8 +277,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                     <i className="fas fa-microphone text-white text-xl"></i>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold mb-1">Talk While You Work</h3>
-                    <p className="text-slate-400">"Now I'm tightening this bolt..." - AI transcribes everything and turns it into professional instructions.</p>
+                    <h3 className="text-lg font-bold mb-1">{t('landing.talkWhileYouWork')}</h3>
+                    <p className="text-slate-400">{t('landing.talkWhileYouWorkDesc')}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -284,8 +286,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                     <i className="fas fa-wand-magic-sparkles text-white text-xl"></i>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold mb-1">AI Does The Rest</h3>
-                    <p className="text-slate-400">Scene detection captures the right moments. AI writes clear instructions. You get a complete SOP.</p>
+                    <h3 className="text-lg font-bold mb-1">{t('landing.aiDoesTheRest')}</h3>
+                    <p className="text-slate-400">{t('landing.aiDoesTheRestDesc')}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -293,8 +295,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                     <i className="fas fa-list-check text-white text-xl"></i>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold mb-1">AI Step Planner</h3>
-                    <p className="text-slate-400">Describe what you'll show and AI creates a step-by-step plan. Follow the guide while recording.</p>
+                    <h3 className="text-lg font-bold mb-1">{t('landing.aiStepPlanner')}</h3>
+                    <p className="text-slate-400">{t('landing.aiStepPlannerDesc')}</p>
                   </div>
                 </div>
                 <button
@@ -302,7 +304,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
                   className="w-full sm:w-auto px-8 py-4 bg-amber-500 text-slate-900 rounded-2xl font-bold text-lg hover:bg-amber-400 transition-all mt-4"
                 >
                   <i className="fas fa-play mr-2"></i>
-                  Try Live Recording
+                  {t('landing.tryLiveRecording')}
                 </button>
               </div>
             </div>
@@ -314,9 +316,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 scroll-mt-24">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">How it works</h2>
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">{t('landing.howItWorks')}</h2>
             <p className="text-lg text-slate-600 max-w-xl mx-auto">
-              Three ways to get your video in. Same result: a guide you can actually use.
+              {t('landing.howItWorksSub')}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -338,9 +340,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 scroll-mt-24">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Pricing</h2>
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">{t('landing.pricingTitle')}</h2>
             <p className="text-lg text-slate-600 max-w-xl mx-auto">
-              Free during beta. I'll figure out pricing when I know what this is worth to people.
+              {t('landing.pricingSub')}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
@@ -355,7 +357,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
               >
                 {plan.highlighted && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-400 text-amber-900 text-xs font-bold rounded-full">
-                    MOST POPULAR
+                    {t('landing.mostPopular')}
                   </div>
                 )}
                 <h3 className={`text-xl font-bold mb-1 ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>
@@ -402,16 +404,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-900">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-2xl font-bold text-white mb-4">
-            Next time you film something, don't let it sit there.
+            {t('landing.ctaTitle')}
           </h2>
           <p className="text-lg text-slate-400 mb-8">
-            Upload it. Get a guide. Actually use it.
+            {t('landing.ctaSub')}
           </p>
           <button
             onClick={onGetStarted}
             className="px-8 py-4 bg-white text-slate-900 rounded-xl font-bold text-lg hover:bg-slate-100 transition-colors"
           >
-            Try It Free
+            {t('landing.tryItFree')}
           </button>
         </div>
       </section>
@@ -427,12 +429,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
               <span className="font-bold text-white">FrameOps</span>
             </div>
             <div className="flex items-center gap-6 text-slate-400 text-sm">
-              <button onClick={() => onNavigate(AppView.PRIVACY)} className="hover:text-white transition-colors">Privacy Policy</button>
-              <button onClick={() => onNavigate(AppView.TERMS)} className="hover:text-white transition-colors">Terms of Service</button>
-              <a href="mailto:support@frameops.ai" className="hover:text-white transition-colors">Contact</a>
+              <button onClick={() => onNavigate(AppView.PRIVACY)} className="hover:text-white transition-colors">{t('landing.privacyPolicy')}</button>
+              <button onClick={() => onNavigate(AppView.TERMS)} className="hover:text-white transition-colors">{t('landing.termsOfService')}</button>
+              <a href="mailto:support@frameops.ai" className="hover:text-white transition-colors">{t('landing.contact')}</a>
             </div>
             <p className="text-slate-600 text-sm">
-              &copy; {new Date().getFullYear()} FrameOps. All rights reserved.
+              &copy; {new Date().getFullYear()} FrameOps. {t('landing.allRightsReserved')}
             </p>
           </div>
         </div>

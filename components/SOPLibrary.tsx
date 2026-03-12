@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SOP, SOPStep } from '../types';
 import { deleteSOP, updateSOP, isSupabaseConfigured } from '../services/supabaseService';
 import StepEditor from './StepEditor';
@@ -21,6 +22,7 @@ interface SOPLibraryProps {
 }
 
 const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro = false, initialSelectedId, onSelectionCleared, onUpgrade, onLoadMore, hasMore = false, fetchSteps }) => {
+  const { t } = useTranslation();
   const [selectedSop, setSelectedSop] = useState<SOP | null>(null);
   const [isLoadingSteps, setIsLoadingSteps] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -451,7 +453,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
               className="flex items-center gap-2 text-slate-600 font-semibold hover:text-slate-900 transition-all"
             >
               <i className="fas fa-times"></i>
-              Cancel Editing
+              {t('library.cancelEditing')}
             </button>
             <div className="flex items-center gap-3">
               <button
@@ -460,7 +462,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                 className="px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all flex items-center gap-2 disabled:opacity-50"
               >
                 <i className={`fas ${isSaving ? 'fa-spinner fa-spin' : 'fa-save'}`}></i>
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? t('library.saving') : t('library.saveChanges')}
               </button>
             </div>
           </div>
@@ -471,8 +473,8 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
               <i className="fas fa-edit text-amber-600 text-xl"></i>
             </div>
             <div>
-              <h3 className="font-bold text-amber-900">Edit Mode Active</h3>
-              <p className="text-sm text-amber-700">Make changes to your SOP. Don't forget to save when done!</p>
+              <h3 className="font-bold text-amber-900">{t('library.editModeActive')}</h3>
+              <p className="text-sm text-amber-700">{t('library.editModeDesc')}</p>
             </div>
           </div>
 
@@ -481,7 +483,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-                  SOP Title
+                  {t('library.sopTitle')}
                 </label>
                 <input
                   type="text"
@@ -492,7 +494,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-                  Description
+                  {t('library.description')}
                 </label>
                 <textarea
                   value={editedSop.description}
@@ -509,7 +511,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
               <div className="bg-slate-50 p-6 rounded-2xl">
                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">
                   <i className="fas fa-user-shield text-indigo-500 mr-2"></i>
-                  Required PPE
+                  {t('library.requiredPpe')}
                 </label>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {(editedSop.ppeRequirements || []).map((ppe, i) => (
@@ -527,7 +529,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     value={newPPE}
                     onChange={(e) => setNewPPE(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && addPPE()}
-                    placeholder="Add PPE item..."
+                    placeholder={t('library.addPpeItem')}
                     className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"
                   />
                   <button onClick={addPPE} className="px-3 py-2 bg-indigo-600 text-white rounded-lg" aria-label="Add PPE item">
@@ -540,7 +542,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
               <div className="bg-slate-50 p-6 rounded-2xl">
                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">
                   <i className="fas fa-box-open text-indigo-500 mr-2"></i>
-                  Materials Required
+                  {t('library.materialsRequired')}
                 </label>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {(editedSop.materialsRequired || []).map((mat, i) => (
@@ -558,7 +560,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     value={newMaterial}
                     onChange={(e) => setNewMaterial(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && addMaterial()}
-                    placeholder="Add material..."
+                    placeholder={t('library.addMaterial')}
                     className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"
                   />
                   <button onClick={addMaterial} className="px-3 py-2 bg-emerald-600 text-white rounded-lg" aria-label="Add material">
@@ -576,8 +578,8 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     <i className="fas fa-image text-blue-600"></i>
                   </div>
                   <div>
-                    <h4 className="font-bold text-blue-900">Lägg till bild</h4>
-                    <p className="text-xs text-blue-700">Ladda upp en bild och applicera på valfritt steg</p>
+                    <h4 className="font-bold text-blue-900">{t('library.addImage')}</h4>
+                    <p className="text-xs text-blue-700">{t('library.addImageDesc')}</p>
                   </div>
                 </div>
                 <button
@@ -585,7 +587,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                   className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700"
                 >
                   <i className="fas fa-upload mr-2"></i>
-                  Välj bild
+                  {t('library.chooseImage')}
                 </button>
                 <input
                   ref={refDocInputRef}
@@ -607,7 +609,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     </button>
                   </div>
                   <div className="bg-white p-4 rounded-xl border border-blue-200">
-                    <p className="text-sm font-bold text-slate-700 mb-3">Applicera på steg:</p>
+                    <p className="text-sm font-bold text-slate-700 mb-3">{t('library.applyToStep')}</p>
                     <div className="flex flex-wrap gap-2">
                       {editedSop.steps.map((step, idx) => (
                         <button
@@ -615,7 +617,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                           onClick={() => applyRefImageToStep(idx)}
                           className="px-3 py-2 bg-blue-100 hover:bg-blue-600 hover:text-white text-blue-700 rounded-lg text-sm font-medium transition-colors"
                         >
-                          Steg {idx + 1}
+                          {t('library.stepNum', { num: idx + 1 })}
                         </button>
                       ))}
                     </div>
@@ -628,7 +630,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
             <div className="space-y-4">
               <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
                 <i className="fas fa-list-ol text-indigo-500 mr-3"></i>
-                Edit Steps ({editedSop.steps.length})
+                {t('library.editSteps', { count: editedSop.steps.length })}
               </h3>
 
               <div className="space-y-4">
@@ -662,7 +664,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
           className="flex items-center gap-2 text-indigo-600 font-semibold hover:gap-3 transition-all"
         >
           <i className="fas fa-arrow-left"></i>
-          Back to Library
+          {t('library.backToLibrary')}
         </button>
 
         <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
@@ -677,7 +679,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
             <div className="absolute inset-0 flex flex-col justify-end p-10 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent">
               <div className="flex items-center gap-3 mb-4">
                 <span className="px-4 py-1.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full">
-                  Verified Procedure
+                  {t('library.verifiedProcedure')}
                 </span>
                 <span className="px-4 py-1.5 bg-white/10 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full backdrop-blur-md">
                   {selectedSop.sourceType}
@@ -691,7 +693,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                 </span>
                 <span className="flex items-center gap-2">
                   <i className="fas fa-layer-group text-indigo-400"></i>
-                  {selectedSop.steps.length} Phases
+                  {t('library.phases', { count: selectedSop.steps.length })}
                 </span>
               </div>
             </div>
@@ -706,8 +708,8 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     <i className="fas fa-play text-white text-sm"></i>
                   </div>
                   <div>
-                    <h3 className="text-white font-bold">Original Recording</h3>
-                    <p className="text-slate-400 text-xs">Click on step timestamps to jump to that moment</p>
+                    <h3 className="text-white font-bold">{t('library.originalRecording')}</h3>
+                    <p className="text-slate-400 text-xs">{t('library.clickTimestamp')}</p>
                   </div>
                 </div>
                 <video
@@ -732,7 +734,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                   <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-lg">
                     <i className="fas fa-align-left"></i>
                   </div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Executive Summary</h2>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{t('library.executiveSummary')}</h2>
                 </div>
                 <p className="text-xl text-slate-600 leading-relaxed font-medium">
                   {selectedSop.description}
@@ -745,7 +747,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                 <section className="bg-slate-50 p-8 rounded-3xl border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
                     <i className="fas fa-user-shield text-indigo-600 text-xl"></i>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Required PPE</h3>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">{t('library.requiredPpe')}</h3>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     {selectedSop.ppeRequirements?.map((ppe, i) => (
@@ -755,7 +757,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                         </div>
                         <span className="text-xs font-bold text-slate-700">{ppe}</span>
                       </div>
-                    )) || <p className="text-xs text-slate-400 italic">No specific PPE identified.</p>}
+                    )) || <p className="text-xs text-slate-400 italic">{t('library.noPpeIdentified')}</p>}
                   </div>
                 </section>
 
@@ -763,7 +765,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                 <section className="bg-slate-50 p-8 rounded-3xl border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
                     <i className="fas fa-box-open text-indigo-600 text-xl"></i>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Materials Required</h3>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">{t('library.materialsRequired')}</h3>
                   </div>
                   <ul className="space-y-3">
                     {selectedSop.materialsRequired?.map((mat, i) => (
@@ -771,7 +773,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                         <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
                         {mat}
                       </li>
-                    )) || <p className="text-xs text-slate-400 italic">No materials listed.</p>}
+                    )) || <p className="text-xs text-slate-400 italic">{t('library.noMaterialsListed')}</p>}
                   </ul>
                 </section>
               </div>
@@ -782,7 +784,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                   <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-lg">
                     <i className="fas fa-shoe-prints"></i>
                   </div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Execution Steps</h2>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{t('library.executionSteps')}</h2>
                 </div>
                 
                 <div className="space-y-24 relative">
@@ -805,7 +807,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 blur-sm opacity-50">
                               <div className="space-y-6">
                                 <div className="space-y-2">
-                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phase {idx + 1}</span>
+                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('library.phase', { num: idx + 1 })}</span>
                                   <h3 className="text-3xl font-black text-slate-400 leading-tight">{step.title}</h3>
                                 </div>
                                 <div className="h-20 bg-slate-200 rounded-xl"></div>
@@ -821,20 +823,20 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                                     <i className="fas fa-lock text-indigo-600 text-2xl"></i>
                                   </div>
                                   <h4 className="text-xl font-black text-slate-900 mb-2">
-                                    +{selectedSop.steps.length - PREVIEW_STEP_LIMIT} more steps
+                                    {t('library.moreSteps', { count: selectedSop.steps.length - PREVIEW_STEP_LIMIT })}
                                   </h4>
                                   <p className="text-slate-500 text-sm mb-6">
-                                    Upgrade to Pro to unlock all steps, PDF export, and editing.
+                                    {t('library.upgradeUnlock')}
                                   </p>
                                   <button
                                     onClick={onUpgrade}
                                     className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
                                   >
                                     <i className="fas fa-crown mr-2"></i>
-                                    Upgrade to Pro
+                                    {t('library.upgradeToPro')}
                                   </button>
                                   <p className="text-xs text-slate-400 mt-3">
-                                    Starting at $19/month
+                                    {t('library.startingAt')}
                                   </p>
                                 </div>
                               </div>
@@ -846,7 +848,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                             <div className="space-y-6">
                               <div className="space-y-2">
                                 <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">
-                                  Phase {idx + 1}
+                                  {t('library.phase', { num: idx + 1 })}
                                   {step.timestamp && (
                                     <>
                                       {' • '}
@@ -876,7 +878,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                                 <div className="p-6 bg-rose-50 border-l-4 border-rose-500 rounded-r-2xl">
                                   <div className="flex items-center gap-2 mb-3 text-rose-700">
                                     <i className="fas fa-triangle-exclamation"></i>
-                                    <span className="text-xs font-black uppercase tracking-widest">Safety Critical</span>
+                                    <span className="text-xs font-black uppercase tracking-widest">{t('library.safetyCritical')}</span>
                                   </div>
                                   <ul className="space-y-2">
                                     {step.safetyWarnings.map((w, i) => (
@@ -923,8 +925,8 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
             <div className="lg:col-span-1">
               <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white space-y-8 sticky top-24 shadow-2xl shadow-slate-900/40">
                 <div>
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Actions</h4>
-                  <p className="text-xs text-slate-400">Edit, export and distribute this procedure.</p>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">{t('library.actions')}</h4>
+                  <p className="text-xs text-slate-400">{t('library.actionsDesc')}</p>
                 </div>
                 
                 <div className="space-y-3">
@@ -933,10 +935,10 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     <div className="p-4 bg-amber-500/20 rounded-2xl border border-amber-500/30 mb-2">
                       <div className="flex items-center gap-2 text-amber-300 mb-1">
                         <i className="fas fa-eye"></i>
-                        <span className="text-xs font-bold uppercase">Preview Mode</span>
+                        <span className="text-xs font-bold uppercase">{t('library.previewMode')}</span>
                       </div>
                       <p className="text-[10px] text-amber-200/80">
-                        Viewing {Math.min(PREVIEW_STEP_LIMIT, selectedSop.steps.length)} of {selectedSop.steps.length} steps
+                        {t('library.viewingSteps', { shown: Math.min(PREVIEW_STEP_LIMIT, selectedSop.steps.length), total: selectedSop.steps.length })}
                       </p>
                     </div>
                   )}
@@ -951,7 +953,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     }`}
                   >
                     <i className={`fas ${isPro ? 'fa-edit' : 'fa-lock'} text-base`}></i>
-                    {isPro ? 'Edit SOP' : 'Edit (Pro)'}
+                    {isPro ? t('library.editSop') : t('library.editPro')}
                   </button>
 
                   {/* EXPORT PDF - Pro only */}
@@ -965,7 +967,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     } disabled:opacity-50`}
                   >
                     <i className={`fas ${isExporting ? 'fa-spinner fa-spin' : isPro ? 'fa-file-pdf' : 'fa-lock'} text-base`}></i>
-                    {isExporting ? 'Generating...' : isPro ? 'Export PDF' : 'Export (Pro)'}
+                    {isExporting ? t('library.generating') : isPro ? t('library.exportPdf') : t('library.exportPro')}
                   </button>
 
                   {/* Upgrade CTA for Free Users */}
@@ -975,7 +977,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                       className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:from-indigo-500 hover:to-purple-500 transition-all flex items-center justify-center gap-3 shadow-lg"
                     >
                       <i className="fas fa-crown text-amber-300 text-base"></i>
-                      Upgrade to Pro
+                      {t('library.upgradeToPro')}
                     </button>
                   )}
 
@@ -984,16 +986,16 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     className="w-full py-4 bg-white/10 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-white/20 transition-all flex items-center justify-center gap-3 backdrop-blur-md"
                   >
                     <i className="fas fa-share-nodes text-emerald-400 text-base"></i>
-                    Share URL
+                    {t('library.shareUrl')}
                   </button>
                 </div>
 
                 <div className="pt-8 mt-8 border-t border-white/5 space-y-4">
                   <div className="p-4 bg-white/5 rounded-2xl">
-                    <p className="text-[10px] text-slate-500 font-bold mb-1">Status</p>
+                    <p className="text-[10px] text-slate-500 font-bold mb-1">{t('library.status')}</p>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                      <span className="text-sm font-black uppercase tracking-widest">Active SOP</span>
+                      <span className="text-sm font-black uppercase tracking-widest">{t('library.activeSop')}</span>
                     </div>
                   </div>
                   <button
@@ -1002,7 +1004,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                     className="w-full py-4 text-rose-400 font-black uppercase tracking-widest text-[10px] hover:text-rose-300 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     <i className={`fas ${isDeleting ? 'fa-spinner fa-spin' : 'fa-trash'}`}></i>
-                    {isDeleting ? 'Deleting...' : 'Delete SOP'}
+                    {isDeleting ? t('library.deleting') : t('library.deleteSop')}
                   </button>
                 </div>
               </div>
@@ -1017,11 +1019,11 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase">Procedure Library</h1>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase">{t('library.procedureLibrary')}</h1>
           <p className="text-slate-500 mt-1 font-medium">
             {searchQuery || filterType !== 'all'
-              ? `${filteredSops.length} of ${sops.length} procedures`
-              : `${sops.length} procedures in your library`}
+              ? t('library.proceduresFiltered', { shown: filteredSops.length, total: sops.length })
+              : t('library.proceduresInLibrary', { count: sops.length })}
           </p>
         </div>
         <div className="flex gap-3">
@@ -1033,7 +1035,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search SOPs..."
+              placeholder={t('library.search')}
               className="pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none w-48 transition-all"
             />
           </div>
@@ -1042,10 +1044,10 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
             onChange={(e) => setFilterType(e.target.value)}
             className="px-4 py-3 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
           >
-            <option value="all">All Types</option>
-            <option value="upload">Uploads</option>
-            <option value="youtube">YouTube</option>
-            <option value="live">Live</option>
+            <option value="all">{t('library.allTypes')}</option>
+            <option value="upload">{t('library.filterUpload')}</option>
+            <option value="youtube">{t('library.filterYoutube')}</option>
+            <option value="live">{t('library.filterLive')}</option>
           </select>
         </div>
       </div>
@@ -1057,12 +1059,12 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
               <i className={`fas ${sops.length === 0 ? 'fa-folder-plus' : 'fa-search'} text-slate-300 text-4xl`}></i>
             </div>
             <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
-              {sops.length === 0 ? 'Repository Empty' : 'No Results Found'}
+              {sops.length === 0 ? t('library.repositoryEmpty') : t('library.noResultsFound')}
             </h3>
             <p className="text-slate-500 mt-2 font-medium">
               {sops.length === 0
-                ? 'Capture or import content to build your knowledge base.'
-                : 'Try adjusting your search or filter criteria.'}
+                ? t('library.emptyLibraryDesc')
+                : t('library.noResultsDesc')}
             </p>
           </div>
         ) : (
@@ -1088,7 +1090,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                 </div>
                 <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0">
                   <div className="p-3 bg-white rounded-2xl text-slate-900 font-black text-[10px] shadow-2xl">
-                    {sop.numSteps || sop.steps?.length || 0} STEPS
+                    {t('library.stepsCount', { count: sop.numSteps || sop.steps?.length || 0 })}
                   </div>
                 </div>
               </div>
@@ -1121,7 +1123,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
             onClick={onLoadMore}
             className="px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-colors"
           >
-            Load More SOPs
+            {t('library.loadMoreSops')}
           </button>
         </div>
       )}
@@ -1131,7 +1133,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-8 rounded-2xl shadow-2xl text-center">
             <i className="fas fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
-            <p className="text-slate-700 font-medium">Loading SOP details...</p>
+            <p className="text-slate-700 font-medium">{t('library.loadingSopDetails')}</p>
           </div>
         </div>
       )}

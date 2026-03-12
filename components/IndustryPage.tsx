@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppView } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -80,6 +81,7 @@ interface IndustryPageProps {
 }
 
 const IndustryPage: React.FC<IndustryPageProps> = ({ industry, onNavigate, onGetStarted }) => {
+  const { t } = useTranslation();
   const { user, loading } = useAuth();
   const config = industries[industry];
 
@@ -114,13 +116,13 @@ const IndustryPage: React.FC<IndustryPageProps> = ({ industry, onNavigate, onGet
             onClick={() => onNavigate(AppView.LANDING)}
             className="text-slate-300 hover:text-white transition-colors text-sm"
           >
-            All Industries
+            {t('landing.features')}
           </button>
           <button
             onClick={onGetStarted}
             className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-500 transition-colors"
           >
-            Try Free
+            {t('landing.tryItFree')}
           </button>
         </div>
       </nav>
@@ -143,13 +145,13 @@ const IndustryPage: React.FC<IndustryPageProps> = ({ industry, onNavigate, onGet
             className="px-8 py-4 bg-indigo-600 text-white font-bold text-lg rounded-xl hover:bg-indigo-500 transition-colors"
           >
             <i className="fas fa-play mr-2"></i>
-            Start Free
+            {t('landing.getStartedFree')}
           </button>
           <button
             onClick={() => onNavigate(AppView.LANDING)}
             className="px-8 py-4 bg-white/10 text-white font-medium rounded-xl hover:bg-white/20 transition-colors"
           >
-            See How It Works
+            {t('landing.howItWorks')}
           </button>
         </div>
       </header>
@@ -221,13 +223,13 @@ const IndustryPage: React.FC<IndustryPageProps> = ({ industry, onNavigate, onGet
           Ready to Transform Your {config.industry} Documentation?
         </h2>
         <p className="text-slate-400 mb-8">
-          Free during beta. No credit card required.
+          {t('landing.betaBanner')}
         </p>
         <button
           onClick={onGetStarted}
           className="px-8 py-4 bg-indigo-600 text-white font-bold text-lg rounded-xl hover:bg-indigo-500 transition-colors"
         >
-          Get Started Free
+          {t('landing.getStartedFree')}
         </button>
       </section>
 
@@ -239,10 +241,10 @@ const IndustryPage: React.FC<IndustryPageProps> = ({ industry, onNavigate, onGet
           </p>
           <div className="flex gap-6">
             <button onClick={() => onNavigate(AppView.PRIVACY)} className="text-slate-500 hover:text-white text-sm">
-              Privacy
+              {t('landing.privacyPolicy')}
             </button>
             <button onClick={() => onNavigate(AppView.TERMS)} className="text-slate-500 hover:text-white text-sm">
-              Terms
+              {t('landing.termsOfService')}
             </button>
             <button onClick={() => onNavigate(AppView.LANDING)} className="text-slate-500 hover:text-white text-sm">
               Home

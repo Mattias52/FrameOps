@@ -1063,9 +1063,16 @@ app.post('/extract-frames-scene-detect', async (req, res) => {
       }
     }
 
-    cleanup(jobDir);
+    // Clean up extracted scene frames but KEEP the video file for reuse by /analyze-video-native
+    const scenesDir = path.join(jobDir, 'scenes');
+    if (fs.existsSync(scenesDir)) {
+      fs.rmSync(scenesDir, { recursive: true, force: true });
+    }
 
-    console.log(`[${jobId}] Returning ${frames.length} frames with ACTUAL timestamps`);
+    // Schedule cleanup of video file after 10 minutes (in case analyze-video-native is never called)
+    setTimeout(() => cleanup(jobDir), 10 * 60 * 1000);
+
+    console.log(`[${jobId}] Returning ${frames.length} frames with ACTUAL timestamps (video kept for reuse)`);
 
     res.json({
       success: true,
@@ -1157,22 +1164,42 @@ function getGenAI() {
 // v25.2: Extracts frames on backend (scene detection + intervals) like YouTube endpoint
 // ============================================
 app.post('/analyze-video-native', async (req, res) => {
-  if (!req.files || !req.files.video) {
-    return res.status(400).json({ error: 'No video file provided' });
+  const reuseJobId = req.body.reuseJobId;
+  const videoFile = req.files?.video;
+
+  // If reuseJobId provided, try to reuse video from extract-frames-scene-detect
+  let videoPath = null;
+  let reusedVideo = false;
+
+  if (reuseJobId) {
+    const reusePath = path.join(TEMP_DIR, reuseJobId, 'video.mp4');
+    if (fs.existsSync(reusePath)) {
+      videoPath = reusePath;
+      reusedVideo = true;
+    } else {
+      console.log(`[${reuseJobId}] Reuse video not found at ${reusePath}, falling back to upload`);
+    }
   }
 
-  const videoFile = req.files.video;
+  if (!videoPath && !videoFile) {
+    return res.status(400).json({ error: 'No video file provided and no reusable jobId found' });
+  }
+
+  if (!videoPath) {
+    videoPath = videoFile.tempFilePath;
+  }
+
   const title = req.body.title || 'Procedure';
   const jobId = crypto.randomBytes(8).toString('hex');
   const jobDir = path.join(TEMP_DIR, `upload_${jobId}`);
+  const videoSize = fs.statSync(videoPath).size;
 
-  console.log(`[${jobId}] Native video analysis v25.2: "${title}" (${(videoFile.size / 1024 / 1024).toFixed(1)}MB)`);
+  console.log(`[${jobId}] Native video analysis v25.2: "${title}" (${(videoSize / 1024 / 1024).toFixed(1)}MB)${reusedVideo ? ` [reused from ${reuseJobId}]` : ''}`);
 
   try {
     fs.mkdirSync(jobDir, { recursive: true });
     const fetch = require('node-fetch');
     const genai = getGenAI();
-    const videoPath = videoFile.tempFilePath;
 
     // Step 1: Get video duration
     let duration = 60;
@@ -1272,9 +1299,8 @@ app.post('/analyze-video-native', async (req, res) => {
     // Step 3: Upload video to Gemini File API using REST
     console.log(`[${jobId}] Uploading video to Gemini File API...`);
 
-    const videoData = fs.readFileSync(videoFile.tempFilePath);
-    const mimeType = videoFile.mimetype || 'video/mp4';
-    const numBytes = videoData.length;
+    const mimeType = (videoFile && videoFile.mimetype) || 'video/mp4';
+    const numBytes = fs.statSync(videoPath).size;
 
     // Start resumable upload
     const startResponse = await fetch('https://generativelanguage.googleapis.com/upload/v1beta/files', {
@@ -1295,9 +1321,9 @@ app.post('/analyze-video-native', async (req, res) => {
       throw new Error('Failed to get upload URL from Gemini');
     }
 
-    console.log(`[${jobId}] Got upload URL, uploading ${(numBytes / 1024 / 1024).toFixed(1)}MB...`);
+    console.log(`[${jobId}] Got upload URL, streaming ${(numBytes / 1024 / 1024).toFixed(1)}MB to Gemini...`);
 
-    // Upload video data
+    // Upload video data using stream (avoids loading entire file into memory)
     const uploadResponse = await fetch(uploadUrl, {
       method: 'PUT',
       headers: {
@@ -1305,7 +1331,7 @@ app.post('/analyze-video-native', async (req, res) => {
         'X-Goog-Upload-Offset': '0',
         'X-Goog-Upload-Command': 'upload, finalize'
       },
-      body: videoData
+      body: fs.createReadStream(videoPath)
     });
 
     const uploadResult = await uploadResponse.json();
@@ -1336,134 +1362,170 @@ app.post('/analyze-video-native', async (req, res) => {
 
     console.log(`[${jobId}] Video ready: ${fileUri}`);
 
-    // Step 3: Build prompt with LABELED frames (same approach as YouTube v25)
-    console.log(`[${jobId}] Building prompt with ${ffmpegFrames.length} labeled frames...`);
+    // Step 3: Segment-based Gemini analysis (split long videos into chunks)
+    const SEGMENT_DURATION = 600; // 10 minutes per segment
+    const numSegments = Math.ceil(duration / SEGMENT_DURATION);
+    console.log(`[${jobId}] Video is ${(duration / 60).toFixed(1)} min → ${numSegments} segment(s) of ~${SEGMENT_DURATION / 60} min`);
 
-    const parts = [];
+    // Helper: build and send a Gemini prompt for one segment
+    async function analyzeSegment(segFrames, segStart, segEnd, segIndex, totalSegments) {
+      const parts = [];
+      parts.push({ fileData: { fileUri: fileUri, mimeType: mimeType } });
 
-    // Video first
-    parts.push({ fileData: { fileUri: fileUri, mimeType: mimeType } });
+      const startMin = Math.floor(segStart / 60);
+      const startSec = Math.floor(segStart % 60);
+      const endMin = Math.floor(segEnd / 60);
+      const endSec = Math.floor(segEnd % 60);
+      const timeRange = `${String(startMin).padStart(2,'0')}:${String(startSec).padStart(2,'0')} to ${String(endMin).padStart(2,'0')}:${String(endSec).padStart(2,'0')}`;
 
-    // Prompt with frame explanation
-    parts.push({ text: `
+      parts.push({ text: `
 You are an expert technical writer creating a Standard Operating Procedure (SOP).
 
-WATCH THIS ENTIRE VIDEO carefully. Pay attention to BOTH:
+FOCUS ONLY on the video segment from ${timeRange} (segment ${segIndex + 1} of ${totalSegments}).
+Watch this portion carefully. Pay attention to BOTH:
 - AUDIO: What the presenter/narrator is SAYING - use their EXACT words!
 - VISUAL: What actions are being performed on screen
 
-I have extracted ${ffmpegFrames.length} frames from this video. They are labeled Frame_0 through Frame_${ffmpegFrames.length - 1}.
+I have extracted ${segFrames.length} frames from this segment. They are labeled Frame_0 through Frame_${segFrames.length - 1}.
 Each frame is shown below with its label and timestamp.
 
-LOOK AT EACH FRAME CAREFULLY. For each step in your SOP, you must select the frameIndex that BEST shows that action.
-
+LOOK AT EACH FRAME CAREFULLY. For each step, select the frameIndex that BEST shows that action.
+EVERY step MUST use a DIFFERENT frameIndex - do NOT reuse the same frame for multiple steps.
 ` });
 
-    // Add each frame with label (like YouTube v25)
-    for (let i = 0; i < ffmpegFrames.length; i++) {
-      const frame = ffmpegFrames[i];
-      parts.push({ text: `\nFrame_${i} (${frame.timestamp}):` });
+      for (let i = 0; i < segFrames.length; i++) {
+        const frame = segFrames[i];
+        parts.push({ text: `\nFrame_${i} (${frame.timestamp}):` });
+        const base64Data = frame.imageBase64.includes(',')
+          ? frame.imageBase64.split(',')[1]
+          : frame.imageBase64;
+        parts.push({ inlineData: { mimeType: 'image/jpeg', data: base64Data } });
+      }
 
-      // Extract base64 data (remove data:image/jpeg;base64, prefix if present)
-      const base64Data = frame.imageBase64.includes(',')
-        ? frame.imageBase64.split(',')[1]
-        : frame.imageBase64;
-
-      parts.push({
-        inlineData: {
-          mimeType: 'image/jpeg',
-          data: base64Data
-        }
-      });
-    }
-
-    // Final instructions
-    parts.push({ text: `
-
-Now create the SOP for: "${title}"
+      parts.push({ text: `
+Now create the SOP steps for this segment (${timeRange}) of: "${title}"
 
 CRITICAL REQUIREMENTS:
 1. Use the presenter's EXACT words and terminology from the audio
-2. Include ALL steps mentioned or shown - do NOT skip any actions
-3. Note ALL tools or equipment mentioned (screwdrivers, wipes, alcohol, etc.)
-4. For EACH step, select the frameIndex (0-${ffmpegFrames.length - 1}) that BEST SHOWS that action
-5. LOOK at the frames above and pick the one that VISUALLY MATCHES the content
+2. Include ALL steps mentioned or shown in this segment - do NOT skip any actions
+3. Note ALL tools or equipment mentioned
+4. For EACH step, select the frameIndex (0-${segFrames.length - 1}) that BEST SHOWS that action
+5. EVERY step MUST have a UNIQUE frameIndex - NEVER assign the same frame to multiple steps
 6. If the presenter says "be careful" or gives a warning, include it as safetyWarnings
-7. TERMINOLOGY CONSISTENCY: If the video uses multiple names for the same part/tool/component (e.g., "plunger" and "solenoid" for the same part), pick ONE term and use it consistently throughout the entire SOP
+7. TERMINOLOGY CONSISTENCY: Use consistent terms throughout
 8. ALWAYS write in ENGLISH
+9. Only include steps that happen between ${timeRange}
 ` });
 
-    console.log(`[${jobId}] Sending to Gemini with ${parts.length} parts...`);
+      console.log(`[${jobId}] Segment ${segIndex + 1}/${totalSegments} (${timeRange}): ${segFrames.length} frames, ${parts.length} parts`);
 
-    const response = await genai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: { parts },
-      config: {
-        temperature: 0,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            ppeRequirements: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            },
-            materialsRequired: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            },
-            steps: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  timestamp: { type: Type.STRING },
-                  title: { type: Type.STRING },
-                  description: { type: Type.STRING },
-                  frameIndex: { type: Type.NUMBER },
-                  safetyWarnings: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
+      const response = await genai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: { parts },
+        config: {
+          temperature: 0,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              description: { type: Type.STRING },
+              ppeRequirements: { type: Type.ARRAY, items: { type: Type.STRING } },
+              materialsRequired: { type: Type.ARRAY, items: { type: Type.STRING } },
+              steps: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    timestamp: { type: Type.STRING },
+                    title: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    frameIndex: { type: Type.NUMBER },
+                    safetyWarnings: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    toolsRequired: { type: Type.ARRAY, items: { type: Type.STRING } }
                   },
-                  toolsRequired: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
-                  }
-                },
-                required: ["timestamp", "title", "description", "frameIndex"]
+                  required: ["timestamp", "title", "description", "frameIndex"]
+                }
               }
-            }
-          },
-          required: ["title", "description", "steps", "ppeRequirements", "materialsRequired"]
+            },
+            required: ["title", "description", "steps", "ppeRequirements", "materialsRequired"]
+          }
         }
+      });
+
+      return JSON.parse(response.text);
+    }
+
+    // Run segments
+    let allSteps = [];
+    let mergedTitle = title;
+    let mergedDescription = '';
+    let mergedPPE = [];
+    let mergedMaterials = [];
+
+    for (let seg = 0; seg < numSegments; seg++) {
+      const segStart = seg * SEGMENT_DURATION;
+      const segEnd = Math.min((seg + 1) * SEGMENT_DURATION, duration);
+
+      // Filter frames for this segment
+      const segFrames = ffmpegFrames.filter(f =>
+        f.timestampSeconds >= segStart && f.timestampSeconds < segEnd
+      );
+
+      if (segFrames.length === 0) {
+        console.log(`[${jobId}] Segment ${seg + 1}: no frames, skipping`);
+        continue;
       }
+
+      const segResult = await analyzeSegment(segFrames, segStart, segEnd, seg, numSegments);
+      console.log(`[${jobId}] Segment ${seg + 1}: Gemini generated ${segResult.steps?.length || 0} steps`);
+
+      // Use title/description from first segment
+      if (seg === 0) {
+        mergedTitle = segResult.title || title;
+        mergedDescription = segResult.description || '';
+      }
+      mergedPPE.push(...(segResult.ppeRequirements || []));
+      mergedMaterials.push(...(segResult.materialsRequired || []));
+
+      // Map frameIndex back to the segment's frames (which have global indices)
+      for (const step of (segResult.steps || [])) {
+        const localIdx = Math.max(0, Math.min(step.frameIndex || 0, segFrames.length - 1));
+        const selectedFrame = segFrames[localIdx];
+        allSteps.push({
+          ...step,
+          timestamp: selectedFrame?.timestamp || step.timestamp,
+          thumbnail: selectedFrame?.imageBase64 || null
+        });
+      }
+    }
+
+    // Deduplicate PPE and materials
+    mergedPPE = [...new Set(mergedPPE)];
+    mergedMaterials = [...new Set(mergedMaterials)];
+
+    console.log(`[${jobId}] Total: ${allSteps.length} steps from ${numSegments} segments`);
+
+    // Number steps sequentially
+    const stepsWithFrames = allSteps.map((step, idx) => {
+      console.log(`[${jobId}]   Step ${idx + 1}: "${step.title}" (${step.timestamp})`);
+      return { ...step, id: `step-${idx + 1}` };
     });
 
-    const resultText = response.text;
-    const result = JSON.parse(resultText);
-
-    console.log(`[${jobId}] Gemini generated ${result.steps?.length || 0} steps`);
-
-    // Step 4: Map frameIndex to frames (like YouTube v25)
-    const stepsWithFrames = result.steps.map((step, idx) => {
-      const frameIdx = Math.max(0, Math.min(step.frameIndex || 0, ffmpegFrames.length - 1));
-      const selectedFrame = ffmpegFrames[frameIdx];
-
-      console.log(`[${jobId}]   Step ${idx + 1}: "${step.title}" → Frame_${frameIdx} (${selectedFrame?.timestamp || 'N/A'})`);
-
-      return {
-        ...step,
-        id: `step-${idx + 1}`,
-        timestamp: selectedFrame?.timestamp || step.timestamp,
-        thumbnail: selectedFrame?.imageBase64 || null
-      };
-    });
+    const result = {
+      title: mergedTitle,
+      description: mergedDescription,
+      ppeRequirements: mergedPPE,
+      materialsRequired: mergedMaterials
+    };
 
     // Cleanup video temp file and job directory
-    if (videoFile.tempFilePath) {
+    if (videoFile && videoFile.tempFilePath) {
       try { fs.unlinkSync(videoFile.tempFilePath); } catch (e) {}
+    }
+    // Also clean up reused video from extract-frames-scene-detect
+    if (reusedVideo && reuseJobId) {
+      cleanup(path.join(TEMP_DIR, reuseJobId));
     }
     cleanup(jobDir);
 
@@ -1496,6 +1558,9 @@ CRITICAL REQUIREMENTS:
     // Cleanup temp file and job directory on error
     if (videoFile && videoFile.tempFilePath) {
       try { fs.unlinkSync(videoFile.tempFilePath); } catch (e) {}
+    }
+    if (reusedVideo && reuseJobId) {
+      cleanup(path.join(TEMP_DIR, reuseJobId));
     }
     cleanup(jobDir);
     res.status(500).json({ error: error.message });

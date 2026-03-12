@@ -408,7 +408,8 @@ export const analyzeVideoNative = async (
   videoFile: File,
   title: string,
   ffmpegFrames: ExtractedFrame[],
-  onProgress?: (msg: string) => void
+  onProgress?: (msg: string) => void,
+  reuseJobId?: string
 ): Promise<{
   title: string;
   description: string;
@@ -430,10 +431,14 @@ export const analyzeVideoNative = async (
 }> => {
   const log = onProgress || console.log;
 
-  log("Uploading video to Gemini for native analysis...");
-
   const formData = new FormData();
-  formData.append('video', videoFile);
+  if (reuseJobId) {
+    log("Reusing video from scene detection (skipping re-upload)...");
+    formData.append('reuseJobId', reuseJobId);
+  } else {
+    log("Uploading video to Gemini for native analysis...");
+    formData.append('video', videoFile);
+  }
   formData.append('title', title);
   formData.append('ffmpegFrames', JSON.stringify(ffmpegFrames.map(f => ({
     timestamp: f.timestamp,

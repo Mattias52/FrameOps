@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppView } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,6 +10,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
+  const { t } = useTranslation();
   const { user, loading, signInGoogle, signInEmail, signUpEmail, logOut } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -41,7 +43,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
           resetForm();
         }
       } else {
-        setAuthError(result.error || 'Sign up failed');
+        setAuthError(result.error || t('auth.signUpFailed'));
       }
     } else {
       const result = await signInEmail(email, password);
@@ -49,7 +51,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
         setShowAuthModal(false);
         resetForm();
       } else {
-        setAuthError(result.error || 'Sign in failed');
+        setAuthError(result.error || t('auth.signInFailed'));
       }
     }
     setAuthLoading(false);
@@ -82,7 +84,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
             <img src="/logo.png" alt="FrameOps" className="w-11 h-11" />
             <span className="font-semibold text-slate-700">FrameOps</span>
             <span className="text-slate-300">|</span>
-            <span>AI-Powered SOP Generator</span>
+            <span>{t('nav.tagline')}</span>
           </div>
         </div>
 
@@ -92,7 +94,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors text-sm font-semibold shadow-sm"
           >
             <i className="fas fa-plus"></i>
-            <span className="hidden sm:inline">New SOP</span>
+            <span className="hidden sm:inline">{t('nav.newSop')}</span>
           </button>
 
           {/* User menu */}
@@ -136,7 +138,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
                       className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                     >
                       <i className="fas fa-sign-out-alt"></i>
-                      Sign out
+                      {t('nav.signOut')}
                     </button>
                   </div>
                 </>
@@ -148,7 +150,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
               className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors text-sm font-medium"
             >
               <i className="fas fa-user"></i>
-              <span className="hidden sm:inline">Sign in</span>
+              <span className="hidden sm:inline">{t('nav.signIn')}</span>
             </button>
           )}
         </div>
@@ -160,7 +162,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-slate-900">
-                {showConfirmation ? 'Check your email' : authMode === 'signin' ? 'Sign in' : 'Create account'}
+                {showConfirmation ? t('auth.checkEmail') : authMode === 'signin' ? t('auth.signIn') : t('auth.createAccount')}
               </h3>
               <button
                 onClick={() => { setShowAuthModal(false); resetForm(); }}
@@ -176,13 +178,13 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
                   <i className="fas fa-envelope text-2xl text-emerald-600"></i>
                 </div>
                 <p className="text-slate-600 mb-4">
-                  We sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account.
+                  <span dangerouslySetInnerHTML={{ __html: t('auth.confirmationSent', { email }) }} />
                 </p>
                 <button
                   onClick={() => { setShowAuthModal(false); resetForm(); }}
                   className="px-6 py-2 bg-indigo-600 text-white rounded-xl font-medium"
                 >
-                  Got it
+                  {t('auth.gotIt')}
                 </button>
               </div>
             ) : (
@@ -194,19 +196,19 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
                   className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium mb-4"
                 >
                   <i className="fab fa-google text-red-500 text-lg"></i>
-                  Continue with Google
+                  {t('auth.continueWithGoogle')}
                 </button>
 
                 <div className="flex items-center gap-4 mb-4">
                   <div className="flex-1 h-px bg-slate-200"></div>
-                  <span className="text-slate-400 text-sm">or</span>
+                  <span className="text-slate-400 text-sm">{t('auth.or')}</span>
                   <div className="flex-1 h-px bg-slate-200"></div>
                 </div>
 
                 {/* Email/Password Form */}
                 <form onSubmit={handleEmailAuth} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('auth.email')}</label>
                     <input
                       type="email"
                       value={email}
@@ -217,7 +219,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('auth.password')}</label>
                     <input
                       type="password"
                       value={password}
@@ -241,9 +243,9 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
                     {authLoading ? (
                       <i className="fas fa-spinner fa-spin"></i>
                     ) : authMode === 'signin' ? (
-                      'Sign in'
+                      t('auth.signIn')
                     ) : (
-                      'Create account'
+                      t('auth.createAccount')
                     )}
                   </button>
                 </form>
@@ -251,22 +253,22 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
                 <p className="text-center text-sm text-slate-500 mt-4">
                   {authMode === 'signin' ? (
                     <>
-                      Don't have an account?{' '}
+                      {t('auth.noAccount')}{' '}
                       <button
                         onClick={() => { setAuthMode('signup'); setAuthError(''); }}
                         className="text-indigo-600 font-medium hover:underline"
                       >
-                        Sign up
+                        {t('auth.signUp')}
                       </button>
                     </>
                   ) : (
                     <>
-                      Already have an account?{' '}
+                      {t('auth.alreadyHaveAccount')}{' '}
                       <button
                         onClick={() => { setAuthMode('signin'); setAuthError(''); }}
                         className="text-indigo-600 font-medium hover:underline"
                       >
-                        Sign in
+                        {t('auth.signIn')}
                       </button>
                     </>
                   )}

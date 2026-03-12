@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppView } from '../types';
 
 interface SidebarProps {
@@ -10,6 +11,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, onToggle }) => {
+  const { t } = useTranslation();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -20,11 +22,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
   }, []);
 
   const menuItems = [
-    { id: AppView.DASHBOARD, label: 'Dashboard', icon: 'fa-gauge' },
-    { id: AppView.GENERATOR, label: 'Create SOP', icon: 'fa-plus-circle' },
-    { id: AppView.LIBRARY, label: 'SOP Library', icon: 'fa-book' },
-    { id: AppView.API_KEYS, label: 'API Access', icon: 'fa-code' },
-    { id: AppView.SUBSCRIPTION, label: 'Subscription', icon: 'fa-credit-card' },
+    { id: AppView.DASHBOARD, label: t('sidebar.dashboard'), icon: 'fa-gauge' },
+    { id: AppView.GENERATOR, label: t('sidebar.createSop'), icon: 'fa-plus-circle' },
+    { id: AppView.LIBRARY, label: t('sidebar.sopLibrary'), icon: 'fa-book' },
+    { id: AppView.API_KEYS, label: t('sidebar.apiAccess'), icon: 'fa-code' },
+    { id: AppView.SUBSCRIPTION, label: t('sidebar.subscription'), icon: 'fa-credit-card' },
   ];
 
   const handleNavClick = (view: AppView) => {
@@ -82,14 +84,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
             <div className="p-3 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/30">
               <div className="flex items-center gap-2 mb-2">
                 <i className="fas fa-flask text-emerald-400"></i>
-                <span className="text-xs font-semibold text-emerald-300">Beta Access</span>
+                <span className="text-xs font-semibold text-emerald-300">{t('sidebar.betaAccess')}</span>
               </div>
-              <p className="text-xs text-slate-400 mb-3">Free during beta period</p>
+              <p className="text-xs text-slate-400 mb-3">{t('sidebar.freeDuringBeta')}</p>
               <button
                 onClick={() => onViewChange(AppView.SUBSCRIPTION)}
                 className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-colors"
               >
-                Give Feedback
+                {t('sidebar.giveFeedback')}
               </button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { AppView } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 interface CreatorLandingPageProps {
   onGetStarted: () => void;
@@ -9,6 +10,7 @@ interface CreatorLandingPageProps {
 
 const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, onNavigate }) => {
   const { user, loading, signInGoogle } = useAuth();
+  const { t } = useTranslation();
 
   // Auto-enter app when user is logged in (e.g., after OAuth redirect)
   useEffect(() => {
@@ -30,62 +32,62 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
   const useCases = [
     {
       icon: "fa-hammer",
-      title: "DIY & Makers",
-      description: "Turn build videos into printable project guides with measurements, materials lists, and step-by-step photos.",
-      example: "\"Build this coffee table\" → Complete woodworking SOP"
+      title: t('creator.diyMakers'),
+      description: t('creator.diyMakersDesc'),
+      example: t('creator.diyMakersExample')
     },
     {
       icon: "fa-dumbbell",
-      title: "Fitness & Health",
-      description: "Transform workout videos into structured training programs your clients can follow at the gym.",
-      example: "\"12-week transformation\" → Daily workout SOPs"
+      title: t('creator.fitnessHealth'),
+      description: t('creator.fitnessHealthDesc'),
+      example: t('creator.fitnessHealthExample')
     },
     {
       icon: "fa-utensils",
-      title: "Cooking & Recipes",
-      description: "Convert cooking videos into professional recipe cards with exact ingredients and timings.",
-      example: "\"Perfect pasta\" → Restaurant-quality recipe SOP"
+      title: t('creator.cookingRecipes'),
+      description: t('creator.cookingRecipesDesc'),
+      example: t('creator.cookingRecipesExample')
     },
     {
       icon: "fa-paint-brush",
-      title: "Beauty & Tutorials",
-      description: "Create detailed makeup guides your audience can reference while getting ready.",
-      example: "\"Wedding makeup look\" → Step-by-step beauty SOP"
+      title: t('creator.beautyTutorials'),
+      description: t('creator.beautyTutorialsDesc'),
+      example: t('creator.beautyTutorialsExample')
     },
     {
       icon: "fa-laptop-code",
-      title: "Tech & Setup",
-      description: "Turn setup/installation videos into IT-style documentation your viewers can follow.",
-      example: "\"Home office setup\" → Technical installation guide"
+      title: t('creator.techSetup'),
+      description: t('creator.techSetupDesc'),
+      example: t('creator.techSetupExample')
     },
     {
       icon: "fa-seedling",
-      title: "Gardening & Home",
-      description: "Create seasonal guides and project plans from your gardening or home improvement content.",
-      example: "\"Spring garden prep\" → Complete planting SOP"
+      title: t('creator.gardeningHome'),
+      description: t('creator.gardeningHomeDesc'),
+      example: t('creator.gardeningHomeExample')
     }
   ];
 
   const benefits = [
     {
       icon: "fa-dollar-sign",
-      title: "New Revenue Stream",
-      description: "Sell SOPs on Gumroad, Patreon, or your own site. Your video is free, the guide is premium."
+      title: t('creator.newRevenueStream'),
+      description: t('creator.newRevenueStreamDesc')
     },
     {
       icon: "fa-heart",
-      title: "Deeper Fan Connection",
-      description: "Give your audience something tangible. They'll actually DO what you teach, not just watch."
+      title: t('creator.deeperFanConnection'),
+      description: t('creator.deeperFanConnectionDesc')
     },
     {
       icon: "fa-clock",
-      title: "Zero Extra Work",
-      description: "Just paste your YouTube link. AI extracts frames and creates the SOP automatically."
+      title: t('creator.zeroExtraWork'),
+      description: t('creator.zeroExtraWorkDesc')
     },
     {
       icon: "fa-infinity",
-      title: "Passive Income",
-      description: "Create once, sell forever. Your old videos become evergreen products."
+      title: t('creator.passiveIncome'),
+      description: t('creator.passiveIncomeDesc')
     }
   ];
 
@@ -104,7 +106,7 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
               </div>
               <span className="font-bold text-xl">FrameOps</span>
               <span className="px-2 py-0.5 bg-amber-500 text-slate-900 text-[10px] font-bold rounded-full uppercase">
-                For Creators
+                {t('creator.forCreators')}
               </span>
             </div>
             <div className="flex items-center gap-3">
@@ -113,7 +115,7 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                   onClick={onGetStarted}
                   className="px-5 py-2.5 bg-amber-500 text-slate-900 rounded-xl font-bold hover:bg-amber-400 transition-colors"
                 >
-                  Go to Dashboard
+                  {t('creator.goToDashboard')}
                 </button>
               ) : (
                 <>
@@ -122,13 +124,13 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                     className="hidden sm:flex items-center gap-2 px-4 py-2.5 text-white/80 font-medium hover:text-white"
                   >
                     <i className="fab fa-google"></i>
-                    Sign in
+                    {t('creator.signIn')}
                   </button>
                   <button
                     onClick={onGetStarted}
                     className="px-5 py-2.5 bg-amber-500 text-slate-900 rounded-xl font-bold hover:bg-amber-400 transition-colors"
                   >
-                    Get Free Access
+                    {t('creator.getFreeAccess')}
                   </button>
                 </>
               )}
@@ -142,21 +144,17 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
         <div className="max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-400 text-sm font-medium mb-8">
             <i className="fas fa-handshake"></i>
-            <span>Creator Partnership Program</span>
+            <span>{t('creator.creatorPartnershipProgram')}</span>
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-tight mb-6">
-            Turn Your Videos Into
+            {t('creator.heroTitle1')}
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
-              Sellable Guides
+              {t('creator.heroTitle2')}
             </span>
           </h1>
 
-          <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10">
-            Your followers watch your videos once and forget. Give them something they can
-            <strong className="text-white"> print, follow, and actually use</strong>.
-            Paste a YouTube link or <strong className="text-white">record live</strong> while you work.
-          </p>
+          <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10" dangerouslySetInnerHTML={{ __html: t('creator.heroDesc') }} />
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <button
@@ -164,14 +162,14 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
               className="w-full sm:w-auto px-8 py-4 bg-amber-500 text-slate-900 rounded-2xl font-bold text-lg hover:bg-amber-400 transition-all shadow-xl shadow-amber-500/20"
             >
               <i className="fab fa-youtube mr-2"></i>
-              Use YouTube Video
+              {t('creator.useYoutubeVideo')}
             </button>
             <button
               onClick={() => onNavigate(AppView.LIVE_GENERATOR)}
               className="w-full sm:w-auto px-8 py-4 bg-emerald-500 text-white rounded-2xl font-bold text-lg hover:bg-emerald-400 transition-all shadow-xl shadow-emerald-500/20"
             >
               <i className="fas fa-video mr-2"></i>
-              Record Live
+              {t('creator.recordLive')}
             </button>
           </div>
 
@@ -184,7 +182,7 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                   <span className="text-slate-400 text-sm">https://youtube.com/watch?v=your-video</span>
                 </div>
                 <button className="px-6 py-3 bg-amber-500 text-slate-900 rounded-xl font-bold">
-                  Generate SOP
+                  {t('creator.generateSop')}
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-4">
@@ -199,7 +197,7 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                 </div>
               </div>
               <p className="text-center text-slate-500 text-sm mt-4">
-                AI extracts key frames and generates step-by-step instructions
+                {t('creator.aiExtractsFrames')}
               </p>
             </div>
           </div>
@@ -210,7 +208,7 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900/50">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">
-            Why Creators Love FrameOps
+            {t('creator.whyCreatorsLove')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {benefits.map((benefit, i) => (
@@ -230,9 +228,9 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
       <section id="use-cases" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Perfect For Your Niche</h2>
+            <h2 className="text-3xl font-bold mb-4">{t('creator.perfectForNiche')}</h2>
             <p className="text-slate-400 max-w-2xl mx-auto">
-              No matter what you create, your audience wants guides they can actually follow.
+              {t('creator.nicheDesc')}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -256,26 +254,26 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
       <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900/50">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">
-            From YouTube Video to Sellable Guide in 3 Steps
+            {t('creator.fromYoutubeToGuide')}
           </h2>
           <div className="space-y-8">
             {[
               {
                 step: "1",
-                title: "Paste Your YouTube Link",
-                description: "Just copy your video URL. Works with any public YouTube video.",
+                title: t('creator.step1Title'),
+                description: t('creator.step1Desc'),
                 icon: "fa-link"
               },
               {
                 step: "2",
-                title: "AI Creates Your SOP",
-                description: "Our AI watches your video, extracts key frames, and writes professional step-by-step instructions.",
+                title: t('creator.step2Title'),
+                description: t('creator.step2Desc'),
                 icon: "fa-magic"
               },
               {
                 step: "3",
-                title: "Edit, Export & Sell",
-                description: "Customize the guide, export as PDF, and sell on Gumroad, Patreon, or your own site.",
+                title: t('creator.step3Title'),
+                description: t('creator.step3Desc'),
                 icon: "fa-dollar-sign"
               }
             ].map((item, i) => (
@@ -347,16 +345,15 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-medium mb-6">
                 <i className="fas fa-bolt"></i>
-                <span>Perfect for tutorials</span>
+                <span>{t('creator.perfectForTutorials')}</span>
               </div>
 
               <h2 className="text-4xl font-bold mb-6">
-                Or Record Live While You Create
+                {t('creator.orRecordLive')}
               </h2>
 
               <p className="text-slate-400 text-lg mb-8">
-                Don't have a polished YouTube video? No problem. Just open FrameOps on your phone,
-                hit record, and do your thing. AI creates the SOP as you work.
+                {t('creator.orRecordLiveDesc')}
               </p>
 
               <div className="space-y-6">
@@ -365,8 +362,8 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                     <i className="fas fa-video text-white"></i>
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg mb-1">Just Film Yourself</h3>
-                    <p className="text-slate-400">Open your phone, hit record, and do the task as you normally would.</p>
+                    <h3 className="font-bold text-lg mb-1">{t('creator.justFilmYourself')}</h3>
+                    <p className="text-slate-400">{t('creator.justFilmYourselfDesc')}</p>
                   </div>
                 </div>
 
@@ -375,8 +372,8 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                     <i className="fas fa-microphone text-white"></i>
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg mb-1">Talk While You Work</h3>
-                    <p className="text-slate-400">"Now I'm applying the second coat..." - AI transcribes and turns it into instructions.</p>
+                    <h3 className="font-bold text-lg mb-1">{t('creator.talkWhileYouWork')}</h3>
+                    <p className="text-slate-400">{t('creator.talkWhileYouWorkDesc')}</p>
                   </div>
                 </div>
 
@@ -385,8 +382,8 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                     <i className="fas fa-wand-magic-sparkles text-white"></i>
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg mb-1">Get a Complete SOP</h3>
-                    <p className="text-slate-400">Scene detection captures the right moments. You get a ready-to-sell guide.</p>
+                    <h3 className="font-bold text-lg mb-1">{t('creator.getCompleteSop')}</h3>
+                    <p className="text-slate-400">{t('creator.getCompleteSopDesc')}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -394,8 +391,8 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                     <i className="fas fa-list-check text-white"></i>
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg mb-1">AI Step Planner</h3>
-                    <p className="text-slate-400">Describe what you'll show and AI creates a step-by-step plan. Follow the guide while you record.</p>
+                    <h3 className="font-bold text-lg mb-1">{t('creator.aiStepPlanner')}</h3>
+                    <p className="text-slate-400">{t('creator.aiStepPlannerDesc')}</p>
                   </div>
                 </div>
               </div>
@@ -405,7 +402,7 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
                 className="mt-8 px-8 py-4 bg-emerald-500 text-white rounded-2xl font-bold text-lg hover:bg-emerald-400 transition-all shadow-xl shadow-emerald-500/20"
               >
                 <i className="fas fa-video mr-2"></i>
-                Try Live Recording
+                {t('creator.tryLiveRecording')}
               </button>
             </div>
           </div>
@@ -417,26 +414,18 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
         <div className="max-w-3xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-400 text-sm font-medium mb-6">
             <i className="fas fa-handshake"></i>
-            <span>Creator Partnership Program</span>
+            <span>{t('creator.creatorPartnershipProgram')}</span>
           </div>
           <h2 className="text-4xl font-bold mb-6">
-            Partner With Us & Get Free Pro Forever
+            {t('creator.partnerWithUs')}
           </h2>
           <p className="text-slate-400 text-lg mb-8">
-            Mention FrameOps in your content and get permanent Pro access.
-            We grow together - you get a free tool, we get exposure.
+            {t('creator.partnerDesc')}
           </p>
           <div className="bg-slate-800/50 rounded-2xl p-6 mb-8 border border-slate-700">
-            <h3 className="font-bold mb-4">What Creator Partners Get:</h3>
+            <h3 className="font-bold mb-4">{t('creator.whatPartnersGet')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
-              {[
-                "Free Pro access forever",
-                "We share your content",
-                "Priority feature requests",
-                "Direct founder support",
-                "Early access to new features",
-                "Affiliate commission (coming soon)"
-              ].map((perk, i) => (
+              {[t('creator.perk1'), t('creator.perk2'), t('creator.perk3'), t('creator.perk4'), t('creator.perk5'), t('creator.perk6')].map((perk, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm">
                   <i className="fas fa-check text-amber-400"></i>
                   <span className="text-slate-300">{perk}</span>
@@ -450,18 +439,18 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
               className="px-10 py-4 bg-amber-500 text-slate-900 rounded-2xl font-bold text-lg hover:bg-amber-400 transition-all shadow-xl shadow-amber-500/20"
             >
               <i className="fas fa-rocket mr-2"></i>
-              Try FrameOps Free
+              {t('creator.tryFrameOpsFree')}
             </button>
             <a
               href="mailto:partners@frameops.ai?subject=Creator Partnership"
               className="px-10 py-4 bg-slate-700 text-white rounded-2xl font-bold text-lg hover:bg-slate-600 transition-all"
             >
               <i className="fas fa-envelope mr-2"></i>
-              Apply for Partnership
+              {t('creator.applyForPartnership')}
             </a>
           </div>
           <p className="text-slate-500 text-sm mt-4">
-            Already have an audience? Email us for instant Pro access.
+            {t('creator.alreadyHaveAudience')}
           </p>
         </div>
       </section>
@@ -476,12 +465,12 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
             <span className="font-bold">FrameOps</span>
           </div>
           <div className="flex items-center gap-6 text-slate-400 text-sm">
-            <button onClick={() => onNavigate(AppView.PRIVACY)} className="hover:text-white transition-colors">Privacy Policy</button>
-            <button onClick={() => onNavigate(AppView.TERMS)} className="hover:text-white transition-colors">Terms of Service</button>
-            <a href="mailto:support@frameops.ai" className="hover:text-white transition-colors">Contact</a>
+            <button onClick={() => onNavigate(AppView.PRIVACY)} className="hover:text-white transition-colors">{t('creator.privacyPolicy')}</button>
+            <button onClick={() => onNavigate(AppView.TERMS)} className="hover:text-white transition-colors">{t('creator.termsOfService')}</button>
+            <a href="mailto:support@frameops.ai" className="hover:text-white transition-colors">{t('creator.contact')}</a>
           </div>
           <p className="text-slate-500 text-sm">
-            &copy; {new Date().getFullYear()} FrameOps. Made for creators.
+            &copy; {new Date().getFullYear()} FrameOps. {t('creator.madeForCreators')}
           </p>
         </div>
       </footer>

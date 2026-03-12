@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SOP, SOPStep } from '../types';
 import { analyzeSOPFrames, transcribeAudioFile } from '../services/geminiService';
 
@@ -86,6 +87,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   isPro = false,
   onUpgrade
 }) => {
+  const { t } = useTranslation();
   const canCreate = isPro || freeSOPsRemaining > 0;
 
   // Phase state: setup -> recording -> frame_selection (screen only) -> review -> finishing
@@ -1807,14 +1809,14 @@ If the frames show something completely different from the title (e.g., title sa
 
             {markedStepCount === 0 ? (
               <>
-                <p className="text-white text-2xl font-bold mb-2">Navigate to your first page</p>
-                <p className="text-slate-400 mb-8">Go to the screen you want to capture, then come back and click the button below</p>
+                <p className="text-white text-2xl font-bold mb-2">{t('live.navigateFirstPage')}</p>
+                <p className="text-slate-400 mb-8">{t('live.navigateFirstPageDesc')}</p>
               </>
             ) : (
               <>
-                <p className="text-green-400 text-lg font-bold mb-1">Step {markedStepCount} captured!</p>
-                <p className="text-white text-2xl font-bold mb-2">Navigate to the next page</p>
-                <p className="text-slate-400 mb-8">Switch to the next screen, then click capture — or finish if you're done</p>
+                <p className="text-green-400 text-lg font-bold mb-1">{t('live.stepCaptured', { count: markedStepCount })}</p>
+                <p className="text-white text-2xl font-bold mb-2">{t('live.navigateNextPage')}</p>
+                <p className="text-slate-400 mb-8">{t('live.navigateNextPageDesc')}</p>
               </>
             )}
 
@@ -1824,7 +1826,7 @@ If the frames show something completely different from the title (e.g., title sa
                 className="px-10 py-5 bg-indigo-600 hover:bg-indigo-500 text-white text-xl font-bold rounded-2xl transition-colors shadow-lg shadow-indigo-600/30"
               >
                 <i className="fas fa-camera mr-3"></i>
-                Capture Step {markedStepCount + 1}
+                {t('live.captureStep', { num: markedStepCount + 1 })}
               </button>
 
               {markedStepCount === 0 && (
@@ -1836,7 +1838,7 @@ If the frames show something completely different from the title (e.g., title sa
                   className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-xl transition-colors"
                 >
                   <i className="fas fa-external-link-alt mr-2"></i>
-                  Pop out capture button
+                  {t('live.popOutCapture')}
                 </button>
               )}
 
@@ -1858,12 +1860,12 @@ If the frames show something completely different from the title (e.g., title sa
                   className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition-colors"
                 >
                   <i className="fas fa-check mr-2"></i>
-                  Finish — Generate SOP ({markedStepCount} steps)
+                  {t('live.finishGenerate', { count: markedStepCount })}
                 </button>
               )}
 
               {markedStepCount > 0 && markedStepCount < 2 && (
-                <p className="text-slate-500 text-sm">Capture at least 2 steps to generate SOP</p>
+                <p className="text-slate-500 text-sm">{t('live.captureAtLeast')}</p>
               )}
 
               {markedStepCount > 0 && (
@@ -1875,7 +1877,7 @@ If the frames show something completely different from the title (e.g., title sa
                   className="text-red-400 hover:text-red-300 text-sm transition-colors"
                 >
                   <i className="fas fa-undo mr-1"></i>
-                  Undo last capture
+                  {t('live.undoLastCapture')}
                 </button>
               )}
             </div>
@@ -1897,7 +1899,7 @@ If the frames show something completely different from the title (e.g., title sa
             }}
             className="absolute bottom-6 text-slate-500 hover:text-white text-sm transition-colors"
           >
-            Cancel
+            {t('live.cancel')}
           </button>
         </div>
       )}
@@ -1920,7 +1922,7 @@ If the frames show something completely different from the title (e.g., title sa
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Name your SOP..."
+                placeholder={t('live.nameYourSop')}
                 className="w-full bg-black/40 backdrop-blur-sm text-white text-center font-medium px-4 py-2 rounded-full border-none outline-none placeholder:text-white/50"
               />
             </div>
@@ -1956,7 +1958,7 @@ If the frames show something completely different from the title (e.g., title sa
               <div className="w-7 h-7 md:w-8 md:h-8 bg-indigo-600 rounded-full flex items-center justify-center">
                 <i className="fas fa-video text-white text-xs md:text-sm"></i>
               </div>
-              <span className="text-white font-bold text-sm md:text-base">Plan Recording</span>
+              <span className="text-white font-bold text-sm md:text-base">{t('live.planRecording')}</span>
             </div>
             <div className="w-8"></div>
           </div>
@@ -1970,8 +1972,8 @@ If the frames show something completely different from the title (e.g., title sa
               <div className="p-3 md:p-4 border-b border-slate-800">
                 <h3 className="text-white font-bold flex items-center gap-2 text-sm md:text-base">
                   <i className="fas fa-list-check text-indigo-400"></i>
-                  <span className="hidden md:inline">Steps to Record</span>
-                  <span className="md:hidden">Steps</span>
+                  <span className="hidden md:inline">{t('live.stepsToRecord')}</span>
+                  <span className="md:hidden">{t('live.steps')}</span>
                   {proposedSteps.length > 0 && (
                     <span className="text-slate-400 font-normal text-xs md:text-sm">({proposedSteps.length})</span>
                   )}
@@ -2033,7 +2035,7 @@ If the frames show something completely different from the title (e.g., title sa
                     className="w-full py-1.5 md:py-2 border-2 border-dashed border-slate-700 rounded-xl text-slate-500 hover:border-slate-600 hover:text-slate-400 transition-colors text-xs md:text-sm"
                   >
                     <i className="fas fa-plus mr-1 md:mr-2"></i>
-                    Add
+                    {t('live.add')}
                   </button>
                 )}
               </div>
@@ -2050,14 +2052,14 @@ If the frames show something completely different from the title (e.g., title sa
                   }`}
                 >
                   <i className="fas fa-video mr-2"></i>
-                  {proposedSteps.length > 0 ? 'Start Recording' : 'Create steps first...'}
+                  {proposedSteps.length > 0 ? t('live.startRecording') : t('live.createStepsFirst')}
                 </button>
                 {proposedSteps.length === 0 && (
                   <button
                     onClick={skipToRecording}
                     className="w-full py-2 text-slate-400 hover:text-white text-sm transition-colors"
                   >
-                    or just record without a plan →
+                    {t('live.recordWithoutPlan')}
                   </button>
                 )}
               </div>
@@ -2068,7 +2070,7 @@ If the frames show something completely different from the title (e.g., title sa
               <div className="p-3 md:p-4 border-b border-slate-800 flex items-center justify-between">
                 <h3 className="text-white font-bold flex items-center gap-2 text-sm md:text-base">
                   <i className="fas fa-comments text-indigo-400"></i>
-                  AI Assistant
+                  {t('live.aiAssistant')}
                 </h3>
                 {/* Mobile: Skip to free recording */}
                 {proposedSteps.length === 0 && (
@@ -2098,7 +2100,7 @@ If the frames show something completely different from the title (e.g., title sa
                   <div className="flex justify-start">
                     <div className="bg-slate-800 text-slate-100 p-2.5 md:p-3 rounded-xl text-xs md:text-sm">
                       <i className="fas fa-circle-notch fa-spin mr-2"></i>
-                      Thinking...
+                      {t('live.thinking')}
                     </div>
                   </div>
                 )}
@@ -2113,7 +2115,7 @@ If the frames show something completely different from the title (e.g., title sa
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && userInput.trim() && handleSetupChat(userInput.trim())}
-                    placeholder="What will you show?"
+                    placeholder={t('live.whatWillYouShow')}
                     className="flex-1 bg-slate-800 text-white px-3 md:px-4 py-2.5 md:py-3 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none text-sm"
                     disabled={isGeneratingGuide}
                   />
@@ -2137,7 +2139,7 @@ If the frames show something completely different from the title (e.g., title sa
           <div className="text-center max-w-md px-4">
             {!recordingMode ? (
               <>
-                <h3 className="text-white text-xl font-bold mb-6">How do you want to record?</h3>
+                <h3 className="text-white text-xl font-bold mb-6">{t('live.howToRecord')}</h3>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button
                     onClick={() => {
@@ -2147,8 +2149,8 @@ If the frames show something completely different from the title (e.g., title sa
                     className="px-6 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-500 transition-colors"
                   >
                     <i className="fas fa-video mr-3"></i>
-                    Camera
-                    <p className="text-indigo-200 text-sm font-normal mt-1">Film yourself or your work</p>
+                    {t('live.camera')}
+                    <p className="text-indigo-200 text-sm font-normal mt-1">{t('live.cameraDesc')}</p>
                   </button>
                   <button
                     onClick={() => {
@@ -2158,33 +2160,33 @@ If the frames show something completely different from the title (e.g., title sa
                     className="px-6 py-4 bg-slate-700 text-white font-bold rounded-2xl hover:bg-slate-600 transition-colors"
                   >
                     <i className="fas fa-desktop mr-3"></i>
-                    Screen
-                    <p className="text-slate-300 text-sm font-normal mt-1">Record your screen</p>
+                    {t('live.screen')}
+                    <p className="text-slate-300 text-sm font-normal mt-1">{t('live.screenDesc')}</p>
                   </button>
                 </div>
               </>
             ) : recordingMode === 'screen' ? (
               <div className="text-center">
-                <h3 className="text-white text-xl font-bold mb-4">Screen Recording</h3>
-                <p className="text-slate-300 mb-6">Click below to choose which screen or window to share</p>
+                <h3 className="text-white text-xl font-bold mb-4">{t('live.screenRecording')}</h3>
+                <p className="text-slate-300 mb-6">{t('live.screenRecordingDesc')}</p>
                 <button
                   onClick={() => startScreenCapture()}
                   className="px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-500 transition-colors"
                 >
                   <i className="fas fa-desktop mr-3"></i>
-                  Start Screen Capture
+                  {t('live.startScreenCapture')}
                 </button>
                 <button
                   onClick={() => setRecordingMode(null)}
                   className="block mx-auto mt-4 text-slate-400 hover:text-white text-sm"
                 >
-                  ← Back to options
+                  {t('live.backToOptions')}
                 </button>
               </div>
             ) : (
               <div className="text-center">
                 <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-white">Starting camera...</p>
+                <p className="text-white">{t('live.startingCamera')}</p>
               </div>
             )}
             {cameraError && (
@@ -2197,7 +2199,7 @@ If the frames show something completely different from the title (e.g., title sa
                   }}
                   className="mt-3 text-slate-400 hover:text-white text-sm"
                 >
-                  Try again
+                  {t('live.tryAgain')}
                 </button>
               </div>
             )}
@@ -2216,7 +2218,7 @@ If the frames show something completely different from the title (e.g., title sa
                 <div className="p-3 bg-red-600/20 border-b border-red-600/30 flex items-center justify-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
                   <span className="text-red-400 font-mono font-bold">{formatTime(recordingTime)}</span>
-                  <span className="text-red-400/60 text-sm ml-2">RECORDING</span>
+                  <span className="text-red-400/60 text-sm ml-2">{t('live.recording')}</span>
                 </div>
               )}
 
@@ -2225,13 +2227,13 @@ If the frames show something completely different from the title (e.g., title sa
                 <div className="p-4 bg-indigo-600/20 border-b border-indigo-500/30">
                   <div className="text-indigo-400 text-xs font-bold uppercase tracking-wider mb-2">
                     <i className="fas fa-play-circle mr-1"></i>
-                    NOW - Step {currentRecordingStep + 1} of {proposedSteps.length}
+                    {t('live.nowStep', { current: currentRecordingStep + 1, total: proposedSteps.length })}
                   </div>
                   <p className="text-white text-lg font-bold leading-tight">
                     {proposedSteps[currentRecordingStep]}
                   </p>
                   <p className="text-indigo-300/70 text-sm mt-2">
-                    Show this on camera. Press "Done" when finished.
+                    {t('live.showOnCamera')}
                   </p>
                 </div>
               )}
@@ -2241,16 +2243,16 @@ If the frames show something completely different from the title (e.g., title sa
                 <div className="p-4 border-b border-slate-800">
                   <h3 className="text-white font-bold flex items-center gap-2">
                     <i className="fas fa-list-check text-indigo-400"></i>
-                    Your Steps
+                    {t('live.yourSteps')}
                   </h3>
-                  <p className="text-slate-400 text-sm mt-1">Press to start recording</p>
+                  <p className="text-slate-400 text-sm mt-1">{t('live.pressToStart')}</p>
                 </div>
               )}
 
               {/* Steps list - smaller during recording since current step is shown above */}
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
                 {isRecording && (
-                  <p className="text-slate-500 text-xs uppercase tracking-wider mb-2 px-1">All steps:</p>
+                  <p className="text-slate-500 text-xs uppercase tracking-wider mb-2 px-1">{t('live.allSteps')}</p>
                 )}
                 {proposedSteps.map((step, idx) => (
                   <div
@@ -2297,7 +2299,7 @@ If the frames show something completely different from the title (e.g., title sa
                       className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 text-lg"
                     >
                       <i className="fas fa-check mr-2"></i>
-                      Done - Next Step
+                      {t('live.doneNextStep')}
                     </button>
                   ) : (
                     <button
@@ -2305,7 +2307,7 @@ If the frames show something completely different from the title (e.g., title sa
                       className="w-full py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 text-lg"
                     >
                       <i className="fas fa-flag-checkered mr-2"></i>
-                      Done - Finish
+                      {t('live.doneFinish')}
                     </button>
                   )}
 
@@ -2387,7 +2389,7 @@ If the frames show something completely different from the title (e.g., title sa
                     className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl"
                   >
                     <i className="fas fa-check mr-2"></i>
-                    Next Step
+                    {t('live.nextStep')}
                   </button>
                 ) : (
                   <button
@@ -2395,7 +2397,7 @@ If the frames show something completely different from the title (e.g., title sa
                     className="px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl"
                   >
                     <i className="fas fa-flag-checkered mr-2"></i>
-                    Finish
+                    {t('live.finish')}
                   </button>
                 )}
 
@@ -2438,7 +2440,7 @@ If the frames show something completely different from the title (e.g., title sa
                       >
                         <div className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-400 transition-colors"></div>
                       </button>
-                      <p className="text-white/60 text-sm mt-4">Press to start</p>
+                      <p className="text-white/60 text-sm mt-4">{t('live.pressToStartShort')}</p>
                     </div>
                   </div>
                 ) : (
@@ -2470,7 +2472,7 @@ If the frames show something completely different from the title (e.g., title sa
                   >
                     <div className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-400 transition-colors"></div>
                   </button>
-                  <p className="text-white/60 text-sm mt-4">Press to start</p>
+                  <p className="text-white/60 text-sm mt-4">{t('live.pressToStartShort')}</p>
                 </div>
               </div>
             )}
@@ -2510,14 +2512,14 @@ If the frames show something completely different from the title (e.g., title sa
             <div className="w-16 h-16 bg-amber-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <i className="fas fa-pause text-amber-400 text-2xl"></i>
             </div>
-            <p className="text-white text-lg font-medium mb-2">Paused</p>
-            <p className="text-slate-400 mb-6">Press to continue recording</p>
+            <p className="text-white text-lg font-medium mb-2">{t('live.paused')}</p>
+            <p className="text-slate-400 mb-6">{t('live.pressToResume')}</p>
             <button
               onClick={togglePause}
               className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500"
             >
               <i className="fas fa-play mr-2"></i>
-              Continue
+              {t('live.continue')}
             </button>
           </div>
         </div>
@@ -2552,18 +2554,18 @@ If the frames show something completely different from the title (e.g., title sa
         <div className="absolute inset-0 bg-slate-900 flex flex-col z-30">
           <div className="p-4 border-b border-slate-700 flex items-center justify-between">
             <div>
-              <h3 className="text-white text-lg font-bold">Select frames for your SOP</h3>
-              <p className="text-slate-400 text-sm">Click to deselect frames you don't want. Each selected frame = one step.</p>
+              <h3 className="text-white text-lg font-bold">{t('live.selectFrames')}</h3>
+              <p className="text-slate-400 text-sm">{t('live.selectFramesDesc')}</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-indigo-400 font-bold">{selectedFrameIndices.size} selected</span>
+              <span className="text-indigo-400 font-bold">{t('live.selected', { count: selectedFrameIndices.size })}</span>
               <button
                 onClick={analyzeSelectedFrames}
                 disabled={selectedFrameIndices.size === 0}
                 className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl transition-colors"
               >
                 <i className="fas fa-magic mr-2"></i>
-                Generate SOP ({selectedFrameIndices.size} steps)
+                {t('live.generateSop', { count: selectedFrameIndices.size })}
               </button>
             </div>
           </div>
@@ -2610,13 +2612,13 @@ If the frames show something completely different from the title (e.g., title sa
               onClick={() => setSelectedFrameIndices(new Set(allFramesRef.current.map((_, i) => i)))}
               className="px-4 py-2 text-slate-400 hover:text-white text-sm"
             >
-              Select all
+              {t('live.selectAll')}
             </button>
             <button
               onClick={() => setSelectedFrameIndices(new Set())}
               className="px-4 py-2 text-slate-400 hover:text-white text-sm"
             >
-              Deselect all
+              {t('live.deselectAll')}
             </button>
           </div>
         </div>
@@ -2630,14 +2632,14 @@ If the frames show something completely different from the title (e.g., title sa
             <button onClick={() => setPhase('setup')} className="text-slate-400 hover:text-white p-2">
               <i className="fas fa-arrow-left text-lg"></i>
             </button>
-            <span className="text-white font-bold text-sm md:text-base">Review SOP</span>
+            <span className="text-white font-bold text-sm md:text-base">{t('live.reviewSop')}</span>
             <button
               onClick={finalizeSOP}
               className="px-3 py-1.5 md:px-4 md:py-2 bg-emerald-600 text-white font-bold rounded-lg md:rounded-xl hover:bg-emerald-500 text-xs md:text-sm"
             >
               <i className="fas fa-check mr-1 md:mr-2"></i>
-              <span className="hidden sm:inline">Finalize</span>
-              <span className="sm:hidden">Done</span>
+              <span className="hidden sm:inline">{t('live.finalize')}</span>
+              <span className="sm:hidden">{t('live.done')}</span>
             </button>
           </div>
 
@@ -2647,7 +2649,7 @@ If the frames show something completely different from the title (e.g., title sa
             <div className="flex-1 overflow-y-auto p-3 md:p-4 md:border-r md:border-slate-800">
               <h3 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-4">
                 <i className="fas fa-list-check mr-2"></i>
-                Draft ({draftSOP?.length || 0} steps)
+                {t('live.draft', { count: draftSOP?.length || 0 })}
               </h3>
 
               {draftSOP && draftSOP.map((step, idx) => (
@@ -2671,7 +2673,7 @@ If the frames show something completely different from the title (e.g., title sa
                         {stepsToReRecord.includes(idx) && (
                           <span className="text-amber-400 text-[10px] md:text-xs">
                             <i className="fas fa-redo mr-1"></i>
-                            <span className="hidden md:inline">Marked</span>
+                            <span className="hidden md:inline">{t('live.marked')}</span>
                           </span>
                         )}
                       </div>
@@ -2703,14 +2705,14 @@ If the frames show something completely different from the title (e.g., title sa
               {isReRecording && recordingMode === 'screen' && reRecordStepIndex !== null ? (
                 <div className="mt-4 space-y-2">
                   <p className="text-amber-400 text-xs text-center">
-                    Recapturing step {reRecordStepIndex + 1}: {draftSOP?.[reRecordStepIndex]?.title}
+                    {t('live.recapturingStep', { num: reRecordStepIndex + 1, title: draftSOP?.[reRecordStepIndex]?.title })}
                   </p>
                   <button
                     onClick={captureReRecordScreen}
                     className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 transition-colors"
                   >
                     <i className="fas fa-camera mr-2"></i>
-                    Capture new screenshot
+                    {t('live.captureNewScreenshot')}
                   </button>
                 </div>
               ) : stepsToReRecord.length > 0 && (
@@ -2719,7 +2721,7 @@ If the frames show something completely different from the title (e.g., title sa
                   className="w-full mt-4 py-3 bg-amber-600 text-white font-bold rounded-xl hover:bg-amber-500 transition-colors"
                 >
                   <i className="fas fa-video mr-2"></i>
-                  Re-record {stepsToReRecord.length} step{stepsToReRecord.length !== 1 ? 's' : ''}
+                  {t('live.reRecordSteps', { count: stepsToReRecord.length })}
                 </button>
               )}
             </div>
@@ -2729,7 +2731,7 @@ If the frames show something completely different from the title (e.g., title sa
               <div className="p-2 border-b border-slate-800 flex items-center justify-between">
                 <h3 className="text-slate-400 text-[10px] md:text-sm font-bold uppercase">
                   <i className="fas fa-lightbulb mr-1 text-amber-400"></i>
-                  Tips
+                  {t('live.tips')}
                 </h3>
                 {/* Quick actions on mobile */}
                 {isMobile && stepsToReRecord.length === 0 && (
@@ -2793,7 +2795,7 @@ If the frames show something completely different from the title (e.g., title sa
                   <span className="text-white font-bold text-sm md:text-base">{reRecordStepIndex + 1}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white/80 text-[10px] md:text-xs uppercase tracking-wider">Re-recording</p>
+                  <p className="text-white/80 text-[10px] md:text-xs uppercase tracking-wider">{t('live.reRecording')}</p>
                   <p className="text-white font-medium text-sm md:text-base truncate">{draftSOP[reRecordStepIndex]?.title}</p>
                 </div>
                 <button
@@ -2801,7 +2803,7 @@ If the frames show something completely different from the title (e.g., title sa
                   className="px-3 md:px-4 py-1.5 md:py-2 bg-white text-amber-600 font-bold rounded-lg text-sm"
                 >
                   <i className="fas fa-check mr-1"></i>
-                  Done
+                  {t('live.done')}
                 </button>
               </div>
             </div>
@@ -2814,8 +2816,8 @@ If the frames show something completely different from the title (e.g., title sa
         <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-40">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-white text-lg font-bold">Analyzing recording...</p>
-            <p className="text-slate-400 text-sm mt-1">{allFramesRef.current.length} frames being processed</p>
+            <p className="text-white text-lg font-bold">{t('live.analyzingRecording')}</p>
+            <p className="text-slate-400 text-sm mt-1">{t('live.framesBeingProcessed', { count: allFramesRef.current.length })}</p>
           </div>
         </div>
       )}
@@ -2825,8 +2827,8 @@ If the frames show something completely different from the title (e.g., title sa
         <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-40">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-white text-lg font-bold">Creating SOP...</p>
-            <p className="text-slate-400 text-sm mt-1">{allFramesRef.current.length} frames being analyzed</p>
+            <p className="text-white text-lg font-bold">{t('live.creatingSop')}</p>
+            <p className="text-slate-400 text-sm mt-1">{t('live.framesBeingAnalyzed', { count: allFramesRef.current.length })}</p>
           </div>
         </div>
       )}
@@ -2837,7 +2839,7 @@ If the frames show something completely different from the title (e.g., title sa
           <div className="absolute inset-0 bg-black/60" onClick={() => setShowSettings(false)} />
           <div className="relative bg-slate-900 w-full md:w-96 md:rounded-2xl p-6 space-y-6 rounded-t-3xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-white text-lg font-bold">Settings</h3>
+              <h3 className="text-white text-lg font-bold">{t('live.settings')}</h3>
               <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-white">
                 <i className="fas fa-times"></i>
               </button>
@@ -2846,7 +2848,7 @@ If the frames show something completely different from the title (e.g., title sa
             {/* Scene Sensitivity */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-white text-sm font-medium">Sensitivity</label>
+                <label className="text-white text-sm font-medium">{t('live.sensitivity')}</label>
                 <span className="text-indigo-400 text-sm font-bold">{sceneSensitivity}%</span>
               </div>
               <input
@@ -2858,8 +2860,8 @@ If the frames show something completely different from the title (e.g., title sa
                 className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
               />
               <p className="text-slate-500 text-xs mt-2">
-                {sceneSensitivity < 30 ? 'Fewer frames, only major changes' :
-                 sceneSensitivity < 70 ? 'Balanced' : 'More frames, more details'}
+                {sceneSensitivity < 30 ? t('live.sensitivityLow') :
+                 sceneSensitivity < 70 ? t('live.sensitivityMedium') : t('live.sensitivityHigh')}
               </p>
             </div>
 
@@ -2867,7 +2869,7 @@ If the frames show something completely different from the title (e.g., title sa
               onClick={() => setShowSettings(false)}
               className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 transition-colors"
             >
-              Done
+              {t('live.done')}
             </button>
           </div>
         </div>
@@ -2883,7 +2885,7 @@ If the frames show something completely different from the title (e.g., title sa
             </div>
             <div className="px-4 pb-3 flex items-center justify-between">
               <h3 className="text-white font-bold">
-                Steps <span className="text-indigo-400">({liveSteps.length})</span>
+                {t('live.steps')} <span className="text-indigo-400">({liveSteps.length})</span>
               </h3>
               <button onClick={() => setShowStepsPanel(false)} className="text-slate-400">
                 <i className="fas fa-times"></i>

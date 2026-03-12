@@ -1,0 +1,557 @@
+/* Manualen.nu landing page — scoped under .manualen-page */
+
+.manualen-page {
+  --mn-bg: #fafaf9;
+  --mn-bg-card: #ffffff;
+  --mn-text: #1a1a1a;
+  --mn-text-dim: #6b6b6b;
+  --mn-accent: #e85d24;
+  --mn-accent-light: #fff3ed;
+  --mn-border: #e8e8e8;
+  --mn-radius: 12px;
+
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--mn-bg);
+  color: var(--mn-text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Nav */
+.manualen-page .mn-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 14px 24px;
+  background: rgba(250, 250, 249, 0.9);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--mn-border);
+}
+
+.manualen-page .mn-nav-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.manualen-page .mn-logo {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--mn-text);
+  text-decoration: none;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.manualen-page .mn-logo span { color: var(--mn-accent); }
+
+.manualen-page .mn-logo-icon {
+  height: 44px;
+  width: auto;
+}
+
+.manualen-page .mn-nav-cta {
+  padding: 8px 20px;
+  background: var(--mn-accent);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: opacity 0.2s;
+  border: none;
+  cursor: pointer;
+}
+.manualen-page .mn-nav-cta:hover { opacity: 0.85; }
+
+/* Hero */
+.manualen-page .mn-hero {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 120px 24px 60px;
+  display: flex;
+  align-items: center;
+  gap: 48px;
+}
+
+.manualen-page .mn-hero-content { flex: 1; }
+
+.manualen-page .mn-hero-image {
+  flex: 1;
+  max-width: 440px;
+}
+
+.manualen-page .mn-hero-image img {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+}
+
+.manualen-page .mn-hero-tag {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--mn-accent);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 16px;
+}
+
+.manualen-page .mn-hero h1 {
+  font-size: clamp(2.2rem, 6vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  line-height: 1.12;
+  margin-bottom: 20px;
+  color: var(--mn-text);
+}
+
+.manualen-page .mn-hero-sub {
+  font-size: 1.1rem;
+  color: var(--mn-text-dim);
+  max-width: 520px;
+  line-height: 1.7;
+  margin-bottom: 32px;
+}
+
+.manualen-page .mn-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.manualen-page .mn-hero-note {
+  font-size: 0.85rem;
+  color: var(--mn-text-dim);
+}
+
+.manualen-page .mn-btn-primary {
+  display: inline-block;
+  padding: 13px 32px;
+  background: var(--mn-accent);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: opacity 0.2s;
+  border: none;
+  cursor: pointer;
+}
+.manualen-page .mn-btn-primary:hover { opacity: 0.85; }
+.manualen-page .mn-btn-large { padding: 16px 40px; font-size: 1.05rem; }
+
+/* Proof bar */
+.manualen-page .mn-proof-bar {
+  border-top: 1px solid var(--mn-border);
+  border-bottom: 1px solid var(--mn-border);
+  background: var(--mn-bg-card);
+}
+
+.manualen-page .mn-proof-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+}
+
+.manualen-page .mn-proof-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--mn-text-dim);
+}
+
+.manualen-page .mn-proof-item strong {
+  color: var(--mn-text);
+  font-weight: 700;
+}
+
+.manualen-page .mn-proof-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--mn-border);
+}
+
+/* How it works */
+.manualen-page .mn-how {
+  padding: 80px 24px;
+}
+
+.manualen-page .mn-how-inner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.manualen-page .mn-how h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 48px;
+  text-align: center;
+}
+
+.manualen-page .mn-how-steps {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.manualen-page .mn-how-step {
+  flex: 1;
+  text-align: center;
+}
+
+.manualen-page .mn-how-num {
+  width: 36px;
+  height: 36px;
+  background: var(--mn-accent);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  margin: 0 auto 16px;
+}
+
+.manualen-page .mn-how-step h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.manualen-page .mn-how-step p {
+  color: var(--mn-text-dim);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  max-width: 240px;
+  margin: 0 auto;
+}
+
+.manualen-page .mn-how-arrow {
+  width: 24px;
+  flex-shrink: 0;
+  color: #ccc;
+  padding-top: 6px;
+}
+
+.manualen-page .mn-how-arrow svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Use cases */
+.manualen-page .mn-usecases {
+  padding: 60px 24px 80px;
+  background: var(--mn-bg-card);
+  border-top: 1px solid var(--mn-border);
+  border-bottom: 1px solid var(--mn-border);
+}
+
+.manualen-page .mn-usecases-inner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.manualen-page .mn-usecases h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.manualen-page .mn-usecases-sub {
+  text-align: center;
+  color: var(--mn-text-dim);
+  font-size: 1rem;
+  margin-bottom: 32px;
+}
+
+.manualen-page .mn-usecase-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.manualen-page .mn-usecase-card {
+  border: 1px solid var(--mn-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--mn-bg);
+  transition: border-color 0.2s;
+}
+
+.manualen-page .mn-usecase-card:hover {
+  border-color: var(--mn-accent);
+}
+
+.manualen-page .mn-usecase-anim {
+  padding: 8px;
+  background: #f0efed;
+}
+
+.manualen-page .mn-usecase-anim img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 6px;
+}
+
+.manualen-page .mn-usecase-label {
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--mn-text);
+}
+
+.manualen-page .mn-source-tags {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+.manualen-page .mn-source-tag {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mn-text-dim);
+  background: var(--mn-bg);
+  border: 1px solid var(--mn-border);
+  border-radius: 20px;
+}
+
+/* Result section */
+.manualen-page .mn-result {
+  padding: 80px 24px;
+}
+
+.manualen-page .mn-result-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 60px;
+}
+
+.manualen-page .mn-result-text {
+  flex: 1;
+}
+
+.manualen-page .mn-result-text h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 24px;
+}
+
+.manualen-page .mn-result-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0;
+  margin: 0;
+}
+
+.manualen-page .mn-result-list li {
+  font-size: 0.95rem;
+  color: var(--mn-text-dim);
+  padding-left: 28px;
+  position: relative;
+  line-height: 1.5;
+}
+
+.manualen-page .mn-result-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--mn-accent-light);
+  border: 2px solid var(--mn-accent);
+}
+
+/* Mock manual preview */
+.manualen-page .mn-result-preview { flex: 1; }
+
+.manualen-page .mn-mock-manual {
+  background: white;
+  border: 1px solid var(--mn-border);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+}
+
+.manualen-page .mn-mock-header {
+  height: 12px;
+  width: 50%;
+  background: var(--mn-accent);
+  border-radius: 4px;
+  margin-bottom: 24px;
+}
+
+.manualen-page .mn-mock-step {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+
+.manualen-page .mn-mock-step:last-child { margin-bottom: 0; }
+
+.manualen-page .mn-mock-img {
+  width: 80px;
+  height: 52px;
+  background: #f0efed;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.manualen-page .mn-mock-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.manualen-page .mn-mock-line {
+  height: 8px;
+  background: #f0efed;
+  border-radius: 4px;
+}
+
+.manualen-page .mn-w50 { width: 50%; }
+.manualen-page .mn-w60 { width: 60%; }
+.manualen-page .mn-w70 { width: 70%; }
+.manualen-page .mn-w80 { width: 80%; }
+.manualen-page .mn-w85 { width: 85%; }
+.manualen-page .mn-w90 { width: 90%; }
+
+/* CTA */
+.manualen-page .mn-cta {
+  padding: 80px 24px;
+  background: var(--mn-accent-light);
+}
+
+.manualen-page .mn-cta-inner {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.manualen-page .mn-cta h2 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 12px;
+}
+
+.manualen-page .mn-cta p {
+  color: var(--mn-text-dim);
+  font-size: 1rem;
+  margin-bottom: 28px;
+}
+
+/* Footer */
+.manualen-page .mn-footer {
+  padding: 24px;
+  border-top: 1px solid var(--mn-border);
+}
+
+.manualen-page .mn-footer-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.manualen-page .mn-logo-small {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--mn-text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.manualen-page .mn-logo-small span { color: var(--mn-accent); }
+
+.manualen-page .mn-logo-icon-small {
+  height: 20px;
+  width: auto;
+}
+
+.manualen-page .mn-footer-copy {
+  color: var(--mn-text-dim);
+  font-size: 0.8rem;
+}
+
+/* Fade-in animation */
+.manualen-page .mn-fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.manualen-page .mn-fade-in.mn-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .manualen-page .mn-how-steps {
+    flex-direction: column;
+    gap: 32px;
+  }
+  .manualen-page .mn-how-arrow {
+    transform: rotate(90deg);
+    margin: 0 auto;
+  }
+  .manualen-page .mn-usecase-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .manualen-page .mn-result-inner {
+    flex-direction: column;
+    gap: 40px;
+  }
+  .manualen-page .mn-proof-inner {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .manualen-page .mn-proof-divider {
+    width: 40px;
+    height: 1px;
+  }
+  .manualen-page .mn-hero {
+    flex-direction: column;
+    padding-top: 100px;
+  }
+  .manualen-page .mn-hero-image {
+    max-width: 100%;
+  }
+  .manualen-page .mn-hero-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

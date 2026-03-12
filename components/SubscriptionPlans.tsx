@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createCheckoutSession, isStripeConfigured, setSubscriptionStatus } from '../services/stripeService';
 
 // Promo codes - in production, validate these server-side
@@ -12,6 +13,7 @@ const VALID_PROMO_CODES: Record<string, { type: 'pro' | 'team'; days: number; na
 const IS_BETA = true; // Set to false when launching paid plans
 
 const SubscriptionPlans: React.FC = () => {
+  const { t } = useTranslation();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [promoCode, setPromoCode] = useState('');
   const [promoStatus, setPromoStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -21,12 +23,12 @@ const SubscriptionPlans: React.FC = () => {
   // Handle upgrade button click
   const handleUpgrade = async () => {
     if (IS_BETA) {
-      alert('Pro-planen är inte tillgänglig under beta. Du har redan tillgång till alla funktioner!');
+      alert(t('subscription.betaNotAvailable'));
       return;
     }
 
     if (!isStripeConfigured()) {
-      alert('Betalning är inte konfigurerad än. Kontakta support.');
+      alert(t('subscription.paymentNotConfigured'));
       return;
     }
 
@@ -35,7 +37,7 @@ const SubscriptionPlans: React.FC = () => {
     setIsCheckingOut(false);
 
     if (error) {
-      alert(`Fel vid checkout: ${error}`);
+      alert(t('subscription.checkoutError', { error }));
     }
   };
 
@@ -56,93 +58,84 @@ const SubscriptionPlans: React.FC = () => {
       // Also set subscription status so isPro is true
       setSubscriptionStatus(true, expiresAt.toISOString());
       setPromoStatus('success');
-      setPromoMessage(`${promo.name} aktiverad! Du har ${promo.type === 'pro' ? 'Pro' : 'Team'}-tillgång i ${promo.days} dagar.`);
+      setPromoMessage(t('subscription.promoActivated', { name: promo.name, type: promo.type === 'pro' ? 'Pro' : 'Team', days: promo.days }));
     } else {
       setPromoStatus('error');
-      setPromoMessage('Invalid promo code. Please check and try again.');
+      setPromoMessage(t('subscription.invalidPromoCode'));
     }
   };
 
   const plans = [
     {
-      name: 'Beta Free',
+      name: t('subscription.betaFreeName'),
       monthlyPrice: '0',
       yearlyPrice: '0',
-      description: 'All features included during beta!',
+      description: t('subscription.betaFreeDesc'),
       features: [
-        'Unlimited SOPs during beta',
-        'YouTube, upload & live recording',
-        'AI-generated instructions',
-        'PDF export',
-        'Manual frame selection',
-        'All Pro features included'
+        t('subscription.betaFreeFeature1'),
+        t('subscription.betaFreeFeature2'),
+        t('subscription.betaFreeFeature3'),
+        t('subscription.betaFreeFeature4'),
+        t('subscription.betaFreeFeature5'),
+        t('subscription.betaFreeFeature6')
       ],
       limitations: [],
-      buttonText: 'Current Plan',
+      buttonText: t('subscription.currentPlan'),
       popular: true,
-      color: 'indigo'
+      color: 'indigo',
+      id: 'Beta Free'
     },
     {
-      name: 'Pro',
+      name: t('subscription.proName'),
       monthlyPrice: '19',
       yearlyPrice: '190',
-      description: 'After beta ends',
+      description: t('subscription.proDesc'),
       features: [
-        'Unlimited SOPs',
-        'All features from Beta',
-        'Priority support',
-        'Early access to new features'
+        t('subscription.proFeature1'),
+        t('subscription.proFeature2'),
+        t('subscription.proFeature3'),
+        t('subscription.proFeature4')
       ],
       limitations: [],
-      buttonText: 'Coming After Beta',
+      buttonText: t('subscription.comingAfterBeta'),
       popular: false,
-      color: 'slate'
+      color: 'slate',
+      id: 'Pro'
     },
     {
-      name: 'API Access',
+      name: t('subscription.apiAccessName'),
       monthlyPrice: '99',
       yearlyPrice: '990',
-      description: 'Integrate into your systems',
+      description: t('subscription.apiAccessDesc'),
       features: [
-        'Everything in Pro',
-        'REST API access',
-        'Webhook notifications',
-        'Programmatic SOP generation',
-        'Technical support'
+        t('subscription.apiFeature1'),
+        t('subscription.apiFeature2'),
+        t('subscription.apiFeature3'),
+        t('subscription.apiFeature4'),
+        t('subscription.apiFeature5')
       ],
       limitations: [],
-      buttonText: 'Contact Us',
+      buttonText: t('subscription.contactUs'),
       popular: false,
-      color: 'slate'
+      color: 'slate',
+      id: 'API Access'
     }
   ];
 
   const faqs = [
-    {
-      question: 'What do I get during beta?',
-      answer: 'During beta, you get full access to all features including unlimited SOPs, YouTube import, live recording, PDF export, and frame selection - completely free!'
-    },
-    {
-      question: 'What happens when beta ends?',
-      answer: 'When beta ends, free users will have a limit on SOPs. Your existing SOPs will remain accessible. Pro subscription gives unlimited access.'
-    },
-    {
-      question: 'What counts as one SOP?',
-      answer: 'One SOP is a single video processed into a procedure document, regardless of length or number of steps.'
-    },
-    {
-      question: 'What payment methods are accepted?',
-      answer: 'We accept all major credit cards (Visa, Mastercard, Amex) via Stripe.'
-    }
+    { question: t('subscription.faq1Question'), answer: t('subscription.faq1Answer') },
+    { question: t('subscription.faq2Question'), answer: t('subscription.faq2Answer') },
+    { question: t('subscription.faq3Question'), answer: t('subscription.faq3Answer') },
+    { question: t('subscription.faq4Question'), answer: t('subscription.faq4Answer') }
   ];
 
   return (
     <div className="py-8 animate-in fade-in duration-500">
       {/* Header */}
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-extrabold text-slate-900 mb-4">Choose Your Plan</h1>
+        <h1 className="text-4xl font-extrabold text-slate-900 mb-4">{t('subscription.chooseYourPlan')}</h1>
         <p className="text-lg text-slate-500 max-w-2xl mx-auto">
-          Start free during beta, upgrade when you need more.
+          {t('subscription.startFreeDuringBeta')}
         </p>
 
         {/* Billing Toggle */}
@@ -155,7 +148,7 @@ const SubscriptionPlans: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Monthly
+            {t('subscription.monthly')}
           </button>
           <button
             onClick={() => setBillingPeriod('yearly')}
@@ -165,9 +158,9 @@ const SubscriptionPlans: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Yearly
+            {t('subscription.yearly')}
             <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">
-              Save 17%
+              {t('subscription.save17')}
             </span>
           </button>
         </div>
@@ -186,7 +179,7 @@ const SubscriptionPlans: React.FC = () => {
           >
             {plan.popular && (
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-1 bg-amber-400 text-amber-900 text-xs font-bold rounded-full uppercase tracking-wide">
-                Most Popular
+                {t('subscription.mostPopular')}
               </div>
             )}
 
@@ -201,7 +194,7 @@ const SubscriptionPlans: React.FC = () => {
                 </span>
                 {plan.monthlyPrice !== 'Custom' && (
                   <span className={plan.popular ? 'text-indigo-200' : 'text-slate-500'}>
-                    /{billingPeriod === 'monthly' ? 'mo' : 'yr'}
+                    {billingPeriod === 'monthly' ? t('subscription.perMonth') : t('subscription.perYear')}
                   </span>
                 )}
               </div>
@@ -220,18 +213,18 @@ const SubscriptionPlans: React.FC = () => {
             </ul>
 
             <button
-              onClick={plan.name === 'Pro' && !IS_BETA ? handleUpgrade : undefined}
-              disabled={isCheckingOut || plan.name === 'Beta Free'}
+              onClick={plan.id === 'Pro' && !IS_BETA ? handleUpgrade : undefined}
+              disabled={isCheckingOut || plan.id === 'Beta Free'}
               className={`w-full py-3.5 rounded-xl font-bold transition-all ${
                 plan.popular
                   ? 'bg-white text-indigo-600 hover:bg-indigo-50'
-                  : plan.name === 'Beta Free'
+                  : plan.id === 'Beta Free'
                     ? 'bg-slate-100 text-slate-400 cursor-default'
                     : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 disabled:opacity-50'
               }`}
             >
-              {isCheckingOut && plan.name === 'Pro' ? (
-                <><i className="fas fa-spinner fa-spin mr-2"></i>Laddar...</>
+              {isCheckingOut && plan.id === 'Pro' ? (
+                <><i className="fas fa-spinner fa-spin mr-2"></i>{t('subscription.loading')}</>
               ) : (
                 plan.buttonText
               )}
@@ -242,65 +235,65 @@ const SubscriptionPlans: React.FC = () => {
 
       {/* Feature Comparison */}
       <div className="max-w-4xl mx-auto mb-20">
-        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Compare Features</h2>
+        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">{t('subscription.compareFeatures')}</h2>
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100">
-                <th className="text-left p-4 font-semibold text-slate-900">Feature</th>
-                <th className="p-4 font-semibold text-indigo-600 text-center bg-indigo-50">Beta Free</th>
-                <th className="p-4 font-semibold text-slate-900 text-center">Pro</th>
+                <th className="text-left p-4 font-semibold text-slate-900">{t('subscription.feature')}</th>
+                <th className="p-4 font-semibold text-indigo-600 text-center bg-indigo-50">{t('subscription.betaFreeName')}</th>
+                <th className="p-4 font-semibold text-slate-900 text-center">{t('subscription.proName')}</th>
                 <th className="p-4 font-semibold text-slate-900 text-center">API</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">Number of SOPs</td>
-                <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">Unlimited (beta)</td>
-                <td className="p-4 text-center text-slate-600">Unlimited</td>
-                <td className="p-4 text-center text-slate-600">Unlimited</td>
+                <td className="p-4 text-slate-700">{t('subscription.numberOfSops')}</td>
+                <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">{t('subscription.unlimitedBeta')}</td>
+                <td className="p-4 text-center text-slate-600">{t('subscription.unlimited')}</td>
+                <td className="p-4 text-center text-slate-600">{t('subscription.unlimited')}</td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">YouTube videos</td>
+                <td className="p-4 text-slate-700">{t('subscription.youtubeVideos')}</td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">Video upload</td>
+                <td className="p-4 text-slate-700">{t('subscription.videoUpload')}</td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">Live recording</td>
+                <td className="p-4 text-slate-700">{t('subscription.liveRecording')}</td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">PDF export</td>
+                <td className="p-4 text-slate-700">{t('subscription.pdfExport')}</td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">Frame selection</td>
+                <td className="p-4 text-slate-700">{t('subscription.frameSelection')}</td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr className="border-b border-slate-50">
-                <td className="p-4 text-slate-700">REST API</td>
+                <td className="p-4 text-slate-700">{t('subscription.restApi')}</td>
                 <td className="p-4 text-center bg-indigo-50"><i className="fas fa-times text-slate-300"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-times text-slate-300"></i></td>
                 <td className="p-4 text-center"><i className="fas fa-check text-emerald-500"></i></td>
               </tr>
               <tr>
-                <td className="p-4 text-slate-700">Support</td>
-                <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">Email</td>
-                <td className="p-4 text-center text-slate-600">Email</td>
-                <td className="p-4 text-center text-slate-600">Priority</td>
+                <td className="p-4 text-slate-700">{t('subscription.support')}</td>
+                <td className="p-4 text-center bg-indigo-50 text-indigo-700 font-semibold">{t('subscription.email')}</td>
+                <td className="p-4 text-center text-slate-600">{t('subscription.email')}</td>
+                <td className="p-4 text-center text-slate-600">{t('subscription.priority')}</td>
               </tr>
             </tbody>
           </table>
@@ -314,8 +307,8 @@ const SubscriptionPlans: React.FC = () => {
             <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-3">
               <i className="fas fa-gift text-indigo-600 text-xl"></i>
             </div>
-            <h3 className="text-lg font-bold text-slate-900">Have a promo code?</h3>
-            <p className="text-sm text-slate-500 mt-1">Enter your code to unlock special access</p>
+            <h3 className="text-lg font-bold text-slate-900">{t('subscription.havePromoCode')}</h3>
+            <p className="text-sm text-slate-500 mt-1">{t('subscription.enterCodeToUnlock')}</p>
           </div>
 
           <div className="flex gap-3">
@@ -326,7 +319,7 @@ const SubscriptionPlans: React.FC = () => {
                 setPromoCode(e.target.value);
                 setPromoStatus('idle');
               }}
-              placeholder="Enter promo code..."
+              placeholder={t('subscription.enterPromoCode')}
               className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm font-medium uppercase"
             />
             <button
@@ -334,7 +327,7 @@ const SubscriptionPlans: React.FC = () => {
               disabled={!promoCode.trim()}
               className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Apply
+              {t('subscription.apply')}
             </button>
           </div>
 
@@ -356,15 +349,15 @@ const SubscriptionPlans: React.FC = () => {
             </div>
           )}
 
-          <p className="text-xs text-slate-400 text-center mt-4">
-            Creator with an audience? <a href="mailto:partners@frameops.ai" className="text-indigo-600 hover:underline">Join our Creator Partnership</a> for free Pro access.
-          </p>
+          <p className="text-xs text-slate-400 text-center mt-4"
+            dangerouslySetInnerHTML={{ __html: t('subscription.creatorPartnership').replace('<1>', '<a href="mailto:partners@frameops.ai" class="text-indigo-600 hover:underline">').replace('</1>', '</a>') }}
+          />
         </div>
       </div>
 
       {/* FAQ Section */}
       <div className="max-w-3xl mx-auto mb-16">
-        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Frequently Asked Questions</h2>
+        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">{t('subscription.faq')}</h2>
         <div className="space-y-4">
           {faqs.map((faq, i) => (
             <div key={i} className="bg-white rounded-xl border border-slate-100 p-6">
@@ -380,17 +373,17 @@ const SubscriptionPlans: React.FC = () => {
         <div className="inline-flex items-center gap-6 text-slate-400 text-sm">
           <div className="flex items-center gap-2">
             <i className="fas fa-lock"></i>
-            <span>256-bit SSL</span>
+            <span>{t('subscription.ssl256')}</span>
           </div>
           <div className="flex items-center gap-2">
             <i className="fas fa-credit-card"></i>
-            <span>Secure payments via Stripe</span>
+            <span>{t('subscription.securePayments')}</span>
           </div>
         </div>
         <p className="text-slate-400 text-sm mt-4">
-          Questions?
+          {t('subscription.questions')}
           <a href="mailto:support@frameops.ai" className="text-indigo-600 font-semibold ml-1 hover:underline">
-            Contact support
+            {t('subscription.contactSupport')}
           </a>
         </p>
       </div>

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SOPStep, FrameOption } from '../types';
 
 interface StepEditorProps {
@@ -32,6 +33,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
   const [newTool, setNewTool] = useState('');
   const [showFramePicker, setShowFramePicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
 
   const handleFrameSelect = (frame: FrameOption) => {
     handleChange('thumbnail', frame.imageBase64);
@@ -138,8 +140,8 @@ const StepEditor: React.FC<StepEditorProps> = ({
 
         {/* Title & Description Preview */}
         <div className="flex-1 min-w-0">
-          <h4 className="font-bold text-slate-900 truncate">{localStep.title || 'Untitled Step'}</h4>
-          <p className="text-sm text-slate-500 truncate">{localStep.description || 'No description'}</p>
+          <h4 className="font-bold text-slate-900 truncate">{localStep.title || t('stepEditor.untitledStep')}</h4>
+          <p className="text-sm text-slate-500 truncate">{localStep.description || t('stepEditor.noDescription')}</p>
         </div>
 
         {/* Indicators */}
@@ -168,7 +170,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
             <i className="fas fa-plus text-sm"></i>
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); if (confirm('Delete this step?')) onDelete(); }}
+            onClick={(e) => { e.stopPropagation(); if (confirm(t('stepEditor.confirmDelete'))) onDelete(); }}
             className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
             title="Delete step"
           >
@@ -189,35 +191,35 @@ const StepEditor: React.FC<StepEditorProps> = ({
               {/* Title */}
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-                  Step Title
+                  {t('stepEditor.stepTitle')}
                 </label>
                 <input
                   type="text"
                   value={localStep.title}
                   onChange={(e) => handleChange('title', e.target.value)}
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                  placeholder="Enter step title..."
+                  placeholder={t('stepEditor.titlePlaceholder')}
                 />
               </div>
 
               {/* Description */}
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-                  Description
+                  {t('stepEditor.description')}
                 </label>
                 <textarea
                   value={localStep.description}
                   onChange={(e) => handleChange('description', e.target.value)}
                   rows={4}
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
-                  placeholder="Describe this step in detail..."
+                  placeholder={t('stepEditor.descriptionPlaceholder')}
                 />
               </div>
 
               {/* Timestamp */}
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-                  Timestamp
+                  {t('stepEditor.timestamp')}
                 </label>
                 <input
                   type="text"
@@ -232,7 +234,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
             {/* Right Column - Image */}
             <div className="space-y-4">
               <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-                Step Image
+                {t('stepEditor.stepImage')}
               </label>
               <div className="relative aspect-video bg-slate-200 rounded-2xl overflow-hidden group">
                 <img
@@ -248,7 +250,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
                       className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"
                     >
                       <i className="fas fa-images mr-2"></i>
-                      Choose Frame
+                      {t('stepEditor.chooseFrame')}
                     </button>
                   )}
                   <button
@@ -256,7 +258,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
                     className="px-4 py-2 bg-white text-slate-900 rounded-xl font-bold text-sm hover:bg-slate-100 transition-colors"
                   >
                     <i className="fas fa-upload mr-2"></i>
-                    Upload
+                    {t('stepEditor.upload')}
                   </button>
                 </div>
                 <input
@@ -269,8 +271,8 @@ const StepEditor: React.FC<StepEditorProps> = ({
               </div>
               <p className="text-xs text-slate-500 text-center">
                 {allFrames.length > 0
-                  ? `${allFrames.length} frames available • Or upload custom`
-                  : 'Click to replace • Max 5MB • JPG, PNG, WebP'}
+                  ? t('stepEditor.framesAvailable', { count: allFrames.length })
+                  : t('stepEditor.clickToReplace')}
               </p>
             </div>
           </div>
@@ -279,7 +281,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
           <div className="pt-4 border-t border-slate-200">
             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">
               <i className="fas fa-triangle-exclamation text-rose-500 mr-2"></i>
-              Safety Warnings
+              {t('stepEditor.safetyWarnings')}
             </label>
             <div className="space-y-2 mb-3">
               {(localStep.safetyWarnings || []).map((warning, i) => (
@@ -301,7 +303,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
                 value={newWarning}
                 onChange={(e) => setNewWarning(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && addSafetyWarning()}
-                placeholder="Add safety warning..."
+                placeholder={t('stepEditor.addWarningPlaceholder')}
                 className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-rose-500 focus:border-transparent"
               />
               <button
@@ -318,7 +320,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
           <div className="pt-4 border-t border-slate-200">
             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">
               <i className="fas fa-wrench text-indigo-500 mr-2"></i>
-              Tools Required
+              {t('stepEditor.toolsRequired')}
             </label>
             <div className="flex flex-wrap gap-2 mb-3">
               {(localStep.toolsRequired || []).map((tool, i) => (
@@ -340,7 +342,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
                 value={newTool}
                 onChange={(e) => setNewTool(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && addTool()}
-                placeholder="Add tool..."
+                placeholder={t('stepEditor.addToolPlaceholder')}
                 className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
               <button
@@ -362,7 +364,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
             <div className="flex items-center justify-between p-4 border-b border-slate-200">
               <h3 className="text-lg font-bold text-slate-900">
                 <i className="fas fa-images text-indigo-600 mr-2"></i>
-                Choose Frame for Step {stepIndex + 1}
+                {t('stepEditor.chooseFrameForStep', { num: stepIndex + 1 })}
               </h3>
               <button
                 onClick={() => setShowFramePicker(false)}
@@ -389,7 +391,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
                     </div>
                     <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/20 transition-colors flex items-center justify-center">
                       <span className="opacity-0 group-hover:opacity-100 bg-white text-indigo-600 px-2 py-1 rounded text-xs font-bold">
-                        Select
+                        {t('stepEditor.select')}
                       </span>
                     </div>
                   </button>
@@ -398,7 +400,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
             </div>
             <div className="p-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
               <p className="text-sm text-slate-500 text-center">
-                Click on a frame to use it for this step • {allFrames.length} frames available
+                {t('stepEditor.clickFrameToUse', { count: allFrames.length })}
               </p>
             </div>
           </div>

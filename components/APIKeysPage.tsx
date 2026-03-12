@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabaseService';
+import { useTranslation } from 'react-i18next';
 
 interface APIKey {
   id: string;
@@ -34,6 +35,8 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const { t } = useTranslation();
+
   // Check if user already has API access
   useEffect(() => {
     const savedAccess = localStorage.getItem('frameops_api_access');
@@ -64,13 +67,13 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
 
       if (error) {
         console.error('Error loading API keys:', error);
-        setError('Failed to load API keys');
+        setError(t('apiKeys.failedToLoadKeys'));
       } else {
         setApiKeys(data || []);
       }
     } catch (err) {
       console.error('Error:', err);
-      setError('Failed to load API keys');
+      setError(t('apiKeys.failedToLoadKeys'));
     }
 
     setIsLoading(false);
@@ -78,12 +81,12 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
 
   const createApiKey = async () => {
     if (!newKeyName.trim()) {
-      setError('Please enter a name for your API key');
+      setError(t('apiKeys.enterKeyName'));
       return;
     }
 
     if (!isSupabaseConfigured() || !supabase) {
-      setError('Database not configured');
+      setError(t('apiKeys.dbNotConfigured'));
       return;
     }
 
@@ -96,7 +99,7 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
 
       if (error) {
         console.error('Error creating API key:', error);
-        setError('Failed to create API key');
+        setError(t('apiKeys.failedToCreateKey'));
         return;
       }
 
@@ -105,12 +108,12 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
       loadApiKeys();
     } catch (err) {
       console.error('Error:', err);
-      setError('Failed to create API key');
+      setError(t('apiKeys.failedToCreateKey'));
     }
   };
 
   const deleteApiKey = async (keyId: string) => {
-    if (!confirm('Are you sure you want to delete this API key? This cannot be undone.')) {
+    if (!confirm(t('apiKeys.confirmDeleteKey'))) {
       return;
     }
 
@@ -124,13 +127,13 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
 
       if (error) {
         console.error('Error deleting API key:', error);
-        setError('Failed to delete API key');
+        setError(t('apiKeys.failedToDeleteKey'));
       } else {
         loadApiKeys();
       }
     } catch (err) {
       console.error('Error:', err);
-      setError('Failed to delete API key');
+      setError(t('apiKeys.failedToDeleteKey'));
     }
   };
 
@@ -148,14 +151,14 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
   // Handle email signup
   const handleSignup = async () => {
     if (!signupEmail.trim()) {
-      setSignupError('Ange din email');
+      setSignupError(t('apiKeys.emailRequired'));
       return;
     }
 
     // Simple email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(signupEmail)) {
-      setSignupError('Ange en giltig email');
+      setSignupError(t('apiKeys.invalidEmail'));
       return;
     }
 
@@ -209,9 +212,9 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
           <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-200">
             <i className="fas fa-code text-3xl text-white"></i>
           </div>
-          <h1 className="text-3xl font-black text-slate-900 mb-3">FrameOps API</h1>
+          <h1 className="text-3xl font-black text-slate-900 mb-3">{t('apiKeys.title')}</h1>
           <p className="text-lg text-slate-600 max-w-md mx-auto">
-            Integrera SOP-generering direkt i dina system. Få tillgång till vårt API.
+            {t('apiKeys.subtitle')}
           </p>
         </div>
 
@@ -220,18 +223,18 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
             <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <i className="fas fa-check text-3xl text-emerald-600"></i>
             </div>
-            <h2 className="text-2xl font-bold text-emerald-900 mb-2">Välkommen!</h2>
-            <p className="text-emerald-700">Du har nu tillgång till FrameOps API.</p>
+            <h2 className="text-2xl font-bold text-emerald-900 mb-2">{t('apiKeys.welcome')}</h2>
+            <p className="text-emerald-700">{t('apiKeys.accessGranted')}</p>
             <p className="text-emerald-600 text-sm mt-2">
               <i className="fas fa-spinner fa-spin mr-2"></i>
-              Laddar API-sidan...
+              {t('apiKeys.loadingApiPage')}
             </p>
           </div>
         ) : (
           <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
             <h2 className="text-xl font-bold text-slate-900 mb-6 text-center">
               <i className="fas fa-envelope text-indigo-500 mr-2"></i>
-              Registrera dig för API-åtkomst
+              {t('apiKeys.signUpForAccess')}
             </h2>
 
             {signupError && (
@@ -244,7 +247,7 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Email <span className="text-red-500">*</span>
+                  {t('apiKeys.email')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -258,38 +261,38 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
 
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Namn <span className="text-slate-400 font-normal">(valfritt)</span>
+                  {t('apiKeys.name')} <span className="text-slate-400 font-normal">({t('apiKeys.optional')})</span>
                 </label>
                 <input
                   type="text"
                   value={signupName}
                   onChange={(e) => setSignupName(e.target.value)}
-                  placeholder="Ditt namn"
+                  placeholder={t('apiKeys.yourName')}
                   className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Företag <span className="text-slate-400 font-normal">(valfritt)</span>
+                  {t('apiKeys.company')} <span className="text-slate-400 font-normal">({t('apiKeys.optional')})</span>
                 </label>
                 <input
                   type="text"
                   value={signupCompany}
                   onChange={(e) => setSignupCompany(e.target.value)}
-                  placeholder="Ditt företag"
+                  placeholder={t('apiKeys.yourCompany')}
                   className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Hur vill du använda API:et? <span className="text-slate-400 font-normal">(valfritt)</span>
+                  {t('apiKeys.howWillYouUse')} <span className="text-slate-400 font-normal">({t('apiKeys.optional')})</span>
                 </label>
                 <textarea
                   value={signupUseCase}
                   onChange={(e) => setSignupUseCase(e.target.value)}
-                  placeholder="Beskriv kort hur du planerar att använda FrameOps API..."
+                  placeholder={t('apiKeys.describeUseCase')}
                   rows={3}
                   className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
                 />
@@ -303,27 +306,27 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
                 {isSigningUp ? (
                   <>
                     <i className="fas fa-spinner fa-spin mr-2"></i>
-                    Registrerar...
+                    {t('apiKeys.signingUp')}
                   </>
                 ) : (
                   <>
                     <i className="fas fa-rocket mr-2"></i>
-                    Få API-åtkomst
+                    {t('apiKeys.getApiAccess')}
                   </>
                 )}
               </button>
             </div>
 
             <div className="mt-8 pt-6 border-t border-slate-100">
-              <h3 className="text-sm font-bold text-slate-700 mb-4 text-center">Vad ingår?</h3>
+              <h3 className="text-sm font-bold text-slate-700 mb-4 text-center">{t('apiKeys.whatsIncluded')}</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <i className="fas fa-check text-emerald-600 text-sm"></i>
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900 text-sm">100 requests/mån</p>
-                    <p className="text-xs text-slate-500">Gratis att börja</p>
+                    <p className="font-semibold text-slate-900 text-sm">{t('apiKeys.requestsPerMonth')}</p>
+                    <p className="text-xs text-slate-500">{t('apiKeys.freeToStart')}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -331,8 +334,8 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
                     <i className="fas fa-check text-emerald-600 text-sm"></i>
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900 text-sm">REST API</p>
-                    <p className="text-xs text-slate-500">Enkel integration</p>
+                    <p className="font-semibold text-slate-900 text-sm">{t('apiKeys.restApi')}</p>
+                    <p className="text-xs text-slate-500">{t('apiKeys.simpleIntegration')}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -340,8 +343,8 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
                     <i className="fas fa-check text-emerald-600 text-sm"></i>
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900 text-sm">YouTube & Upload</p>
-                    <p className="text-xs text-slate-500">Båda metoderna</p>
+                    <p className="font-semibold text-slate-900 text-sm">{t('apiKeys.youtubeAndUpload')}</p>
+                    <p className="text-xs text-slate-500">{t('apiKeys.bothMethods')}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -349,8 +352,8 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
                     <i className="fas fa-check text-emerald-600 text-sm"></i>
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900 text-sm">JSON Response</p>
-                    <p className="text-xs text-slate-500">Strukturerad data</p>
+                    <p className="font-semibold text-slate-900 text-sm">{t('apiKeys.jsonResponse')}</p>
+                    <p className="text-xs text-slate-500">{t('apiKeys.structuredData')}</p>
                   </div>
                 </div>
               </div>
@@ -365,15 +368,15 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">API Access</h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">{t('apiKeys.apiAccess')}</h1>
         <p className="text-slate-600">
-          Integrate FrameOps into your workflows with our REST API.
+          {t('apiKeys.integrateWorkflows')}
         </p>
       </div>
 
       {/* Quick Start */}
       <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 mb-8 text-white">
-        <h2 className="text-lg font-semibold mb-3">Quick Start</h2>
+        <h2 className="text-lg font-semibold mb-3">{t('apiKeys.quickStart')}</h2>
         <div className="bg-black/20 rounded-lg p-4 font-mono text-sm overflow-x-auto">
           <pre>{`curl -X POST https://frameops-production.up.railway.app/api/v1/generate-sop \\
   -H "X-API-Key: YOUR_API_KEY" \\
@@ -388,7 +391,7 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
             className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
           >
             <i className="fas fa-book"></i>
-            API Documentation
+            {t('apiKeys.apiDocumentation')}
           </a>
         </div>
       </div>
@@ -397,15 +400,15 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-8">
         <div className="p-6 border-b border-slate-200 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Your API Keys</h2>
-            <p className="text-sm text-slate-500">Manage your API keys for authentication</p>
+            <h2 className="text-lg font-semibold text-slate-900">{t('apiKeys.yourApiKeys')}</h2>
+            <p className="text-sm text-slate-500">{t('apiKeys.manageApiKeys')}</p>
           </div>
           <button
             onClick={() => setShowNewKeyModal(true)}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <i className="fas fa-plus"></i>
-            Create Key
+            {t('apiKeys.createKey')}
           </button>
         </div>
 
@@ -419,20 +422,20 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
         {isLoading ? (
           <div className="p-12 text-center text-slate-400">
             <i className="fas fa-spinner fa-spin text-2xl mb-2"></i>
-            <p>Loading API keys...</p>
+            <p>{t('apiKeys.loadingApiKeys')}</p>
           </div>
         ) : apiKeys.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <i className="fas fa-key text-2xl text-slate-400"></i>
             </div>
-            <h3 className="text-lg font-medium text-slate-900 mb-2">No API keys yet</h3>
-            <p className="text-slate-500 mb-4">Create your first API key to start using the API</p>
+            <h3 className="text-lg font-medium text-slate-900 mb-2">{t('apiKeys.noApiKeysYet')}</h3>
+            <p className="text-slate-500 mb-4">{t('apiKeys.createFirstKeyDesc')}</p>
             <button
               onClick={() => setShowNewKeyModal(true)}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
             >
-              Create Your First Key
+              {t('apiKeys.createFirstKey')}
             </button>
           </div>
         ) : (
@@ -450,9 +453,9 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right text-sm text-slate-500 hidden sm:block">
-                    <div>Created {new Date(key.created_at).toLocaleDateString()}</div>
+                    <div>{t('apiKeys.created')} {new Date(key.created_at).toLocaleDateString()}</div>
                     {key.last_used_at && (
-                      <div>Last used {new Date(key.last_used_at).toLocaleDateString()}</div>
+                      <div>{t('apiKeys.lastUsed')} {new Date(key.last_used_at).toLocaleDateString()}</div>
                     )}
                   </div>
                   <button
@@ -478,19 +481,19 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
 
       {/* Rate Limits Info */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Rate Limits</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('apiKeys.rateLimits')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 bg-slate-50 rounded-xl">
             <div className="text-2xl font-bold text-slate-900">100</div>
-            <div className="text-sm text-slate-500">Requests/month (Free)</div>
+            <div className="text-sm text-slate-500">{t('apiKeys.requestsMonthFree')}</div>
           </div>
           <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
             <div className="text-2xl font-bold text-indigo-600">10,000</div>
-            <div className="text-sm text-slate-500">Requests/month (Pro)</div>
+            <div className="text-sm text-slate-500">{t('apiKeys.requestsMonthPro')}</div>
           </div>
           <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
             <div className="text-2xl font-bold text-purple-600">Unlimited</div>
-            <div className="text-sm text-slate-500">Enterprise</div>
+            <div className="text-sm text-slate-500">{t('apiKeys.enterprise')}</div>
           </div>
         </div>
       </div>
@@ -505,9 +508,9 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
                   <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <i className="fas fa-check text-2xl text-emerald-600"></i>
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">API Key Created!</h3>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">{t('apiKeys.apiKeyCreated')}</h3>
                   <p className="text-slate-500 text-sm">
-                    Copy your key now. You won't be able to see it again.
+                    {t('apiKeys.copyKeyWarning')}
                   </p>
                 </div>
                 <div className="bg-slate-100 rounded-lg p-4 font-mono text-sm break-all mb-6">
@@ -519,7 +522,7 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
                     className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                   >
                     <i className={`fas ${copiedKey === createdKey ? 'fa-check' : 'fa-copy'}`}></i>
-                    {copiedKey === createdKey ? 'Copied!' : 'Copy Key'}
+                    {copiedKey === createdKey ? t('apiKeys.copied') : t('apiKeys.copyKey')}
                   </button>
                   <button
                     onClick={() => {
@@ -528,21 +531,21 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
                     }}
                     className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors"
                   >
-                    Done
+                    {t('apiKeys.done')}
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Create API Key</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">{t('apiKeys.createApiKey')}</h3>
                 <p className="text-slate-500 text-sm mb-6">
-                  Give your key a name to help you remember what it's used for.
+                  {t('apiKeys.keyNameHelp')}
                 </p>
                 <input
                   type="text"
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
-                  placeholder="e.g., Production Server, Zapier Integration"
+                  placeholder={t('apiKeys.keyNamePlaceholder')}
                   className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-6"
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && createApiKey()}
@@ -556,13 +559,13 @@ const APIKeysPage: React.FC<APIKeysPageProps> = ({ onBack }) => {
                     }}
                     className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors"
                   >
-                    Cancel
+                    {t('apiKeys.cancel')}
                   </button>
                   <button
                     onClick={createApiKey}
                     className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
                   >
-                    Create Key
+                    {t('apiKeys.createKey')}
                   </button>
                 </div>
               </>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppView } from '../types';
 
 interface PrivacyPageProps {
@@ -6,6 +7,7 @@ interface PrivacyPageProps {
 }
 
 const PrivacyPage: React.FC<PrivacyPageProps> = ({ onNavigate }) => {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -26,7 +28,7 @@ const PrivacyPage: React.FC<PrivacyPageProps> = ({ onNavigate }) => {
               className="text-slate-600 hover:text-slate-900 font-medium"
             >
               <i className="fas fa-arrow-left mr-2"></i>
-              Back to Home
+              {t('legal.backToHome')}
             </button>
           </div>
         </div>
@@ -35,7 +37,7 @@ const PrivacyPage: React.FC<PrivacyPageProps> = ({ onNavigate }) => {
       {/* Content */}
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-4xl font-bold text-slate-900 mb-8">Privacy Policy</h1>
+          <h1 className="text-4xl font-bold text-slate-900 mb-8">{t('legal.privacyPolicy')}</h1>
           <p className="text-slate-500 mb-8">Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
 
           <div className="prose prose-slate max-w-none">
@@ -120,7 +122,7 @@ const PrivacyPage: React.FC<PrivacyPageProps> = ({ onNavigate }) => {
       <footer className="py-8 px-4 border-t border-slate-100">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-slate-500 text-sm">
-            &copy; {new Date().getFullYear()} FrameOps. All rights reserved.
+            &copy; {new Date().getFullYear()} FrameOps. {t('legal.allRightsReserved')}
           </p>
         </div>
       </footer>

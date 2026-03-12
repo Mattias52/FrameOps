@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { SOP, AppView } from '../types';
 
 interface DashboardProps {
@@ -8,43 +9,44 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode }) => {
+  const { t } = useTranslation();
   // Calculate real stats from actual data (use numSteps for lazy loaded SOPs)
   const totalSteps = sops.reduce((sum, sop) => sum + (sop.numSteps || sop.steps?.length || 0), 0);
   const youtubeSOPs = sops.filter(s => s.source === 'youtube' || s.sourceType === 'youtube').length;
   const uploadSOPs = sops.filter(s => s.source === 'upload' || s.sourceType === 'upload').length;
 
   const stats = [
-    { label: 'Total SOPs', value: sops.length, icon: 'fa-file-lines', color: 'bg-indigo-500', trend: null },
-    { label: 'Total Steps', value: totalSteps, icon: 'fa-list-check', color: 'bg-emerald-500', trend: null },
-    { label: 'YouTube', value: youtubeSOPs, icon: 'fa-youtube', color: 'bg-rose-500', trend: null },
-    { label: 'Uploads', value: uploadSOPs, icon: 'fa-cloud-upload-alt', color: 'bg-blue-500', trend: null },
+    { label: t('dashboard.totalSops'), value: sops.length, icon: 'fa-file-lines', color: 'bg-indigo-500', trend: null },
+    { label: t('dashboard.totalSteps'), value: totalSteps, icon: 'fa-list-check', color: 'bg-emerald-500', trend: null },
+    { label: t('dashboard.youtube'), value: youtubeSOPs, icon: 'fa-youtube', color: 'bg-rose-500', trend: null },
+    { label: t('dashboard.uploads'), value: uploadSOPs, icon: 'fa-cloud-upload-alt', color: 'bg-blue-500', trend: null },
   ];
 
   const quickActions = [
     {
-      title: 'Camera Recording',
-      description: 'Film yourself or physical tasks',
+      title: t('dashboard.cameraRecording'),
+      description: t('dashboard.cameraDesc'),
       icon: 'fa-video',
       color: 'bg-emerald-500',
       action: () => onNavigate(AppView.LIVE_GENERATOR)
     },
     {
-      title: 'Screen Recording',
-      description: 'Record your screen for tutorials',
+      title: t('dashboard.screenRecording'),
+      description: t('dashboard.screenDesc'),
       icon: 'fa-desktop',
       color: 'bg-purple-500',
       action: onScreenMode || (() => onNavigate(AppView.LIVE_GENERATOR))
     },
     {
-      title: 'Upload Video',
-      description: 'Upload MP4, MOV, or WebM',
+      title: t('dashboard.uploadVideo'),
+      description: t('dashboard.uploadDesc'),
       icon: 'fa-upload',
       color: 'bg-indigo-500',
       action: () => onNavigate(AppView.GENERATOR)
     },
     {
-      title: 'YouTube Import',
-      description: 'Paste a YouTube URL',
+      title: t('dashboard.youtubeImport'),
+      description: t('dashboard.youtubeDesc'),
       icon: 'fa-youtube',
       color: 'bg-red-500',
       action: () => onNavigate(AppView.GENERATOR)
@@ -55,8 +57,8 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode })
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Welcome Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500 mt-1">Create and manage your standard operating procedures</p>
+        <h1 className="text-3xl font-bold text-slate-900">{t('dashboard.title')}</h1>
+        <p className="text-slate-500 mt-1">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* Stats Grid */}
@@ -78,7 +80,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode })
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-lg font-bold text-slate-900 mb-4">Quick Actions</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-4">{t('dashboard.quickActions')}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {quickActions.map((action, i) => (
             <button
@@ -101,13 +103,13 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode })
         {/* Recent SOPs */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-5 border-b border-slate-100 flex justify-between items-center">
-            <h2 className="text-lg font-bold text-slate-900">Recent SOPs</h2>
+            <h2 className="text-lg font-bold text-slate-900">{t('dashboard.recentSops')}</h2>
             {sops.length > 0 && (
               <button
                 onClick={() => onNavigate(AppView.LIBRARY)}
                 className="text-indigo-600 text-sm font-semibold hover:underline"
               >
-                View All <i className="fas fa-arrow-right ml-1"></i>
+                {t('dashboard.viewAll')} <i className="fas fa-arrow-right ml-1"></i>
               </button>
             )}
           </div>
@@ -117,16 +119,16 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode })
                 <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <i className="fas fa-file-video text-slate-400 text-2xl"></i>
                 </div>
-                <h3 className="font-semibold text-slate-900 mb-2">No SOPs yet</h3>
+                <h3 className="font-semibold text-slate-900 mb-2">{t('dashboard.noSopsYet')}</h3>
                 <p className="text-slate-500 text-sm mb-6 max-w-sm mx-auto">
-                  Create your first SOP by uploading a video or recording a procedure live.
+                  {t('dashboard.noSopsDesc')}
                 </p>
                 <button
                   onClick={() => onNavigate(AppView.GENERATOR)}
                   className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
                 >
                   <i className="fas fa-plus mr-2"></i>
-                  Create Your First SOP
+                  {t('dashboard.createFirstSop')}
                 </button>
               </div>
             ) : (
@@ -155,7 +157,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode })
                       </span>
                       <span className="text-xs text-slate-500">
                         <i className="fas fa-list mr-1"></i>
-                        {sop.numSteps || sop.steps?.length || 0} steps
+                        {t('dashboard.steps', { count: sop.numSteps || sop.steps?.length || 0 })}
                       </span>
                     </div>
                   </div>
@@ -182,39 +184,39 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode })
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-6 text-white">
             <div className="flex items-center gap-2 mb-3">
               <i className="fas fa-lightbulb text-amber-300"></i>
-              <span className="text-sm font-semibold text-indigo-200">Pro Tip</span>
+              <span className="text-sm font-semibold text-indigo-200">{t('dashboard.proTip')}</span>
             </div>
-            <h3 className="font-bold text-lg mb-2">Get Better Results</h3>
+            <h3 className="font-bold text-lg mb-2">{t('dashboard.getBetterResults')}</h3>
             <p className="text-indigo-100 text-sm leading-relaxed mb-4">
-              For best AI analysis, ensure good lighting and steady camera work. Close-up shots of hands and tools help the AI identify steps more accurately.
+              {t('dashboard.proTipDesc')}
             </p>
             <button
               onClick={() => onNavigate(AppView.GENERATOR)}
               className="w-full py-3 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors"
             >
-              Try It Now
+              {t('dashboard.tryItNow')}
             </button>
           </div>
 
           {/* Features List */}
           <div className="bg-white rounded-2xl p-6 border border-slate-100">
-            <h3 className="font-bold text-slate-900 mb-4">What FrameOps Does</h3>
+            <h3 className="font-bold text-slate-900 mb-4">{t('dashboard.whatFrameOpsDoes')}</h3>
             <ul className="space-y-3">
               <li className="flex items-start gap-3 text-sm">
                 <i className="fas fa-check-circle text-emerald-500 mt-0.5"></i>
-                <span className="text-slate-600">Extracts key frames from video automatically</span>
+                <span className="text-slate-600">{t('dashboard.feature1')}</span>
               </li>
               <li className="flex items-start gap-3 text-sm">
                 <i className="fas fa-check-circle text-emerald-500 mt-0.5"></i>
-                <span className="text-slate-600">Identifies safety hazards and PPE requirements</span>
+                <span className="text-slate-600">{t('dashboard.feature2')}</span>
               </li>
               <li className="flex items-start gap-3 text-sm">
                 <i className="fas fa-check-circle text-emerald-500 mt-0.5"></i>
-                <span className="text-slate-600">Detects tools and materials in each step</span>
+                <span className="text-slate-600">{t('dashboard.feature3')}</span>
               </li>
               <li className="flex items-start gap-3 text-sm">
                 <i className="fas fa-check-circle text-emerald-500 mt-0.5"></i>
-                <span className="text-slate-600">Generates professional PDF documentation</span>
+                <span className="text-slate-600">{t('dashboard.feature4')}</span>
               </li>
             </ul>
           </div>
@@ -223,12 +225,12 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode })
           <div className="bg-slate-50 rounded-2xl p-6">
             <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
               <i className="fas fa-keyboard text-slate-400"></i>
-              Quick Tips
+              {t('dashboard.quickTips')}
             </h3>
             <ul className="space-y-2 text-sm text-slate-600">
-              <li>Supported: MP4, MOV, WebM, YouTube</li>
-              <li>Max video length: 30 minutes</li>
-              <li>Edit any step after generation</li>
+              <li>{t('dashboard.tip1')}</li>
+              <li>{t('dashboard.tip2')}</li>
+              <li>{t('dashboard.tip3')}</li>
             </ul>
           </div>
         </div>

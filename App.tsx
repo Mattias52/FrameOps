@@ -1,7 +1,9 @@
 
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppView, SOP } from './types';
 import LandingPage from './components/LandingPage';
+import ManualenLandingPage from './components/ManualenLandingPage';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy load components not needed for landing page
@@ -38,6 +40,7 @@ const getViewFromUrl = (): AppView | null => {
 };
 
 const App: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const { user, signInGoogle } = useAuth();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [startWithScreenMode, setStartWithScreenMode] = useState(false);
@@ -63,7 +66,7 @@ const App: React.FC = () => {
     if (paymentStatus === 'success') {
       setStripeIsPro(true);
       // Show success message
-      alert('Betalning genomförd! Du har nu Pro-tillgång.');
+      alert(t('common.paymentSuccess'));
     } else if (paymentStatus === 'cancelled') {
       // User cancelled - no action needed
     }
@@ -210,7 +213,9 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (currentView) {
       case AppView.LANDING:
-        return <LandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
+        return i18n.language === 'sv'
+          ? <ManualenLandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />
+          : <LandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
       case AppView.DASHBOARD:
         return (
           <Dashboard
@@ -291,7 +296,11 @@ const App: React.FC = () => {
   };
 
   // Landing page - show without app chrome
+  // Swedish visitors see the manualen.nu landing page
   if (currentView === AppView.LANDING) {
+    if (i18n.language === 'sv') {
+      return <ManualenLandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
+    }
     return <LandingPage onNavigate={setCurrentView} onGetStarted={handleEnterApp} />;
   }
 
@@ -361,13 +370,13 @@ const App: React.FC = () => {
             'bg-red-100 text-red-800'
           }`}>
             {syncStatus === 'saving' && (
-              <><i className="fas fa-cloud-arrow-up mr-2 animate-pulse"></i>Syncing to cloud...</>
+              <><i className="fas fa-cloud-arrow-up mr-2 animate-pulse"></i>{t('common.syncing')}</>
             )}
             {syncStatus === 'saved' && (
-              <><i className="fas fa-cloud-check mr-2"></i>Saved to cloud</>
+              <><i className="fas fa-cloud-check mr-2"></i>{t('common.allSaved')}</>
             )}
             {syncStatus === 'error' && (
-              <><i className="fas fa-exclamation-triangle mr-2"></i>Failed to sync - data saved locally</>
+              <><i className="fas fa-exclamation-triangle mr-2"></i>{t('common.error')}</>
             )}
           </div>
         )}
@@ -387,9 +396,9 @@ const App: React.FC = () => {
               <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i className="fas fa-user-lock text-2xl text-indigo-600"></i>
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Sign in to Save</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">{t('common.loginToSave')}</h3>
               <p className="text-slate-600">
-                Your SOP was created! Sign in with Google to save it to your account.
+                {t('common.loginPromptDesc')}
               </p>
             </div>
             <div className="space-y-3">
@@ -401,13 +410,13 @@ const App: React.FC = () => {
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"
               >
                 <i className="fab fa-google text-red-500 text-lg"></i>
-                Sign in with Google
+                {t('common.signInWithGoogle')}
               </button>
               <button
                 onClick={() => setShowLoginPrompt(false)}
                 className="w-full px-4 py-3 text-slate-500 hover:text-slate-700 transition-colors font-medium"
               >
-                Continue without saving
+                {t('common.maybeLater')}
               </button>
             </div>
           </div>
