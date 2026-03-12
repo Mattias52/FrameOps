@@ -12,6 +12,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
   const { t } = useTranslation();
   const { user, loading, signInGoogle, signInEmail, signUpEmail, logOut } = useAuth();
+  const isManualen = typeof window !== 'undefined' && window.location.hostname.includes('manualen.nu');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
@@ -81,8 +82,17 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
             <i className="fas fa-bars"></i>
           </button>
           <div className="hidden md:flex items-center gap-2 text-slate-400 text-sm">
-            <img src="/logo.png" alt="FrameOps" className="w-11 h-11" />
-            <span className="font-semibold text-slate-700">FrameOps</span>
+            {isManualen ? (
+              <>
+                <img src="/manualen/logo.png" alt="Manualen" className="w-11 h-11" />
+                <span className="font-semibold text-slate-700">Manualen<span className="text-orange-500">.nu</span></span>
+              </>
+            ) : (
+              <>
+                <img src="/logo.png" alt="FrameOps" className="w-11 h-11" />
+                <span className="font-semibold text-slate-700">FrameOps</span>
+              </>
+            )}
             <span className="text-slate-300">|</span>
             <span>{t('nav.tagline')}</span>
           </div>

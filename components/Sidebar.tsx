@@ -12,6 +12,10 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, onToggle }) => {
   const { t } = useTranslation();
+  const isManualen = typeof window !== 'undefined' && window.location.hostname.includes('manualen.nu');
+  const brandLogo = isManualen ? '/manualen/logo.png' : '/logo.png';
+  const brandName = isManualen ? 'Manualen' : 'FrameOps';
+  const brandAlt = isManualen ? 'Manualen' : 'FrameOps';
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -51,9 +55,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
           <div className="p-4 flex items-center justify-between h-24 border-b border-slate-800 shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-20 h-20 rounded-lg flex items-center justify-center flex-shrink-0">
-                <img src="/logo.png" alt="FrameOps" className="w-20 h-20" />
+                <img src={brandLogo} alt={brandAlt} className="w-20 h-20" />
               </div>
-              <span className="font-bold text-xl tracking-tight">FrameOps</span>
+              <span className="font-bold text-xl tracking-tight">{brandName}{isManualen && <span className="text-orange-500">.nu</span>}</span>
             </div>
             <button onClick={onToggle} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white" aria-label="Close menu">
               <i className="fas fa-times"></i>
@@ -105,9 +109,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
     <aside className={`bg-slate-900 text-white transition-all duration-300 flex flex-col ${isOpen ? 'w-64' : 'w-20'}`}>
       <div className="p-4 flex items-center gap-1 h-24 border-b border-slate-800 shrink-0">
         <div className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0">
-          <img src="/logo.png" alt="FrameOps" className="w-16 h-16" />
+          <img src={brandLogo} alt={brandAlt} className="w-16 h-16" />
         </div>
-        {isOpen && <span className="font-bold text-xl tracking-tight">FrameOps</span>}
+        {isOpen && <span className="font-bold text-xl tracking-tight">{brandName}{isManualen && <span className="text-orange-500">.nu</span>}</span>}
       </div>
 
       <nav className="flex-1 overflow-y-auto py-6">
