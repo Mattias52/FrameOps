@@ -3588,7 +3588,14 @@ app.post('/clip-video', async (req, res) => {
     const ffmpegCmd = `${FFMPEG_BIN} -ss ${clipStart} -i "${videoPath}" -t ${duration} ${vFilter} ${mapFlag} -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k -movflags +faststart "${outputPath}" -y`;
 
     console.log(`[CLIP-${jobId}] Processing: ${clipStart.toFixed(2)}s to ${(clipStart + duration).toFixed(2)}s`);
-    execSync(ffmpegCmd, { timeout: 300000, encoding: 'utf8', stdio: 'pipe' });
+    console.log(`[CLIP-${jobId}] FFmpeg cmd: ${ffmpegCmd}`);
+    try {
+      const ffmpegOutput = execSync(ffmpegCmd, { timeout: 300000, encoding: 'utf8' });
+      console.log(`[CLIP-${jobId}] FFmpeg done`);
+    } catch (ffmpegErr) {
+      console.error(`[CLIP-${jobId}] FFmpeg stderr:`, ffmpegErr.stderr || ffmpegErr.message);
+      throw ffmpegErr;
+    }
 
     if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size === 0) {
       throw new Error('FFmpeg produced empty output');
