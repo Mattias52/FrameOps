@@ -143,6 +143,10 @@ function checkBinary(cmd, versionArg = '--version') {
   }
 }
 
+// Concurrency: use ~80% of available CPUs (min 2)
+const CONCURRENCY = Math.max(2, Math.floor(os.cpus().length * 0.8));
+console.log(`Server concurrency: ${CONCURRENCY} (${os.cpus().length} CPUs available)`);
+
 const hasYtDlp = checkBinary('yt-dlp');
 // Check for ffmpeg in this order: FFMPEG_PATH env var, system ffmpeg, ffmpeg-static
 let FFMPEG_BIN = process.env.FFMPEG_PATH || 'ffmpeg';
