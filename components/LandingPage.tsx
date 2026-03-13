@@ -33,6 +33,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       description: t('landing.liveRecordingDesc')
     },
     {
+      icon: 'fa-desktop',
+      title: t('landing.screenRecordingTitle'),
+      description: t('landing.screenRecordingDesc')
+    },
+    {
       icon: 'fa-cloud-upload-alt',
       title: t('landing.videoUploadTitle'),
       description: t('landing.videoUploadDesc')
@@ -159,37 +164,46 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
       {/* Hero Section */}
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto">
+          <div className="flex flex-col lg:flex-row items-center gap-12">
+            <div className="flex-1 max-w-2xl">
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 leading-tight mb-8">
-              {t('landing.heroTitle')}
-            </h1>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 leading-tight mb-8">
+                {t('landing.heroTitle')}
+              </h1>
 
-            <p className="text-xl text-slate-600 mb-4 leading-relaxed">
-              {t('landing.heroP1')}
-            </p>
+              <p className="text-xl text-slate-600 mb-4 leading-relaxed">
+                {t('landing.heroP1')}
+              </p>
 
-            <p className="text-xl text-slate-600 mb-4 leading-relaxed">
-              {t('landing.heroP2')}
-            </p>
+              <p className="text-xl text-slate-600 mb-4 leading-relaxed">
+                {t('landing.heroP2')}
+              </p>
 
-            <p className="text-xl text-slate-900 font-semibold mb-10">
-              {t('landing.heroP3')}
-            </p>
+              <p className="text-xl text-slate-900 font-semibold mb-10">
+                {t('landing.heroP3')}
+              </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
-              <button
-                onClick={onGetStarted}
-                className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-xl font-bold text-lg hover:bg-slate-800 transition-all"
-              >
-                {t('landing.tryItFree')}
-              </button>
+              <div className="flex flex-col sm:flex-row items-start gap-4 mb-6">
+                <button
+                  onClick={onGetStarted}
+                  className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-xl font-bold text-lg hover:bg-slate-800 transition-all"
+                >
+                  {t('landing.tryItFree')}
+                </button>
+              </div>
+
+              <p className="text-slate-500">
+                {t('landing.heroSubtext')}
+              </p>
+
             </div>
-
-            <p className="text-slate-500">
-              {t('landing.heroSubtext')}
-            </p>
-
+            <div className="flex-1 max-w-lg">
+              <img
+                src="/manualen/hero.png"
+                alt="Field service engineer documenting a repair with a phone camera"
+                className="w-full h-auto rounded-2xl shadow-xl"
+              />
+            </div>
           </div>
         </div>
       </section>

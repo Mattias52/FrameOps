@@ -476,6 +476,8 @@
     "youtubeImportDesc": "Paste any YouTube URL. AI extracts frames and generates step-by-step instructions automatically.",
     "liveRecordingTitle": "Live Recording",
     "liveRecordingDesc": "Record yourself doing the task with your phone. AI watches and creates the SOP as you work.",
+    "screenRecordingTitle": "Screen Recording",
+    "screenRecordingDesc": "Capture your screen step by step. Perfect for software tutorials, IT procedures, and digital workflows.",
     "videoUploadTitle": "Video Upload",
     "videoUploadDesc": "Upload existing training videos. AI analyzes the footage and extracts clear step-by-step instructions.",
     "safetyDetection": "Safety Detection",

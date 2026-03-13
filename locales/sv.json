@@ -476,6 +476,8 @@
     "youtubeImportDesc": "Klistra in en YouTube-länk. AI extraherar bilder och genererar steg-för-steg-instruktioner automatiskt.",
     "liveRecordingTitle": "Liveinspelning",
     "liveRecordingDesc": "Filma dig själv medan du gör uppgiften. AI tittar och skapar manualen medan du jobbar.",
+    "screenRecordingTitle": "Skärminspelning",
+    "screenRecordingDesc": "Fånga din skärm steg för steg. Perfekt för programvaruguider, IT-procedurer och digitala arbetsflöden.",
     "videoUploadTitle": "Videouppladding",
     "videoUploadDesc": "Ladda upp befintliga utbildningsvideor. AI analyserar materialet och extraherar tydliga steg-för-steg-instruktioner.",
     "safetyDetection": "Säkerhetsdetektering",
