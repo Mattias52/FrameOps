@@ -3571,19 +3571,21 @@ app.post('/clip-video', async (req, res) => {
     }
 
     // Build FFmpeg filter for aspect ratio
-    // Uses letterboxing (not center-crop) to preserve all content including text overlays
+    // Uses blurred background to preserve all content while filling the frame
     let vFilter = '';
     if (aspect_ratio === '9:16') {
-      // Letterbox: scale video to fit 1080 width, pad to 1920 height with black bars
-      vFilter = '-vf "scale=1080:-2,pad=1080:1920:0:(1920-ih)/2:black"';
+      // Blurred background: zoomed blurry version behind, sharp original centered on top
+      vFilter = `-filter_complex "[0:v]split[original][blur];[blur]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=25:25[bg];[original]scale=1080:-2[fg];[bg][fg]overlay=0:(H-h)/2[out]"`;
     } else if (aspect_ratio === '1:1') {
-      // Letterbox: scale to fit 1080 width, pad to 1080x1080 with black bars
-      vFilter = '-vf "scale=1080:-2,pad=1080:1080:0:(1080-ih)/2:black"';
+      // Blurred background for square
+      vFilter = `-filter_complex "[0:v]split[original][blur];[blur]scale=1080:1080:force_original_aspect_ratio=increase,crop=1080:1080,boxblur=25:25[bg];[original]scale=1080:-2[fg];[bg][fg]overlay=0:(H-h)/2[out]"`;
     }
 
     // Trim and process
     const outputPath = path.join(jobDir, 'clip.mp4');
-    const ffmpegCmd = `${FFMPEG_BIN} -ss ${clipStart} -i "${videoPath}" -t ${duration} ${vFilter} -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k -movflags +faststart "${outputPath}" -y`;
+    // When using -filter_complex, output map is needed; for simple -vf or no filter, not needed
+    const mapFlag = vFilter.includes('filter_complex') ? '-map "[out]" -map 0:a?' : '';
+    const ffmpegCmd = `${FFMPEG_BIN} -ss ${clipStart} -i "${videoPath}" -t ${duration} ${vFilter} ${mapFlag} -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k -movflags +faststart "${outputPath}" -y`;
 
     console.log(`[CLIP-${jobId}] Processing: ${clipStart.toFixed(2)}s to ${(clipStart + duration).toFixed(2)}s`);
     execSync(ffmpegCmd, { timeout: 300000, encoding: 'utf8', stdio: 'pipe' });
