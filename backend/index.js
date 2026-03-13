@@ -3570,12 +3570,15 @@ app.post('/clip-video', async (req, res) => {
       clipStart = Math.max(0, videoDuration - duration);
     }
 
-    // Build FFmpeg filter for aspect ratio cropping
+    // Build FFmpeg filter for aspect ratio
+    // Uses letterboxing (not center-crop) to preserve all content including text overlays
     let vFilter = '';
     if (aspect_ratio === '9:16') {
-      vFilter = '-vf "crop=ih*9/16:ih,scale=1080:1920"';
+      // Letterbox: scale video to fit 1080 width, pad to 1920 height with black bars
+      vFilter = '-vf "scale=1080:-2,pad=1080:1920:0:(1920-ih)/2:black"';
     } else if (aspect_ratio === '1:1') {
-      vFilter = '-vf "crop=min(iw\\,ih):min(iw\\,ih),scale=1080:1080"';
+      // Letterbox: scale to fit 1080 width, pad to 1080x1080 with black bars
+      vFilter = '-vf "scale=1080:-2,pad=1080:1080:0:(1080-ih)/2:black"';
     }
 
     // Trim and process
