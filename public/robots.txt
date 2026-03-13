@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://frameops.ai/sitemap.xml
+Sitemap: https://www.frameops.ai/sitemap.xml
+Sitemap: https://www.manualen.nu/sitemap-manualen.xml

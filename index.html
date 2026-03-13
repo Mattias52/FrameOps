@@ -10,30 +10,56 @@
     <meta name="keywords" content="SOP generator, video to SOP, turn video into guide, YouTube to PDF guide, content creator guide maker, tutorial video to instructions, video to downloadable guide, create guide from video free, offer followers guide, AI documentation, live SOP recording, hands-free SOP creation, manufacturing SOP software, physical task documentation, mobile SOP creator">
     <meta name="author" content="FrameOps">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://frameops.ai/">
+    <link rel="canonical" href="https://www.frameops.ai/">
+
+    <!-- hreflang: connect English and Swedish versions -->
+    <link rel="alternate" hreflang="en" href="https://www.frameops.ai/">
+    <link rel="alternate" hreflang="sv" href="https://www.manualen.nu/">
+    <link rel="alternate" hreflang="x-default" href="https://www.frameops.ai/">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://frameops.ai/">
+    <meta property="og:url" content="https://www.frameops.ai/">
     <meta property="og:title" content="FrameOps - AI-Powered Video to SOP Generator">
     <meta property="og:description" content="More than screen recording. Film real tasks with your phone - machines, tools, assembly. AI watches, listens, and writes SOPs automatically. Works with any video source.">
-    <meta property="og:image" content="https://frameops.ai/og-image.png">
+    <meta property="og:image" content="https://www.frameops.ai/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:site_name" content="FrameOps">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://frameops.ai/">
+    <meta name="twitter:url" content="https://www.frameops.ai/">
     <meta name="twitter:title" content="FrameOps - Video to SOP in Minutes">
     <meta name="twitter:description" content="Beyond screen capture. Film real-world tasks with your phone - AI watches and writes SOPs. Works for machines, tools, assembly, maintenance. Voice transcription + scene detection included.">
-    <meta name="twitter:image" content="https://frameops.ai/og-image.png">
+    <meta name="twitter:image" content="https://www.frameops.ai/og-image.png">
 
     <!-- Additional SEO -->
     <meta name="theme-color" content="#4F46E5">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="FrameOps">
+
+    <!-- Domain-specific SEO: override meta tags for manualen.nu -->
+    <script>
+      if (window.location.hostname.includes('manualen.nu')) {
+        document.documentElement.lang = 'sv';
+        document.title = 'Manualen.nu \u2014 Filma jobbet. F\u00e5 en manual.';
+        document.querySelector('meta[name="description"]').content = 'Filma ditt arbete, f\u00e5 en f\u00e4rdig manual automatiskt. AI:n tittar, lyssnar och skapar steg-f\u00f6r-steg-manualer med bilder fr\u00e5n din video.';
+        document.querySelector('meta[name="keywords"]').content = 'skapa manual fr\u00e5n video, SOP-generator, dokumentera arbete, filma manual, AI manual, steg-f\u00f6r-steg guide, arbetsinstruktion, manualen.nu';
+        document.querySelector('meta[name="author"]').content = 'Manualen.nu';
+        document.querySelector('link[rel="canonical"]').href = 'https://www.manualen.nu/';
+        document.querySelector('meta[property="og:url"]').content = 'https://www.manualen.nu/';
+        document.querySelector('meta[property="og:title"]').content = 'Manualen.nu \u2014 Filma jobbet. F\u00e5 en manual.';
+        document.querySelector('meta[property="og:description"]').content = 'Filma ditt arbete med mobilen. AI:n skapar en komplett steg-f\u00f6r-steg-manual med bilder automatiskt.';
+        document.querySelector('meta[property="og:site_name"]').content = 'Manualen.nu';
+        document.querySelector('meta[name="twitter:url"]').content = 'https://www.manualen.nu/';
+        document.querySelector('meta[name="twitter:title"]').content = 'Manualen.nu \u2014 Filma jobbet. F\u00e5 en manual.';
+        document.querySelector('meta[name="twitter:description"]').content = 'Filma ditt arbete med mobilen. AI:n skapar en komplett steg-f\u00f6r-steg-manual med bilder automatiskt.';
+        document.querySelector('meta[name="apple-mobile-web-app-title"]').content = 'Manualen';
+        document.querySelector('meta[name="theme-color"]').content = '#e85d24';
+      }
+    </script>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
@@ -83,6 +109,21 @@
       }
     }
     </script>
+    <script>
+      if (window.location.hostname.includes('manualen.nu')) {
+        var ld = document.querySelector('script[type="application/ld+json"]');
+        if (ld) ld.text = JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "Manualen.nu",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "inLanguage": "sv",
+          "description": "Filma ditt arbete och f\u00e5 en f\u00e4rdig manual automatiskt. AI-driven steg-f\u00f6r-steg dokumentation fr\u00e5n video.",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "SEK" }
+        });
+      }
+    </script>
 
     <style>
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -116,6 +157,7 @@
         <!-- SEO fallback for crawlers that don't run JavaScript -->
         <h1>FrameOps - Turn Videos Into Professional SOPs</h1>
         <p>Create step-by-step guides, tutorials, and manuals from any video automatically using AI.</p>
+        <p lang="sv">Filma ditt arbete och få en färdig manual automatiskt. <a href="https://www.manualen.nu/">Manualen.nu</a> - AI-driven dokumentation från video.</p>
     </div>
     <script type="module" src="/index.tsx"></script>
 </body>
