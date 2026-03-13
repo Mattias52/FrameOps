@@ -3431,6 +3431,189 @@ Max 2 punkter per kategori. Svara på SVENSKA.
   }
 });
 
+// ============================================
+// CLIP VIDEO - Trim and crop video for social media clips
+// Used by MusicOrb to create TikTok/Reels/Shorts clips
+// Isolated endpoint — does not affect any existing routes
+// ============================================
+app.post('/clip-video', async (req, res) => {
+  const {
+    video_url,
+    start_time,
+    duration = 30,
+    aspect_ratio = '16:9',
+    scene_detect = false,
+    scene_threshold = 0.3,
+  } = req.body;
+
+  if (!video_url) {
+    return res.status(400).json({ error: 'Missing video_url' });
+  }
+
+  if (typeof video_url !== 'string' || !video_url.match(/^https?:\/\//)) {
+    return res.status(400).json({ error: 'Invalid video_url — must be an HTTP(S) URL' });
+  }
+
+  if (![15, 30, 60, 90].includes(duration)) {
+    return res.status(400).json({ error: 'duration must be 15, 30, 60, or 90' });
+  }
+
+  const jobId = crypto.randomBytes(8).toString('hex');
+  const jobDir = path.join(TEMP_DIR, `clip-${jobId}`);
+
+  console.log(`[CLIP-${jobId}] Request: ${duration}s clip, ${aspect_ratio}, scene_detect=${scene_detect}`);
+
+  const cleanup = () => {
+    try { fs.rmSync(jobDir, { recursive: true, force: true }); } catch (e) {}
+  };
+
+  try {
+    fs.mkdirSync(jobDir, { recursive: true });
+
+    // Download video from URL using Node built-in modules (no shell injection risk)
+    const videoPath = path.join(jobDir, 'input.mp4');
+    console.log(`[CLIP-${jobId}] Downloading video...`);
+
+    await new Promise((resolve, reject) => {
+      const downloadUrl = (url, redirectCount = 0) => {
+        if (redirectCount > 5) { reject(new Error('Too many redirects')); return; }
+        const mod = url.startsWith('https') ? require('https') : require('http');
+        const file = fs.createWriteStream(videoPath);
+
+        const request = mod.get(url, { timeout: 120000 }, (response) => {
+          if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+            file.close();
+            try { fs.unlinkSync(videoPath); } catch (e) {}
+            downloadUrl(response.headers.location, redirectCount + 1);
+            return;
+          }
+          if (response.statusCode !== 200) {
+            file.close();
+            reject(new Error(`Download failed: HTTP ${response.statusCode}`));
+            return;
+          }
+          response.pipe(file);
+          file.on('finish', () => { file.close(resolve); });
+        });
+
+        request.on('error', (err) => { file.close(); reject(err); });
+        request.on('timeout', () => { request.destroy(); reject(new Error('Download timeout')); });
+      };
+
+      downloadUrl(video_url);
+    });
+
+    if (!fs.existsSync(videoPath) || fs.statSync(videoPath).size === 0) {
+      throw new Error('Failed to download video — file is empty');
+    }
+
+    const fileSize = fs.statSync(videoPath).size;
+    console.log(`[CLIP-${jobId}] Downloaded: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
+
+    // Get video duration via ffprobe
+    const probeOutput = execSync(
+      `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`,
+      { timeout: 30000, encoding: 'utf8' }
+    ).trim();
+    const videoDuration = parseFloat(probeOutput);
+    console.log(`[CLIP-${jobId}] Video duration: ${videoDuration}s`);
+
+    // Determine clip start time
+    let clipStart = typeof start_time === 'number' ? start_time : null;
+    let detectedScenes = [];
+
+    // Run scene detection if requested and no explicit start time given
+    if (scene_detect && clipStart === null) {
+      console.log(`[CLIP-${jobId}] Running scene detection (threshold ${scene_threshold})...`);
+      try {
+        const sceneOutput = execSync(
+          `${FFMPEG_BIN} -hide_banner -loglevel info -nostats -i "${videoPath}" -vf "format=yuv420p,select='gt(scene,${scene_threshold})',showinfo" -f null - 2>&1 | grep -v "deprecated pixel format" | grep -E "pts_time"`,
+          { timeout: 120000, encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 }
+        );
+
+        const ptsMatches = sceneOutput.match(/pts_time:[\d.]+/g) || [];
+        detectedScenes = ptsMatches
+          .map(match => parseFloat(match.split(':')[1]))
+          .filter(ts => !isNaN(ts) && ts >= 0 && ts <= videoDuration);
+
+        console.log(`[CLIP-${jobId}] Found ${detectedScenes.length} scene changes`);
+
+        if (detectedScenes.length > 0) {
+          // Pick a scene change near 35% of the video (usually chorus/hook area)
+          const targetTime = videoDuration * 0.35;
+          let bestScene = detectedScenes[0];
+          let bestDiff = Math.abs(bestScene - targetTime);
+
+          for (const scene of detectedScenes) {
+            const diff = Math.abs(scene - targetTime);
+            if (diff < bestDiff && scene + duration <= videoDuration) {
+              bestDiff = diff;
+              bestScene = scene;
+            }
+          }
+
+          clipStart = Math.max(0, bestScene);
+          console.log(`[CLIP-${jobId}] Best scene at ${clipStart.toFixed(2)}s (target ${targetTime.toFixed(2)}s)`);
+        }
+      } catch (e) {
+        console.log(`[CLIP-${jobId}] Scene detection failed: ${e.message}`);
+      }
+    }
+
+    // Fallback: start at ~35% of video
+    if (clipStart === null) {
+      clipStart = Math.min(videoDuration * 0.35, Math.max(0, videoDuration - duration - 1));
+    }
+
+    // Clamp to valid range
+    if (clipStart + duration > videoDuration) {
+      clipStart = Math.max(0, videoDuration - duration);
+    }
+
+    // Build FFmpeg filter for aspect ratio cropping
+    let vFilter = '';
+    if (aspect_ratio === '9:16') {
+      vFilter = '-vf "crop=ih*9/16:ih,scale=1080:1920"';
+    } else if (aspect_ratio === '1:1') {
+      vFilter = '-vf "crop=min(iw\\,ih):min(iw\\,ih),scale=1080:1080"';
+    }
+
+    // Trim and process
+    const outputPath = path.join(jobDir, 'clip.mp4');
+    const ffmpegCmd = `${FFMPEG_BIN} -ss ${clipStart} -i "${videoPath}" -t ${duration} ${vFilter} -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k -movflags +faststart "${outputPath}" -y`;
+
+    console.log(`[CLIP-${jobId}] Processing: ${clipStart.toFixed(2)}s to ${(clipStart + duration).toFixed(2)}s`);
+    execSync(ffmpegCmd, { timeout: 300000, encoding: 'utf8', stdio: 'pipe' });
+
+    if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size === 0) {
+      throw new Error('FFmpeg produced empty output');
+    }
+
+    const clipSize = fs.statSync(outputPath).size;
+    console.log(`[CLIP-${jobId}] Clip ready: ${(clipSize / 1024 / 1024).toFixed(2)} MB`);
+
+    // Return the clip as binary video
+    const clipBuffer = fs.readFileSync(outputPath);
+    cleanup();
+
+    res.set({
+      'Content-Type': 'video/mp4',
+      'Content-Length': clipSize,
+      'X-Clip-Start': clipStart.toFixed(2),
+      'X-Clip-Duration': String(duration),
+      'X-Scenes-Detected': String(detectedScenes.length),
+      'X-Video-Duration': videoDuration.toFixed(2),
+    });
+
+    res.send(clipBuffer);
+
+  } catch (error) {
+    cleanup();
+    console.error(`[CLIP-${jobId}] Error:`, error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Global Express error handler - catches any unhandled errors in routes
 app.use((err, req, res, next) => {
   console.error('EXPRESS ERROR HANDLER:', err.message);
