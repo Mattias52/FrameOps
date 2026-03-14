@@ -36,6 +36,8 @@ const getViewFromUrl = (): AppView | null => {
   if (path === '/creators') return AppView.CREATOR_LANDING;
   if (path === '/privacy') return AppView.PRIVACY;
   if (path === '/terms') return AppView.TERMS;
+  // Programmatic SEO pages — show landing page
+  if (path.startsWith('/sop-generator/') || path.startsWith('/skapa-manual/')) return AppView.LANDING;
   return null;
 };
 
