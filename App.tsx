@@ -82,7 +82,7 @@ const App: React.FC = () => {
   const isManualen = typeof window !== 'undefined' && window.location.hostname.includes('manualen.nu');
 
   const [currentView, setCurrentView] = useState<AppView>(
-    urlView || (isManualen ? AppView.LANDING : (hasVisited ? AppView.DASHBOARD : AppView.LANDING))
+    urlView || ((isManualen && !user) ? AppView.LANDING : (hasVisited ? AppView.DASHBOARD : AppView.LANDING))
   );
   const [sops, setSops] = useState<SOP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
