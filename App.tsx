@@ -78,8 +78,11 @@ const App: React.FC = () => {
     setStripeIsPro(storedIsPro);
     setSubscriptionChecked(true);
   }, []);
+  // Manualen.nu always starts on landing page
+  const isManualen = typeof window !== 'undefined' && window.location.hostname.includes('manualen.nu');
+
   const [currentView, setCurrentView] = useState<AppView>(
-    urlView || (hasVisited ? AppView.DASHBOARD : AppView.LANDING)
+    urlView || (isManualen ? AppView.LANDING : (hasVisited ? AppView.DASHBOARD : AppView.LANDING))
   );
   const [sops, setSops] = useState<SOP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
