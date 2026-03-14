@@ -5,4 +5,55 @@
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
+  <!-- Programmatic SEO pages -->
+  <url>
+    <loc>https://www.manualen.nu/skapa-manual/tillverkning</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.manualen.nu/skapa-manual/sjukvard</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.manualen.nu/skapa-manual/livsmedel</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.manualen.nu/skapa-manual/bygg</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.manualen.nu/skapa-manual/lager</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.manualen.nu/skapa-manual/it-drift</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.manualen.nu/skapa-manual/onboarding</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.manualen.nu/skapa-manual/underhall</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.manualen.nu/skapa-manual/sakerhet</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.manualen.nu/skapa-manual/video-till-manual</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
 </urlset>

@@ -25,6 +25,14 @@
       "destination": "https://frameops-production.up.railway.app/:path*"
     },
     {
+      "source": "/sop-generator/:slug",
+      "destination": "/api/seo/:slug"
+    },
+    {
+      "source": "/skapa-manual/:slug",
+      "destination": "/api/seo/:slug"
+    },
+    {
       "source": "/((?!assets/).*)",
       "destination": "/index.html"
     }
