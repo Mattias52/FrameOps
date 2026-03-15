@@ -52,6 +52,7 @@ interface LiveSOPGeneratorProps {
   onComplete: (sop: SOP) => void;
   onCancel: () => void;
   startWithScreenMode?: boolean;
+  continueSop?: SOP | null;
   freeSOPsRemaining?: number;
   isPro?: boolean;
   onUpgrade?: () => void;
@@ -83,11 +84,12 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   onComplete,
   onCancel,
   startWithScreenMode = false,
+  continueSop = null,
   freeSOPsRemaining = 3,
   isPro = false,
   onUpgrade
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const canCreate = isPro || freeSOPsRemaining > 0;
 
   // Phase state: setup -> recording -> frame_selection (screen only) -> review -> finishing
@@ -152,10 +154,15 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const [cameraStarted, setCameraStarted] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
-  // Recording mode: camera or screen
-  const [recordingMode, setRecordingMode] = useState<'camera' | 'screen' | null>(
+  // Recording mode: camera, screen, or photos
+  const [recordingMode, setRecordingMode] = useState<'camera' | 'screen' | 'photos' | null>(
     startWithScreenMode ? 'screen' : null
   );
+
+  // Upload photos state
+  const [uploadedPhotos, setUploadedPhotos] = useState<{ file: File; preview: string }[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // If starting with screen mode, skip to recording phase (user must click to start capture - getDisplayMedia requires user gesture)
   useEffect(() => {
@@ -194,7 +201,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   const speechRecognitionRef = useRef<any>(null);
   const transcriptRef = useRef<string>('');
   // Refs for stable access in callbacks (avoid stale closures)
-  const recordingModeRef = useRef<'camera' | 'screen' | null>(recordingMode);
+  const recordingModeRef = useRef<'camera' | 'screen' | 'photos' | null>(recordingMode);
   const isRecordingRef = useRef(false);
   // Audio-only recorder for iOS Safari fallback (when Web Speech API unavailable)
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
@@ -456,7 +463,9 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     if (!ctx) return;
 
     ctx.drawImage(video, 0, 0);
-    const image = canvas.toDataURL('image/jpeg', 0.85);
+    const image = recordingModeRef.current === 'screen'
+      ? canvas.toDataURL('image/png')
+      : canvas.toDataURL('image/jpeg', 0.92);
     const timestamp = recordingTimeRef.current;
 
     markedFramesRef.current.push({ timestamp, image });
@@ -554,6 +563,32 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     }
   };
 
+  // Keyboard shortcuts for screen recording (F2 = capture, F4 = finish)
+  useEffect(() => {
+    if (recordingMode !== 'screen' || !isRecording) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        markStep();
+      } else if (e.key === 'F4' && markedFramesRef.current.length >= 2) {
+        e.preventDefault();
+        allFramesRef.current = markedFramesRef.current;
+        setSelectedFrameIndices(new Set(markedFramesRef.current.map((_: any, i: number) => i)));
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+          streamRef.current = null;
+        }
+        setCameraStarted(false);
+        setIsRecording(false);
+        analyzeSelectedFrames();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [recordingMode, isRecording]);
+
   // Cleanup on unmount (camera started manually via button click for iOS Safari)
   useEffect(() => {
     return () => {
@@ -593,30 +628,15 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    // Set canvas to 16:9 but handle source aspect ratio
-    canvas.width = 1280;
-    canvas.height = 720;
-    
-    const videoAspect = video.videoWidth / video.videoHeight;
-    const canvasAspect = canvas.width / canvas.height;
-    
-    let drawWidth = canvas.width;
-    let drawHeight = canvas.height;
-    let offsetX = 0;
-    let offsetY = 0;
+    // Use native video resolution for full quality
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
-    if (videoAspect > canvasAspect) {
-      // Video is wider than canvas
-      drawWidth = canvas.height * videoAspect;
-      offsetX = -(drawWidth - canvas.width) / 2;
-    } else {
-      // Video is taller than canvas (like iPhone portrait)
-      drawHeight = canvas.width / videoAspect;
-      offsetY = -(drawHeight - canvas.height) / 2;
-    }
-
-    ctx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
-    return canvas.toDataURL('image/jpeg', 0.8);
+    ctx.drawImage(video, 0, 0);
+    // Screen recordings use PNG (lossless), camera uses JPEG
+    return recordingModeRef.current === 'screen'
+      ? canvas.toDataURL('image/png')
+      : canvas.toDataURL('image/jpeg', 0.92);
   }, []);
 
   // Compare two frames to detect scene change
@@ -730,30 +750,19 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
-    // Set canvas to 16:9 but handle source aspect ratio (Cover)
-    canvas.width = 1280;
-    canvas.height = 720;
-    
-    const videoAspect = video.videoWidth / video.videoHeight;
-    const canvasAspect = canvas.width / canvas.height;
-    
-    let drawWidth = canvas.width;
-    let drawHeight = canvas.height;
-    let offsetX = 0;
-    let offsetY = 0;
+    // Use native video resolution for full quality capture
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
-    if (videoAspect > canvasAspect) {
-      drawWidth = canvas.height * videoAspect;
-      offsetX = -(drawWidth - canvas.width) / 2;
-    } else {
-      drawHeight = canvas.width / videoAspect;
-      offsetY = -(drawHeight - canvas.height) / 2;
-    }
+    ctx.drawImage(video, 0, 0);
 
-    ctx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
-
-    // Check for blur and scene change
-    const imageData = ctx.getImageData(0, 0, 1280, 720);
+    // Scene detection uses a small sample for speed (doesn't affect saved image quality)
+    const detectCanvas = document.createElement('canvas');
+    detectCanvas.width = 320;
+    detectCanvas.height = 180;
+    const detectCtx = detectCanvas.getContext('2d')!;
+    detectCtx.drawImage(video, 0, 0, 320, 180);
+    const imageData = detectCtx.getImageData(0, 0, 320, 180);
     // Skip blur detection for screen recordings (screen content like white backgrounds scores as "blurry")
     const blurry = recordingModeRef.current === 'screen' ? false : isFrameBlurry(imageData);
     const diff = detectSceneChange(imageData);
@@ -801,10 +810,15 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       }
     }
 
-    // Apply sharpening to enhance the frame (helps with action/motion blur)
-    sharpenFrame(ctx, canvas.width, canvas.height);
+    // Only sharpen camera frames (screen recordings are already sharp)
+    if (recordingModeRef.current !== 'screen') {
+      sharpenFrame(ctx, canvas.width, canvas.height);
+    }
 
-    const frame = canvas.toDataURL('image/jpeg', 0.85); // Slightly higher quality after sharpening
+    // Screen recordings use PNG for crisp text/UI, camera uses high-quality JPEG
+    const frame = recordingModeRef.current === 'screen'
+      ? canvas.toDataURL('image/png')
+      : canvas.toDataURL('image/jpeg', 0.92);
     lastFrameRef.current = frame;
     const timestamp = recordingTimeRef.current;
     lastCaptureTimeRef.current = timestamp; // Track when we captured
@@ -1104,6 +1118,45 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   };
 
 
+  // Handle photo file selection
+  const handlePhotoFiles = (files: FileList | File[]) => {
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    const remaining = 20 - uploadedPhotos.length;
+    const toAdd = imageFiles.slice(0, remaining);
+
+    toAdd.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const preview = e.target?.result as string;
+        setUploadedPhotos(prev => {
+          if (prev.length >= 20) return prev;
+          return [...prev, { file, preview }];
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Process uploaded photos → frame_selection phase
+  const processUploadedPhotos = () => {
+    if (uploadedPhotos.length < 2) return;
+
+    // Use UI language for analysis since there's no audio/chat
+    setDetectedLanguage(i18n.language === 'sv' ? 'sv' : 'en');
+
+    // Load photos into allFramesRef as frames
+    allFramesRef.current = uploadedPhotos.map((photo, idx) => ({
+      timestamp: idx,
+      image: photo.preview,
+    }));
+
+    // Select all by default
+    setSelectedFrameIndices(new Set(uploadedPhotos.map((_, i) => i)));
+
+    // Jump to frame selection
+    setPhase('frame_selection');
+  };
+
   // Skip AI guide and go directly to recording
   const skipToRecording = () => {
     setPhase('recording');
@@ -1152,24 +1205,24 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
         ? 'LANGUAGE: Respond in Swedish (Svenska). All step titles and descriptions must be in Swedish.'
         : 'LANGUAGE: Respond in English. All step titles and descriptions must be in English.';
 
-      const screenInstructions = `
-SCREEN RECORDING MODE - ONE STEP PER FRAME:
-You are receiving ${frames.length} user-selected frames. Each frame shows a DIFFERENT screen/page.
+      const frameInstructions = `
+ONE STEP PER IMAGE:
+You are receiving ${frames.length} user-selected images. Each image shows a DIFFERENT step or view.
 
 CRITICAL RULES:
-- Create EXACTLY ${frames.length} steps - one for each frame, in order
-- Step 1 describes Frame 1, Step 2 describes Frame 2, etc.
+- Create EXACTLY ${frames.length} steps - one for each image, in order
+- Step 1 describes Image 1, Step 2 describes Image 2, etc.
 - The frameIndex for step N MUST be N-1 (0-indexed)
-- Do NOT create more or fewer steps than frames
+- Do NOT create more or fewer steps than images
 
 FOR EACH STEP:
-- Describe what is shown on the screen in that specific frame
-- Use clear, actionable language ("Navigate to...", "Click on...", "View the...")
+- Describe what is shown in that specific image
+- Use clear, actionable language ("Navigate to...", "Click on...", "View the...", "Prepare the...")
 `;
 
       const contextWithTranscript = finalTranscript
-        ? `${languageInstruction}\n${screenInstructions}\nVIDEO TRANSCRIPT:\n"${finalTranscript}"\n\nUse the transcript to enhance descriptions.`
-        : `${languageInstruction}\n${screenInstructions}\nNo audio transcript. Base analysis on visual content only.`;
+        ? `${languageInstruction}\n${frameInstructions}\nVIDEO TRANSCRIPT:\n"${finalTranscript}"\n\nUse the transcript to enhance descriptions.`
+        : `${languageInstruction}\n${frameInstructions}\nNo audio transcript. Base analysis on visual content only.`;
 
       const result = await analyzeSOPFrames(frames, title, contextWithTranscript, [], []);
       console.log('Gemini returned steps:', result.steps.length);
@@ -1640,7 +1693,9 @@ If the frames show something completely different from the title (e.g., title sa
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.drawImage(video, 0, 0);
-    const newImage = canvas.toDataURL('image/jpeg', 0.85);
+    const newImage = recordingModeRef.current === 'screen'
+      ? canvas.toDataURL('image/png')
+      : canvas.toDataURL('image/jpeg', 0.92);
 
     // Replace the step's thumbnail
     const updatedSteps = [...draftSOP];
@@ -1829,6 +1884,11 @@ If the frames show something completely different from the title (e.g., title sa
                 {t('live.captureStep', { num: markedStepCount + 1 })}
               </button>
 
+              <div className="flex items-center gap-6 text-slate-400 text-sm">
+                <span><kbd className="px-2 py-1 bg-slate-700 rounded text-white font-mono text-xs">F2</kbd> {t('live.captureShortcut')}</span>
+                <span><kbd className="px-2 py-1 bg-slate-700 rounded text-white font-mono text-xs">F4</kbd> {t('live.finishShortcut')}</span>
+              </div>
+
               {markedStepCount === 0 && (
                 <button
                   onClick={async () => {
@@ -1949,6 +2009,15 @@ If the frames show something completely different from the title (e.g., title sa
       {/* Setup phase - SPLIT VIEW: Steps + Chat */}
       {phase === 'setup' && !cameraStarted && (
         <div className="absolute inset-0 bg-slate-900 flex flex-col z-30">
+          {/* Continue recording banner */}
+          {continueSop && (
+            <div className="px-4 py-3 bg-amber-500/20 border-b border-amber-500/30 flex items-center gap-3">
+              <i className="fas fa-plus-circle text-amber-400"></i>
+              <span className="text-amber-200 text-sm font-medium">
+                {t('live.continuingRecording', { title: continueSop.title, count: continueSop.steps.length })}
+              </span>
+            </div>
+          )}
           {/* Header */}
           <div className="p-3 md:p-4 flex items-center justify-between border-b border-slate-800 safe-area-top">
             <button onClick={handleCancel} className="text-slate-400 hover:text-white p-1">
@@ -2163,6 +2232,14 @@ If the frames show something completely different from the title (e.g., title sa
                     {t('live.screen')}
                     <p className="text-slate-300 text-sm font-normal mt-1">{t('live.screenDesc')}</p>
                   </button>
+                  <button
+                    onClick={() => setRecordingMode('photos')}
+                    className="px-6 py-4 bg-slate-700 text-white font-bold rounded-2xl hover:bg-slate-600 transition-colors"
+                  >
+                    <i className="fas fa-images mr-3"></i>
+                    {t('live.uploadPhotos')}
+                    <p className="text-slate-300 text-sm font-normal mt-1">{t('live.uploadPhotosDesc')}</p>
+                  </button>
                 </div>
               </>
             ) : recordingMode === 'screen' ? (
@@ -2182,6 +2259,118 @@ If the frames show something completely different from the title (e.g., title sa
                 >
                   {t('live.backToOptions')}
                 </button>
+              </div>
+            ) : recordingMode === 'photos' ? (
+              <div className="w-full max-w-2xl px-4">
+                {/* Title input */}
+                <div className="mb-6">
+                  <label className="block text-slate-400 text-sm mb-2">{t('live.sopTitle')}</label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder={t('live.sopTitlePlaceholder')}
+                    className="w-full bg-slate-800 text-white px-4 py-3 rounded-xl border border-slate-700 focus:border-indigo-500 outline-none"
+                  />
+                </div>
+
+                {/* Drop zone */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => e.target.files && handlePhotoFiles(e.target.files)}
+                />
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    if (e.dataTransfer.files) handlePhotoFiles(e.dataTransfer.files);
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${
+                    isDragging
+                      ? 'border-indigo-500 bg-indigo-500/10'
+                      : 'border-slate-700 hover:border-slate-500 bg-slate-800/50'
+                  }`}
+                >
+                  <i className={`fas fa-cloud-arrow-up text-4xl mb-3 ${isDragging ? 'text-indigo-400' : 'text-slate-500'}`}></i>
+                  <p className="text-white font-medium">{t('live.dragDropPhotos')}</p>
+                  <p className="text-slate-400 text-sm mt-1">{t('live.orBrowseFiles')}</p>
+                  <p className="text-slate-500 text-xs mt-2">{t('live.maxPhotos')}</p>
+                </div>
+
+                {/* Photo previews */}
+                {uploadedPhotos.length > 0 && (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-white font-medium text-sm">
+                        {t('live.photosSelected', { count: uploadedPhotos.length })}
+                      </span>
+                      <button
+                        onClick={() => setUploadedPhotos([])}
+                        className="text-red-400 hover:text-red-300 text-sm"
+                      >
+                        {t('live.clearPhotos')}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-48 overflow-y-auto">
+                      {uploadedPhotos.map((photo, idx) => (
+                        <div key={idx} className="relative group">
+                          <img
+                            src={photo.preview}
+                            alt={`Photo ${idx + 1}`}
+                            className="w-full h-20 object-cover rounded-lg border border-slate-700"
+                          />
+                          <div className="absolute top-0.5 left-0.5 bg-indigo-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                            {idx + 1}
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setUploadedPhotos(prev => prev.filter((_, i) => i !== idx));
+                            }}
+                            className="absolute top-0.5 right-0.5 bg-red-600 text-white text-xs w-5 h-5 rounded-full items-center justify-center hidden group-hover:flex"
+                          >
+                            <i className="fas fa-times text-[8px]"></i>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="mt-6 flex flex-col items-center gap-3">
+                  <button
+                    onClick={processUploadedPhotos}
+                    disabled={uploadedPhotos.length < 2}
+                    className={`px-8 py-4 font-bold rounded-2xl transition-colors ${
+                      uploadedPhotos.length >= 2
+                        ? 'bg-indigo-600 text-white hover:bg-indigo-500'
+                        : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <i className="fas fa-wand-magic-sparkles mr-2"></i>
+                    {uploadedPhotos.length >= 2
+                      ? t('live.analyzePhotos', { count: uploadedPhotos.length })
+                      : t('live.uploadMinPhotos')
+                    }
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRecordingMode(null);
+                      setUploadedPhotos([]);
+                    }}
+                    className="text-slate-400 hover:text-white text-sm"
+                  >
+                    {t('live.backToOptions')}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="text-center">

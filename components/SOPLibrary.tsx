@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SOP, SOPStep } from '../types';
-import { deleteSOP, updateSOP, isSupabaseConfigured } from '../services/supabaseService';
+import { deleteSOP, updateSOP, uploadPresentation, isSupabaseConfigured } from '../services/supabaseService';
 import StepEditor from './StepEditor';
 
 // Preview mode: Free users see only first N steps
@@ -19,15 +19,17 @@ interface SOPLibraryProps {
   onLoadMore?: () => void;
   hasMore?: boolean;
   fetchSteps?: (sopId: string) => Promise<SOPStep[]>;
+  onContinueRecording?: (sop: SOP) => void;
 }
 
-const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro = false, initialSelectedId, onSelectionCleared, onUpgrade, onLoadMore, hasMore = false, fetchSteps }) => {
+const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro = false, initialSelectedId, onSelectionCleared, onUpgrade, onLoadMore, hasMore = false, fetchSteps, onContinueRecording }) => {
   const { t } = useTranslation();
   const [selectedSop, setSelectedSop] = useState<SOP | null>(null);
   const [isLoadingSteps, setIsLoadingSteps] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Edit mode states
@@ -416,6 +418,46 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
     printWindow.document.write(html);
     printWindow.document.close();
     setIsExporting(false);
+  };
+
+  // Generate narrated video from SOP
+  const generateVideo = async (sop: SOP) => {
+    setIsGeneratingVideo(true);
+    try {
+      const RAILWAY_URL = import.meta.env.VITE_RAILWAY_URL || 'https://frameops-production.up.railway.app';
+      const response = await fetch(`${RAILWAY_URL}/generate-sop-video`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sop }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(err.error || `Failed: ${response.status}`);
+      }
+      const blob = await response.blob();
+
+      // Download the video
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(sop.title || 'sop-video').replace(/[^a-zA-Z0-9]/g, '_')}.mp4`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // Upload to Supabase and save on SOP
+      if (isSupabaseConfigured()) {
+        const presentationUrl = await uploadPresentation(sop.id, blob);
+        if (presentationUrl) {
+          const updatedSop = { ...sop, presentationUrl };
+          setSelectedSop(updatedSop);
+          if (onUpdate) onUpdate(updatedSop);
+        }
+      }
+    } catch (error: any) {
+      console.error('Video generation failed:', error);
+      alert(`Video generation failed: ${error.message}`);
+    }
+    setIsGeneratingVideo(false);
   };
 
   // Copy shareable link
@@ -946,13 +988,13 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                   {/* EDIT BUTTON - Pro only */}
                   <button
                     onClick={isPro ? enterEditMode : undefined}
-                    className={`w-full py-4 font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all flex items-center justify-center gap-3 ${
+                    className={`w-full py-3 font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all flex items-center justify-center gap-2 overflow-hidden ${
                       isPro
                         ? 'bg-amber-500 text-slate-900 hover:bg-amber-400 shadow-lg shadow-amber-500/30'
                         : 'bg-white/5 text-slate-500 cursor-not-allowed'
                     }`}
                   >
-                    <i className={`fas ${isPro ? 'fa-edit' : 'fa-lock'} text-base`}></i>
+                    <i className={`fas ${isPro ? 'fa-pen-to-square' : 'fa-lock'} text-xs shrink-0`}></i>
                     {isPro ? t('library.editSop') : t('library.editPro')}
                   </button>
 
@@ -960,32 +1002,70 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                   <button
                     onClick={isPro ? () => exportToPDF(selectedSop) : undefined}
                     disabled={isExporting || !isPro}
-                    className={`w-full py-4 font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all flex items-center justify-center gap-3 ${
+                    className={`w-full py-3 font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all flex items-center justify-center gap-2 overflow-hidden ${
                       isPro
                         ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/30'
                         : 'bg-white/5 text-slate-500 cursor-not-allowed'
                     } disabled:opacity-50`}
                   >
-                    <i className={`fas ${isExporting ? 'fa-spinner fa-spin' : isPro ? 'fa-file-pdf' : 'fa-lock'} text-base`}></i>
+                    <i className={`fas ${isExporting ? 'fa-spinner fa-spin' : isPro ? 'fa-file-arrow-down' : 'fa-lock'} text-xs shrink-0`}></i>
                     {isExporting ? t('library.generating') : isPro ? t('library.exportPdf') : t('library.exportPro')}
                   </button>
+
+                  {/* CREATE PRESENTATION - Pro only */}
+                  <button
+                    onClick={isPro ? () => generateVideo(selectedSop) : undefined}
+                    disabled={isGeneratingVideo || !isPro}
+                    className={`w-full py-3 font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all flex items-center justify-center gap-2 overflow-hidden ${
+                      isPro
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/30'
+                        : 'bg-white/5 text-slate-500 cursor-not-allowed'
+                    } disabled:opacity-50`}
+                  >
+                    <i className={`fas ${isGeneratingVideo ? 'fa-spinner fa-spin' : isPro ? 'fa-clapperboard' : 'fa-lock'} text-xs shrink-0`}></i>
+                    {isGeneratingVideo ? t('library.generatingVideo') : isPro ? t('library.generateVideo') : t('library.exportPro')}
+                  </button>
+
+                  {/* WATCH PRESENTATION - if already generated */}
+                  {selectedSop.presentationUrl && (
+                    <a
+                      href={selectedSop.presentationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-3 font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all flex items-center justify-center gap-2 overflow-hidden bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30"
+                    >
+                      <i className="fas fa-play text-xs shrink-0"></i>
+                      {t('library.watchPresentation')}
+                    </a>
+                  )}
+
+                  {/* CONTINUE RECORDING - Add more steps */}
+                  {onContinueRecording && isPro && (
+                    <button
+                      onClick={() => onContinueRecording(selectedSop)}
+                      className="w-full py-3 font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all flex items-center justify-center gap-2 overflow-hidden bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/30"
+                    >
+                      <i className="fas fa-plus-circle text-xs shrink-0"></i>
+                      {t('library.continueRecording')}
+                    </button>
+                  )}
 
                   {/* Upgrade CTA for Free Users */}
                   {!isPro && (
                     <button
                       onClick={onUpgrade}
-                      className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:from-indigo-500 hover:to-purple-500 transition-all flex items-center justify-center gap-3 shadow-lg"
+                      className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:from-indigo-500 hover:to-purple-500 transition-all flex items-center justify-center gap-2 overflow-hidden shadow-lg"
                     >
-                      <i className="fas fa-crown text-amber-300 text-base"></i>
+                      <i className="fas fa-crown text-amber-300 text-xs shrink-0"></i>
                       {t('library.upgradeToPro')}
                     </button>
                   )}
 
                   <button
                     onClick={() => copyShareLink(selectedSop)}
-                    className="w-full py-4 bg-white/10 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-white/20 transition-all flex items-center justify-center gap-3 backdrop-blur-md"
+                    className="w-full py-3 bg-white/10 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-white/20 transition-all flex items-center justify-center gap-2 overflow-hidden backdrop-blur-md"
                   >
-                    <i className="fas fa-share-nodes text-emerald-400 text-base"></i>
+                    <i className="fas fa-share-nodes text-emerald-400 text-xs shrink-0"></i>
                     {t('library.shareUrl')}
                   </button>
                 </div>
@@ -1081,16 +1161,21 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
                   className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-1000"
                   crossOrigin="anonymous"
                 />
-                <div className="absolute top-6 left-6">
+                <div className="absolute top-6 left-6 flex gap-2">
                   <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest backdrop-blur-xl border border-white/20 shadow-xl ${
                     sop.sourceType === 'youtube' ? 'bg-rose-500/80 text-white' : 'bg-slate-900/80 text-white'
                   }`}>
                     {sop.sourceType}
                   </span>
+                  {sop.presentationUrl && (
+                    <span className="px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest backdrop-blur-xl border border-white/20 shadow-xl bg-emerald-500/80 text-white">
+                      <i className="fas fa-play mr-1"></i>{t('library.presentation')}
+                    </span>
+                  )}
                 </div>
                 <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0">
                   <div className="p-3 bg-white rounded-2xl text-slate-900 font-black text-[10px] shadow-2xl">
-                    {t('library.stepsCount', { count: sop.numSteps || sop.steps?.length || 0 })}
+                    {t('library.stepsCount', { count: sop.steps?.length || sop.numSteps || 0 })}
                   </div>
                 </div>
               </div>

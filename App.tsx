@@ -46,6 +46,7 @@ const App: React.FC = () => {
   const { user, signInGoogle } = useAuth();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [startWithScreenMode, setStartWithScreenMode] = useState(false);
+  const [continueSop, setContinueSop] = useState<SOP | null>(null);
 
   // Check if user has entered the app before
   const hasVisited = typeof window !== 'undefined' && window.localStorage.getItem('frameops_visited');
@@ -261,15 +262,34 @@ const App: React.FC = () => {
           <ErrorBoundary>
             <LiveSOPGenerator
               onComplete={(sop) => {
-                handleAddSOP(sop);
+                if (continueSop) {
+                  // Append new steps to existing SOP
+                  const merged = {
+                    ...continueSop,
+                    steps: [...continueSop.steps, ...sop.steps],
+                  };
+                  merged.numSteps = merged.steps.length;
+                  setSops(prev => prev.map(s => s.id === merged.id ? merged : s));
+                  // Save to backend
+                  if (isSupabaseConfigured()) {
+                    import('./services/supabaseService').then(({ updateSOP: updateSOPService }) => {
+                      updateSOPService(merged);
+                    });
+                  }
+                  setContinueSop(null);
+                } else {
+                  handleAddSOP(sop);
+                }
                 setCurrentView(AppView.LIBRARY);
                 setStartWithScreenMode(false);
               }}
               onCancel={() => {
-                setCurrentView(AppView.GENERATOR);
+                setContinueSop(null);
+                setCurrentView(continueSop ? AppView.LIBRARY : AppView.GENERATOR);
                 setStartWithScreenMode(false);
               }}
               startWithScreenMode={startWithScreenMode}
+              continueSop={continueSop}
               freeSOPsRemaining={freeSOPsRemaining}
               isPro={isPro}
               onUpgrade={() => setCurrentView(AppView.SUBSCRIPTION)}
@@ -289,6 +309,11 @@ const App: React.FC = () => {
             onLoadMore={loadMoreSOPs}
             hasMore={hasMore}
             fetchSteps={fetchSOPSteps}
+            onContinueRecording={(sop) => {
+              setContinueSop(sop);
+              setStartWithScreenMode(false);
+              setCurrentView(AppView.LIVE_GENERATOR);
+            }}
           />
         );
       case AppView.SUBSCRIPTION:

@@ -184,6 +184,7 @@ const dbToSOP = (dbSop: DbSOP, steps: DbStep[]): SOP => ({
   materialsRequired: dbSop.materials_required || [],
   thumbnail_url: dbSop.thumbnail_url || undefined,
   videoUrl: dbSop.video_url || undefined,
+  presentationUrl: (dbSop.metadata as any)?.presentation_url || undefined,
   numSteps: dbSop.num_steps || steps.length, // For lazy loading
   steps: steps
     .sort((a, b) => (a.step_order ?? a.step_number) - (b.step_order ?? b.step_number))
@@ -286,6 +287,43 @@ export const deleteVideo = async (sopId: string): Promise<boolean> => {
   } catch (err) {
     console.error('Error deleting video:', err);
     return false;
+  }
+};
+
+// Upload presentation video and save URL to SOP metadata
+export const uploadPresentation = async (sopId: string, videoBlob: Blob): Promise<string | null> => {
+  if (!supabase) return null;
+
+  try {
+    const fileName = `${sopId}/presentation.mp4`;
+    console.log(`Uploading presentation: ${(videoBlob.size / 1024 / 1024).toFixed(2)} MB`);
+
+    const { error } = await supabase.storage
+      .from('video-uploads')
+      .upload(fileName, videoBlob, {
+        contentType: 'video/mp4',
+        upsert: true,
+      });
+
+    if (error) {
+      console.error('Error uploading presentation:', error);
+      return null;
+    }
+
+    const { data } = supabase.storage.from('video-uploads').getPublicUrl(fileName);
+    const presentationUrl = data.publicUrl;
+
+    // Save URL in SOP metadata
+    const { data: sopData } = await supabase.from('sops').select('metadata').eq('id', sopId).single();
+    const metadata = (sopData?.metadata as Record<string, unknown>) || {};
+    metadata.presentation_url = presentationUrl;
+
+    await supabase.from('sops').update({ metadata }).eq('id', sopId);
+    console.log('Presentation uploaded:', presentationUrl);
+    return presentationUrl;
+  } catch (err) {
+    console.error('Error uploading presentation:', err);
+    return null;
   }
 };
 

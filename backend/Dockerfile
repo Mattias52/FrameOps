@@ -3,6 +3,7 @@ FROM node:20-slim
 # Install ffmpeg, yt-dlp dependencies, and unzip for deno
 RUN apt-get update && apt-get install -y \
     ffmpeg \
+    fonts-dejavu-core \
     python3 \
     python3-pip \
     curl \

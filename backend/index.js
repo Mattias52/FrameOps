@@ -1409,6 +1409,8 @@ EVERY step MUST use a DIFFERENT frameIndex - do NOT reuse the same frame for mul
       parts.push({ text: `
 Now create the SOP steps for this segment (${timeRange}) of: "${title}"
 
+SOP TITLE: The user named this SOP "${title}". You MUST return this EXACT title. Do NOT rename it.
+
 CRITICAL REQUIREMENTS:
 1. Use the presenter's EXACT words and terminology from the audio
 2. Include ALL steps mentioned or shown in this segment - do NOT skip any actions
@@ -1801,6 +1803,8 @@ LOOK AT EACH FRAME CAREFULLY. For each step in your SOP, you must select the fra
     parts.push({ text: `
 
 Now create the SOP for: "${title || 'Procedure'}"
+
+SOP TITLE: The user named this SOP "${title}". You MUST return this EXACT title. Do NOT rename it.
 
 CRITICAL REQUIREMENTS:
 1. Document EVERY tip, instruction, or action - DO NOT SKIP ANY
@@ -2639,6 +2643,10 @@ app.post('/analyze-sop', async (req, res) => {
       ${hasShotContext
         ? `You MUST return exactly the number of steps matching the AI Guide shots above.`
         : `Create as many steps as needed to cover ALL actions in the procedure. Use the transcript to identify every step. Minimum 3 steps, but create more if the procedure has more actions. MAXIMUM ${validImageParts.length} steps.`}
+
+      SOP TITLE (CRITICAL):
+      The user has named this SOP: "${title}". You MUST use this EXACT title as-is. Do NOT rename, rephrase, or invent your own title.
+      Return the title field as exactly: "${title}"
 
       THUMBNAIL SELECTION:
       Also select the BEST frame to use as the cover image/thumbnail for this SOP.
@@ -3615,6 +3623,204 @@ app.post('/clip-video', async (req, res) => {
     cleanup();
     console.error(`[CLIP-${jobId}] Error:`, error.message);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// SOP TO VIDEO — Generate narrated video from SOP data
+// Uses Gemini TTS for narration + FFmpeg for compositing
+// ============================================
+
+function writePcmAsWav(pcmBuffer, outputPath, sampleRate = 24000, channels = 1, bitDepth = 16) {
+  const byteRate = sampleRate * channels * (bitDepth / 8);
+  const blockAlign = channels * (bitDepth / 8);
+  const dataSize = pcmBuffer.length;
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0);
+  header.writeUInt32LE(36 + dataSize, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(channels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitDepth, 34);
+  header.write('data', 36);
+  header.writeUInt32LE(dataSize, 40);
+  fs.writeFileSync(outputPath, Buffer.concat([header, pcmBuffer]));
+}
+
+function escapeDrawtext(text) {
+  return text.replace(/\\/g, '\\\\').replace(/'/g, "'\\''").replace(/:/g, '\\:').replace(/%/g, '%%');
+}
+
+async function downloadImage(urlOrBase64, outputPath) {
+  if (urlOrBase64.startsWith('data:')) {
+    const base64Data = urlOrBase64.split(',')[1];
+    fs.writeFileSync(outputPath, Buffer.from(base64Data, 'base64'));
+  } else if (urlOrBase64.startsWith('http')) {
+    const fetch = require('node-fetch');
+    const resp = await fetch(urlOrBase64);
+    if (!resp.ok) throw new Error(`Failed to download image: ${resp.status}`);
+    const buffer = await resp.buffer();
+    fs.writeFileSync(outputPath, buffer);
+  } else {
+    // Assume base64 without data: prefix
+    fs.writeFileSync(outputPath, Buffer.from(urlOrBase64, 'base64'));
+  }
+}
+
+app.post('/generate-sop-video', async (req, res) => {
+  const { sop, voice = 'Kore' } = req.body;
+
+  if (!sop || !sop.steps || sop.steps.length === 0) {
+    return res.status(400).json({ error: 'Missing SOP data or steps' });
+  }
+
+  const jobId = `sopvideo_${crypto.randomUUID()}`;
+  const jobDir = path.join(TEMP_DIR, jobId);
+  fs.mkdirSync(jobDir, { recursive: true });
+
+  console.log(`[SOP-VIDEO] Starting job ${jobId} — ${sop.steps.length} steps, voice: ${voice}`);
+
+  try {
+    const clipFiles = [];
+
+    // --- Generate intro card (5 seconds, no audio) ---
+    const introText = escapeDrawtext(sop.title || 'SOP Video');
+    const introDesc = escapeDrawtext((sop.description || '').substring(0, 120));
+    const introPath = path.join(jobDir, 'intro.mp4');
+
+    // Determine font path (Docker has dejavu, local may not)
+    const fontPath = fs.existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
+      ? '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+      : '';
+    const fontOpt = fontPath ? `fontfile=${fontPath}:` : '';
+    const fontOptRegular = fs.existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
+      ? `fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:` : '';
+
+    const introFilter = [
+      `color=c=#1e293b:s=1920x1080:d=5`,
+      `drawtext=${fontOpt}text='${introText}':fontsize=56:fontcolor=white:x=(w-tw)/2:y=(h-th)/2-40`,
+      `drawtext=${fontOptRegular}text='${introDesc}':fontsize=28:fontcolor=#94a3b8:x=(w-tw)/2:y=(h-th)/2+40`,
+    ].join(',');
+
+    execSync(
+      `${FFMPEG_BIN} -f lavfi -i "${introFilter}" -f lavfi -i anullsrc=r=24000:cl=mono -r 30 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 128k -shortest -movflags +faststart "${introPath}" -y`,
+      { timeout: 30000, stdio: 'pipe' }
+    );
+    clipFiles.push(introPath);
+    console.log(`[SOP-VIDEO] Intro card created`);
+
+    // --- Process each step ---
+    for (let i = 0; i < sop.steps.length; i++) {
+      const step = sop.steps[i];
+      const stepNum = i + 1;
+      const imgPath = path.join(jobDir, `step_${stepNum}.png`);
+      const wavPath = path.join(jobDir, `step_${stepNum}.wav`);
+      const clipPath = path.join(jobDir, `step_${stepNum}.mp4`);
+
+      console.log(`[SOP-VIDEO] Step ${stepNum}/${sop.steps.length}: ${step.title}`);
+
+      // 1. Download/decode step image
+      const imageSource = step.image_url || step.thumbnail;
+      if (imageSource) {
+        await downloadImage(imageSource, imgPath);
+      } else {
+        // Generate placeholder
+        execSync(
+          `${FFMPEG_BIN} -f lavfi -i "color=c=#334155:s=1920x1080:d=1" -vframes 1 "${imgPath}" -y`,
+          { timeout: 10000, stdio: 'pipe' }
+        );
+      }
+
+      // 2. Build narration text (no "Step N:" prefix for presentations)
+      let narration = `${step.title}. ${step.description || ''}`;
+      // Strip any leftover step numbering patterns (English + Swedish)
+      narration = narration.replace(/\b(Step|Steg)\s+\d+\s*[:\-\.\s]*\s*/gi, '');
+      // Also strip leading numbered patterns like "1. " or "1: " or "1 - "
+      narration = narration.replace(/^\d+\s*[:\-\.\)]\s*/g, '');
+
+      // 3. Generate TTS via Gemini — speak slowly and clearly
+      const ttsResponse = await getGenAI().models.generateContent({
+        model: 'gemini-2.5-flash-preview-tts',
+        contents: [{ parts: [{ text: `Read this slowly, clearly, and at a calm pace with natural pauses between sentences: ${narration}` }] }],
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: voice },
+            },
+          },
+        },
+      });
+
+      const audioData = ttsResponse.candidates[0].content.parts[0].inlineData.data;
+      const pcmBuffer = Buffer.from(audioData, 'base64');
+      writePcmAsWav(pcmBuffer, wavPath);
+      console.log(`[SOP-VIDEO] Step ${stepNum} TTS done (${pcmBuffer.length} bytes PCM)`);
+
+      // 4. Get audio duration
+      let audioDuration;
+      try {
+        const probeResult = execSync(
+          `${FFMPEG_BIN.replace('ffmpeg', 'ffprobe')} -v error -show_entries format=duration -of csv=p=0 "${wavPath}"`,
+          { timeout: 10000, encoding: 'utf-8' }
+        ).trim();
+        audioDuration = parseFloat(probeResult);
+      } catch (e) {
+        // Fallback: calculate from PCM size (24kHz, 16-bit, mono = 48000 bytes/sec)
+        audioDuration = pcmBuffer.length / 48000;
+      }
+      console.log(`[SOP-VIDEO] Step ${stepNum} audio duration: ${audioDuration.toFixed(1)}s`);
+
+      // 5. FFmpeg composite: image + audio + text overlay (title only, no "Step N")
+      const stepTitle = escapeDrawtext(step.title || '');
+
+      let vf = `scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black`;
+      // Sharpen image: luma amount 1.0, luma size 5x5 (enhances text and UI details)
+      vf += `,unsharp=5:5:1.0:5:5:0.5`;
+      vf += `,drawtext=${fontOpt}text='${stepTitle}':fontsize=42:fontcolor=white:x=60:y=40:shadowcolor=black@0.8:shadowx=2:shadowy=2`;
+
+      execSync(
+        `${FFMPEG_BIN} -loop 1 -i "${imgPath}" -i "${wavPath}" -vf "${vf}" -r 30 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 128k -shortest -movflags +faststart "${clipPath}" -y`,
+        { timeout: 90000, stdio: 'pipe' }
+      );
+      clipFiles.push(clipPath);
+      console.log(`[SOP-VIDEO] Step ${stepNum} clip created`);
+    }
+
+    // --- Concatenate all clips ---
+    const concatListPath = path.join(jobDir, 'concat.txt');
+    const concatContent = clipFiles.map(f => `file '${f.replace(/\\/g, '/')}'`).join('\n');
+    fs.writeFileSync(concatListPath, concatContent);
+
+    const finalPath = path.join(jobDir, 'final.mp4');
+    execSync(
+      `${FFMPEG_BIN} -f concat -safe 0 -i "${concatListPath}" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 128k -async 1 -r 30 -movflags +faststart "${finalPath}" -y`,
+      { timeout: 180000, stdio: 'pipe' }
+    );
+
+    console.log(`[SOP-VIDEO] Final video created: ${finalPath}`);
+
+    // --- Return video ---
+    const videoBuffer = fs.readFileSync(finalPath);
+    res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Content-Disposition', `attachment; filename="${(sop.title || 'sop-video').replace(/[^a-zA-Z0-9_-]/g, '_')}.mp4"`);
+    res.setHeader('Content-Length', videoBuffer.length);
+    res.send(videoBuffer);
+
+    // Cleanup
+    fs.rmSync(jobDir, { recursive: true, force: true });
+    console.log(`[SOP-VIDEO] Job ${jobId} complete, cleaned up`);
+
+  } catch (err) {
+    console.error(`[SOP-VIDEO] Error:`, err.message);
+    // Cleanup on error
+    try { fs.rmSync(jobDir, { recursive: true, force: true }); } catch (e) {}
+    res.status(500).json({ error: 'Video generation failed', details: err.message });
   }
 });
 

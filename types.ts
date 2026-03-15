@@ -51,6 +51,7 @@ export interface SOP {
   allFrames?: FrameOption[];
   videoUrl?: string; // For live recordings - embedded video playback
   videoBlob?: Blob; // Temporary - only used for uploading, not stored
+  presentationUrl?: string; // Generated presentation video URL
 }
 
 export interface AnalysisProgress {
