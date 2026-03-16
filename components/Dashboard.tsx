@@ -141,7 +141,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode })
                   <div className="w-20 h-14 bg-slate-100 rounded-xl shrink-0 overflow-hidden">
                     <img
                       src={sop.thumbnail_url || (sop.steps?.length > 0 ? (sop.steps[Math.floor(sop.steps.length / 3)]?.image_url || sop.steps[0]?.image_url || sop.steps[0]?.thumbnail) : undefined)}
-                      alt=""
+                      alt={`Thumbnail for ${sop.title}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       crossOrigin="anonymous"
                     />

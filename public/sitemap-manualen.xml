@@ -1,59 +1,80 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://www.manualen.nu/</loc>
+    <xhtml:link rel="alternate" hreflang="sv" href="https://www.manualen.nu/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.frameops.ai/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.frameops.ai/" />
+    <lastmod>2026-03-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://www.manualen.nu/manualen/hero.png</image:loc>
+      <image:title>Skapa manual fr&#229;n video med AI - Manualen.nu</image:title>
+      <image:caption>AI SOP-generator som skapar arbetsinstruktioner och manualer fr&#229;n video automatiskt</image:caption>
+    </image:image>
   </url>
-  <!-- Programmatic SEO pages -->
+  <!-- Programmatic SEO pages — industry verticals -->
   <url>
     <loc>https://www.manualen.nu/skapa-manual/tillverkning</loc>
+    <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.manualen.nu/skapa-manual/sjukvard</loc>
+    <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.manualen.nu/skapa-manual/livsmedel</loc>
+    <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.manualen.nu/skapa-manual/bygg</loc>
+    <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.manualen.nu/skapa-manual/lager</loc>
+    <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.manualen.nu/skapa-manual/it-drift</loc>
+    <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.manualen.nu/skapa-manual/onboarding</loc>
+    <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.manualen.nu/skapa-manual/underhall</loc>
+    <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.manualen.nu/skapa-manual/sakerhet</loc>
+    <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.manualen.nu/skapa-manual/video-till-manual</loc>
+    <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.8</priority>
   </url>
 </urlset>

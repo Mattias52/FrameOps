@@ -94,21 +94,31 @@ const IndustryPage: React.FC<IndustryPageProps> = ({ industry, onNavigate, onGet
 
   // SEO: Update document title and meta
   useEffect(() => {
-    document.title = `${config.industry} SOP Software | FrameOps - AI Video to SOP Generator`;
+    document.title = `${config.industry} SOP Generator - Create ${config.industry} Standard Operating Procedures | FrameOps`;
 
     // Update meta description
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
-      metaDesc.setAttribute('content', `${config.subheadline} Try FrameOps free.`);
+      metaDesc.setAttribute('content', `${config.subheadline} Create ${config.industry.toLowerCase()} SOPs from video automatically. Try FrameOps free.`);
     }
-  }, [config]);
+
+    // Update Open Graph tags
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', `${config.industry} SOP Generator | FrameOps`);
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', `${config.subheadline} Create ${config.industry.toLowerCase()} SOPs from video automatically.`);
+
+    // Update canonical for industry page
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.setAttribute('href', `https://www.frameops.ai/${industry}`);
+  }, [config, industry]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-indigo-900">
       {/* Nav */}
       <nav className="px-6 py-4 flex items-center justify-between max-w-7xl mx-auto">
         <button onClick={() => onNavigate(AppView.LANDING)} className="flex items-center gap-2">
-          <img src="/logo.png" alt="FrameOps" className="w-12 h-12" />
+          <img src="/logo.png" alt="FrameOps SOP Generator" className="w-12 h-12" width="48" height="48" />
           <span className="text-white font-bold text-xl">FrameOps</span>
         </button>
         <div className="flex items-center gap-4">
@@ -253,10 +263,7 @@ const IndustryPage: React.FC<IndustryPageProps> = ({ industry, onNavigate, onGet
         </div>
       </footer>
 
-      {/* Hidden SEO keywords */}
-      <div className="sr-only">
-        {config.keywords.join(', ')}
-      </div>
+      {/* SEO keywords used in meta tags via useEffect */}
     </div>
   );
 };

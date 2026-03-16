@@ -132,7 +132,7 @@ const StepEditor: React.FC<StepEditorProps> = ({
         <div className="w-20 h-14 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
           <img 
             src={localStep.image_url || localStep.thumbnail || `https://picsum.photos/seed/${step.id}/80/56`}
-            alt=""
+            alt={localStep.title || 'Step thumbnail'}
             className="w-full h-full object-cover"
             crossOrigin="anonymous"
           />

@@ -715,7 +715,7 @@ const SOPLibrary: React.FC<SOPLibraryProps> = ({ sops, onDelete, onUpdate, isPro
             <img 
               src={selectedSop.thumbnail_url || selectedSop.steps[Math.floor(selectedSop.steps.length / 3)]?.image_url || selectedSop.steps[0]?.image_url || selectedSop.steps[0]?.thumbnail} 
               className="w-full h-full object-cover opacity-60"
-              alt=""
+              alt={`Banner image for ${selectedSop.title}`}
               crossOrigin="anonymous"
             />
             <div className="absolute inset-0 flex flex-col justify-end p-10 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent">

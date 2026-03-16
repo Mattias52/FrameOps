@@ -107,7 +107,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <div className="w-16 h-16 rounded-xl flex items-center justify-center">
-                <img src="/logo.png" alt="FrameOps" className="w-16 h-16" />
+                <img src="/logo.png" alt="FrameOps SOP Generator" className="w-16 h-16" width="64" height="64" />
               </div>
               <span className="font-bold text-xl text-slate-900">FrameOps</span>
             </div>
@@ -200,8 +200,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
             <div className="flex-1 max-w-lg">
               <img
                 src="/manualen/hero.png"
-                alt="Field service engineer documenting a repair with a phone camera"
+                alt="FrameOps SOP generator - field service engineer filming a repair to create standard operating procedures"
                 className="w-full h-auto rounded-2xl shadow-xl"
+                width="512"
+                height="512"
+                fetchPriority="high"
               />
             </div>
           </div>
@@ -438,7 +441,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-lg flex items-center justify-center">
-                <img src="/logo.png" alt="FrameOps" className="w-14 h-14" />
+                <img src="/logo.png" alt="FrameOps - AI SOP Generator" className="w-14 h-14" width="56" height="56" loading="lazy" />
               </div>
               <span className="font-bold text-white">FrameOps</span>
             </div>

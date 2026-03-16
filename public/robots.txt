@@ -1,5 +1,13 @@
+# FrameOps - www.frameops.ai
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /generator
+Disallow: /library
+Disallow: /subscription
+Disallow: /api-youtube/
 
+# Sitemaps
 Sitemap: https://www.frameops.ai/sitemap.xml
 Sitemap: https://www.manualen.nu/sitemap-manualen.xml

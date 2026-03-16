@@ -22,11 +22,17 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
 
   // SEO for creator page
   useEffect(() => {
-    document.title = 'FrameOps for Creators - Turn Your Videos Into Downloadable Guides';
+    document.title = 'YouTube to SOP Guide Creator - Turn Videos Into Downloadable Guides | FrameOps';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
-      metaDesc.setAttribute('content', 'Give your followers more than just videos. Turn your YouTube tutorials into professional step-by-step guides they can download and follow. Free, takes minutes.');
+      metaDesc.setAttribute('content', 'Turn your YouTube tutorials into professional step-by-step guides your followers can download. AI extracts steps and screenshots from any video. Free to try.');
     }
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', 'YouTube to Guide Creator for Content Creators | FrameOps');
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', 'Turn YouTube tutorials into downloadable step-by-step guides. AI extracts steps and screenshots automatically.');
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.setAttribute('href', 'https://www.frameops.ai/creators');
   }, []);
 
   const useCases = [
@@ -102,7 +108,7 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
               onClick={() => onNavigate(AppView.LANDING)}
             >
               <div className="w-16 h-16 rounded-xl flex items-center justify-center">
-                <img src="/logo.png" alt="FrameOps" className="w-16 h-16" />
+                <img src="/logo.png" alt="FrameOps SOP Generator for Creators" className="w-16 h-16" width="64" height="64" />
               </div>
               <span className="font-bold text-xl">FrameOps</span>
               <span className="px-2 py-0.5 bg-amber-500 text-slate-900 text-[10px] font-bold rounded-full uppercase">
@@ -460,7 +466,7 @@ const CreatorLandingPage: React.FC<CreatorLandingPageProps> = ({ onGetStarted, o
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-14 h-14 rounded-lg flex items-center justify-center">
-              <img src="/logo.png" alt="FrameOps" className="w-14 h-14" />
+              <img src="/logo.png" alt="FrameOps - Video to Guide for Creators" className="w-14 h-14" width="56" height="56" loading="lazy" />
             </div>
             <span className="font-bold">FrameOps</span>
           </div>

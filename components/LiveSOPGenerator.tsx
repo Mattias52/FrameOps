@@ -2853,7 +2853,7 @@ If the frames show something completely different from the title (e.g., title sa
                   <div className="flex gap-2 md:gap-3">
                     <img
                       src={step.thumbnail}
-                      alt=""
+                      alt={`Thumbnail for step ${idx + 1}`}
                       className="w-16 h-12 md:w-24 md:h-16 object-cover rounded-lg flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
@@ -3085,7 +3085,7 @@ If the frames show something completely different from the title (e.g., title sa
                 <div key={step.id} className="flex gap-3 bg-slate-800 rounded-xl p-2">
                   <img
                     src={step.thumbnail}
-                    alt=""
+                    alt={step.title || `Step ${idx + 1} thumbnail`}
                     className="w-20 h-14 object-cover rounded-lg"
                     onClick={() => { setShowStepsPanel(false); setPreviewImage(step.thumbnail); }}
                   />
@@ -3106,7 +3106,7 @@ If the frames show something completely different from the title (e.g., title sa
           <button className="absolute top-4 right-4 text-white/60 hover:text-white z-10" aria-label="Close preview">
             <i className="fas fa-times text-2xl"></i>
           </button>
-          <img src={previewImage} alt="" className="max-w-full max-h-full object-contain" />
+          <img src={previewImage} alt="Full-size step image preview" className="max-w-full max-h-full object-contain" />
         </div>
       )}
     </div>

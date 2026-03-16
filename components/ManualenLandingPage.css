@@ -105,10 +105,10 @@
 }
 
 .manualen-page .mn-hero h1 {
-  font-size: clamp(2.2rem, 6vw, 3.5rem);
+  font-size: clamp(2rem, 5vw, 3rem);
   font-weight: 900;
   letter-spacing: -1.5px;
-  line-height: 1.12;
+  line-height: 1.15;
   margin-bottom: 20px;
   color: var(--mn-text);
 }
@@ -198,8 +198,17 @@
   font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.5px;
-  margin-bottom: 48px;
+  margin-bottom: 16px;
   text-align: center;
+}
+
+.manualen-page .mn-how-intro {
+  text-align: center;
+  color: var(--mn-text-dim);
+  font-size: 1rem;
+  max-width: 600px;
+  margin: 0 auto 48px;
+  line-height: 1.6;
 }
 
 .manualen-page .mn-how-steps {
@@ -237,7 +246,7 @@
   color: var(--mn-text-dim);
   font-size: 0.9rem;
   line-height: 1.6;
-  max-width: 240px;
+  max-width: 260px;
   margin: 0 auto;
 }
 
@@ -292,11 +301,15 @@
   border-radius: 12px;
   overflow: hidden;
   background: var(--mn-bg);
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  text-decoration: none;
+  color: inherit;
+  display: block;
 }
 
 .manualen-page .mn-usecase-card:hover {
   border-color: var(--mn-accent);
+  box-shadow: 0 4px 16px rgba(232, 93, 36, 0.1);
 }
 
 .manualen-page .mn-usecase-anim {
@@ -317,6 +330,24 @@
   font-weight: 600;
   text-align: center;
   color: var(--mn-text);
+}
+
+/* More industries */
+.manualen-page .mn-more-industries {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 0.9rem;
+  color: var(--mn-text-dim);
+}
+
+.manualen-page .mn-more-industries a {
+  color: var(--mn-accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.manualen-page .mn-more-industries a:hover {
+  text-decoration: underline;
 }
 
 .manualen-page .mn-source-tags {
@@ -447,6 +478,126 @@
 .manualen-page .mn-w85 { width: 85%; }
 .manualen-page .mn-w90 { width: 90%; }
 
+/* SEO content section */
+.manualen-page .mn-seo-content {
+  padding: 60px 24px 80px;
+  background: var(--mn-bg-card);
+  border-top: 1px solid var(--mn-border);
+}
+
+.manualen-page .mn-seo-content-inner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.manualen-page .mn-seo-content h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.manualen-page .mn-seo-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.manualen-page .mn-seo-col h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--mn-text);
+}
+
+.manualen-page .mn-seo-col p {
+  font-size: 0.95rem;
+  color: var(--mn-text-dim);
+  line-height: 1.7;
+}
+
+/* FAQ section */
+.manualen-page .mn-faq {
+  padding: 80px 24px;
+}
+
+.manualen-page .mn-faq-inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.manualen-page .mn-faq h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.manualen-page .mn-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.manualen-page .mn-faq-item {
+  border-bottom: 1px solid var(--mn-border);
+}
+
+.manualen-page .mn-faq-item:first-child {
+  border-top: 1px solid var(--mn-border);
+}
+
+.manualen-page .mn-faq-question {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mn-text);
+  gap: 16px;
+}
+
+.manualen-page .mn-faq-question:hover {
+  color: var(--mn-accent);
+}
+
+.manualen-page .mn-faq-chevron {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--mn-text-dim);
+  transition: transform 0.3s ease;
+}
+
+.manualen-page .mn-faq-open .mn-faq-chevron {
+  transform: rotate(180deg);
+}
+
+.manualen-page .mn-faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.manualen-page .mn-faq-open .mn-faq-answer {
+  max-height: 300px;
+  padding-bottom: 20px;
+}
+
+.manualen-page .mn-faq-answer p {
+  font-size: 0.95rem;
+  color: var(--mn-text-dim);
+  line-height: 1.7;
+}
+
 /* CTA */
 .manualen-page .mn-cta {
   padding: 80px 24px;
@@ -484,6 +635,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .manualen-page .mn-logo-small {
@@ -499,6 +652,23 @@
 .manualen-page .mn-logo-icon-small {
   height: 20px;
   width: auto;
+}
+
+.manualen-page .mn-footer-links {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.manualen-page .mn-footer-links a {
+  font-size: 0.8rem;
+  color: var(--mn-text-dim);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.manualen-page .mn-footer-links a:hover {
+  color: var(--mn-accent);
 }
 
 .manualen-page .mn-footer-copy {
@@ -553,5 +723,16 @@
   .manualen-page .mn-hero-actions {
     flex-direction: column;
     align-items: flex-start;
+  }
+  .manualen-page .mn-seo-columns {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .manualen-page .mn-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .manualen-page .mn-footer-links {
+    gap: 12px;
   }
 }

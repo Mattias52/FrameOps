@@ -588,6 +588,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                     <div className="flex items-center gap-4 p-4 bg-slate-900 rounded-xl text-white">
                       <img
                         src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+                        alt={ytMetadata?.title ? `Thumbnail for ${ytMetadata.title}` : 'YouTube video thumbnail'}
                         className="w-32 h-20 object-cover rounded-lg"
                         onError={(e) => ((e.currentTarget as any).src = `https://img.youtube.com/vi/${ytId}/0.jpg`)}
                       />
@@ -701,7 +702,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
             <div className="aspect-video bg-slate-900 rounded-[2rem] overflow-hidden relative shadow-2xl mb-8">
               {videoUrl ? <video ref={videoRef} src={videoUrl} className="w-full h-full object-contain" /> : (
                 <div className="w-full h-full relative">
-                   <img src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`} className="w-full h-full object-cover" />
+                   <img src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`} alt="YouTube video preview frame" className="w-full h-full object-cover" />
                    {isProcessing && (
                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                        <div className="text-center text-white">

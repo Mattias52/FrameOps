@@ -19,7 +19,7 @@ const TermsPage: React.FC<TermsPageProps> = ({ onNavigate }) => {
               onClick={() => onNavigate(AppView.LANDING)}
             >
               <div className="w-16 h-16 rounded-xl flex items-center justify-center">
-                <img src="/logo.png" alt="FrameOps" className="w-16 h-16" />
+                <img src="/logo.png" alt="FrameOps SOP Generator" className="w-16 h-16" width="64" height="64" />
               </div>
               <span className="font-bold text-xl text-slate-900">FrameOps</span>
             </div>
