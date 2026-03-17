@@ -340,9 +340,12 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
       console.error(err);
       const msg = err.message || 'Unknown error';
       const isFileTooLarge = msg.includes('too large') || msg.includes('413') || msg.includes('limit');
+      const isYouTubeBlocked = msg.includes('bot') || msg.includes('Sign in') || msg.includes('cookies');
       addLog(`Pipeline Error: ${msg}`);
       if (isFileTooLarge) {
         alert(`Upload failed: File is too large. Try compressing or trimming your video.`);
+      } else if (isYouTubeBlocked) {
+        alert(`YouTube is temporarily blocking downloads. Please try again in a few minutes, or download the video manually and use "Upload Video" instead.`);
       } else {
         alert(`SOP generation failed: ${msg}`);
       }

@@ -15,11 +15,15 @@ RUN curl -fsSL https://deno.land/install.sh | sh
 ENV DENO_INSTALL="/root/.deno"
 ENV PATH="${DENO_INSTALL}/bin:${PATH}"
 
-# Install yt-dlp (v25 deploy)
+# Install yt-dlp (always latest — YouTube changes bot detection frequently)
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
     && chmod a+rx /usr/local/bin/yt-dlp \
     && yt-dlp --version \
     && deno --version
+
+# Auto-update yt-dlp on container start (startup script handles this)
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 # Create app directory
 WORKDIR /app
@@ -43,5 +47,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-# Start the app
-CMD ["node", "index.js"]
+# Start the app (via start.sh which auto-updates yt-dlp first)
+CMD ["/app/start.sh"]
