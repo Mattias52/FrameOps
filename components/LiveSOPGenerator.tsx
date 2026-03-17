@@ -52,6 +52,7 @@ interface LiveSOPGeneratorProps {
   onComplete: (sop: SOP) => void;
   onCancel: () => void;
   startWithScreenMode?: boolean;
+  startWithPhotosMode?: boolean;
   continueSop?: SOP | null;
   freeSOPsRemaining?: number;
   isPro?: boolean;
@@ -84,6 +85,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
   onComplete,
   onCancel,
   startWithScreenMode = false,
+  startWithPhotosMode = false,
   continueSop = null,
   freeSOPsRemaining = 3,
   isPro = false,
@@ -156,7 +158,7 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
 
   // Recording mode: camera, screen, or photos
   const [recordingMode, setRecordingMode] = useState<'camera' | 'screen' | 'photos' | null>(
-    startWithScreenMode ? 'screen' : null
+    startWithScreenMode ? 'screen' : startWithPhotosMode ? 'photos' : null
   );
 
   // Upload photos state
@@ -171,6 +173,14 @@ const LiveSOPGenerator: React.FC<LiveSOPGeneratorProps> = ({
       setPhase('recording');
     }
   }, [startWithScreenMode]);
+
+  // If starting with photos mode, skip to recording phase with photos UI
+  useEffect(() => {
+    if (startWithPhotosMode && phase === 'setup') {
+      setRecordingMode('photos');
+      setPhase('recording');
+    }
+  }, [startWithPhotosMode]);
 
   // Scene detection settings (user-controllable)
   const [sceneSensitivity, setSceneSensitivity] = useState(50); // 0-100, 50 = balanced

@@ -45,6 +45,8 @@
     "screenDesc": "Record your screen for tutorials",
     "uploadVideo": "Upload Video",
     "uploadDesc": "Upload MP4, MOV, or WebM",
+    "uploadPhotos": "Upload Photos",
+    "uploadPhotosDesc": "Create SOP from images",
     "youtubeImport": "YouTube Import",
     "youtubeDesc": "Paste a YouTube URL",
     "recentSops": "Recent SOPs",

@@ -46,6 +46,7 @@ const App: React.FC = () => {
   const { user, signInGoogle } = useAuth();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [startWithScreenMode, setStartWithScreenMode] = useState(false);
+  const [startWithPhotosMode, setStartWithPhotosMode] = useState(false);
   const [continueSop, setContinueSop] = useState<SOP | null>(null);
 
   // Check if user has entered the app before
@@ -229,6 +230,12 @@ const App: React.FC = () => {
             onNavigate={setCurrentView}
             onScreenMode={() => {
               setStartWithScreenMode(true);
+              setStartWithPhotosMode(false);
+              setCurrentView(AppView.LIVE_GENERATOR);
+            }}
+            onPhotosMode={() => {
+              setStartWithPhotosMode(true);
+              setStartWithScreenMode(false);
               setCurrentView(AppView.LIVE_GENERATOR);
             }}
           />
@@ -282,13 +289,16 @@ const App: React.FC = () => {
                 }
                 setCurrentView(AppView.LIBRARY);
                 setStartWithScreenMode(false);
+                setStartWithPhotosMode(false);
               }}
               onCancel={() => {
                 setContinueSop(null);
                 setCurrentView(continueSop ? AppView.LIBRARY : AppView.GENERATOR);
                 setStartWithScreenMode(false);
+                setStartWithPhotosMode(false);
               }}
               startWithScreenMode={startWithScreenMode}
+              startWithPhotosMode={startWithPhotosMode}
               continueSop={continueSop}
               freeSOPsRemaining={freeSOPsRemaining}
               isPro={isPro}

@@ -6,9 +6,10 @@ interface DashboardProps {
   sops: SOP[];
   onNavigate: (view: AppView) => void;
   onScreenMode?: () => void;
+  onPhotosMode?: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode }) => {
+const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode, onPhotosMode }) => {
   const { t } = useTranslation();
   // Calculate real stats from actual data (use numSteps for lazy loaded SOPs)
   const totalSteps = sops.reduce((sum, sop) => sum + (sop.numSteps || sop.steps?.length || 0), 0);
@@ -36,6 +37,13 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode })
       icon: 'fa-desktop',
       color: 'bg-purple-500',
       action: onScreenMode || (() => onNavigate(AppView.LIVE_GENERATOR))
+    },
+    {
+      title: t('dashboard.uploadPhotos'),
+      description: t('dashboard.uploadPhotosDesc'),
+      icon: 'fa-images',
+      color: 'bg-amber-500',
+      action: onPhotosMode || (() => onNavigate(AppView.LIVE_GENERATOR))
     },
     {
       title: t('dashboard.uploadVideo'),
@@ -81,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode })
       {/* Quick Actions */}
       <div>
         <h2 className="text-lg font-bold text-slate-900 mb-4">{t('dashboard.quickActions')}</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {quickActions.map((action, i) => (
             <button
               key={i}
@@ -89,7 +97,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sops, onNavigate, onScreenMode })
               className="p-5 bg-white rounded-2xl border border-slate-100 hover:border-slate-200 hover:shadow-lg transition-all text-left group"
             >
               <div className={`w-12 h-12 ${action.color} rounded-xl flex items-center justify-center text-white text-xl mb-4 group-hover:scale-110 transition-transform`}>
-                <i className={`fab ${action.icon === 'fa-youtube' ? 'fa-youtube' : ''} fas ${action.icon !== 'fa-youtube' ? action.icon : ''}`}></i>
+                <i className={`${action.icon === 'fa-youtube' ? 'fab' : 'fas'} ${action.icon}`}></i>
               </div>
               <h3 className="font-semibold text-slate-900 mb-1">{action.title}</h3>
               <p className="text-sm text-slate-500">{action.description}</p>
