@@ -15,9 +15,24 @@ const swaggerSpec = require('./config/swagger');
 // API routes
 const apiV1Routes = require('./routes/apiV1');
 
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+
+// Rate limit for SOP generation endpoints — max 5 per day per IP
+const sopGenerationLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 5,
+  keyGenerator: (req) => req.ip || req.headers['x-forwarded-for'] || 'unknown',
+  message: { error: 'Daily limit reached', message: 'You can generate up to 5 SOPs per day. Please try again tomorrow.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply to all SOP generation endpoints
+app.use(['/analyze-video-native', '/analyze-youtube-native', '/analyze-sop'], sopGenerationLimiter);
 
 // Add file upload middleware for uploaded videos (3GB max temporarily for testing)
 app.use(fileUpload({
