@@ -218,7 +218,7 @@ app.post('/get-transcript', async (req, res) => {
 
     try {
       execSync(
-        `yt-dlp --skip-download --write-auto-subs --write-subs --sub-format "vtt/srt/best" --sub-langs "en.*,sv.*,de.*,fr.*,es.*,it.*,pt.*,nl.*,pl.*,ru.*,ja.*,ko.*,zh.*,no.*,da.*,fi.*" --no-check-certificates --extractor-args "youtube:player_client=web" -o "${tempFile}" "${youtubeUrl}"`,
+        `yt-dlp --skip-download --write-auto-subs --write-subs --sub-format "vtt/srt/best" --sub-langs "en.*,sv.*,de.*,fr.*,es.*,it.*,pt.*,nl.*,pl.*,ru.*,ja.*,ko.*,zh.*,no.*,da.*,fi.*" --no-check-certificates --extractor-args "youtube:player_client=mweb" -o "${tempFile}" "${youtubeUrl}"`,
         { timeout: 30000, stdio: 'pipe' }
       );
     } catch (e) {
@@ -258,7 +258,7 @@ app.post('/get-transcript', async (req, res) => {
       // Download audio only - let yt-dlp handle the filename
       const audioTemplate = path.join(jobDir, 'audio.%(ext)s');
       execSync(
-        `yt-dlp -x --audio-format mp3 --audio-quality 5 --no-check-certificates --extractor-args "youtube:player_client=web" -o "${audioTemplate}" "${youtubeUrl}"`,
+        `yt-dlp -x --audio-format mp3 --audio-quality 5 --no-check-certificates --extractor-args "youtube:player_client=mweb" -o "${audioTemplate}" "${youtubeUrl}"`,
         { timeout: 120000 }
       );
       console.log(`[${jobId}] yt-dlp audio extraction completed`);
@@ -901,7 +901,7 @@ app.post('/extract-frames-scene-detect', async (req, res) => {
 
       try {
         const dlOutput = execSync(
-          `yt-dlp --no-warnings --no-check-certificates -f "bv*[height<=720][ext=mp4]+ba[ext=m4a]/bv*[height<=720]+ba/b[height<=720]/b" --merge-output-format mp4 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" --extractor-retries 5 --retries 3 -o "${videoPath}" "${youtubeUrl}"`,
+          `yt-dlp --no-warnings --no-check-certificates -f "bv*[height<=720][ext=mp4]+ba[ext=m4a]/bv*[height<=720]+ba/b[height<=720]/b" --merge-output-format mp4 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" --extractor-args "youtube:player_client=mweb" --extractor-retries 5 --retries 3 -o "${videoPath}" "${youtubeUrl}"`,
           { timeout: 180000, encoding: 'utf8' }
         );
         console.log(`[${jobId}] yt-dlp finished. Output: ${dlOutput.split('\n').filter(l => l.trim()).pop()}`);
@@ -1118,7 +1118,7 @@ async function getStreamUrl(youtubeUrl) {
   try {
     console.log(`Getting stream URL for ${youtubeUrl}...`);
     const url = execSync(
-      `yt-dlp --no-warnings --no-check-certificates -g -f "bv*[height<=720][ext=mp4]/bv*[height<=720]/b[height<=720]/b" "${youtubeUrl}"`,
+      `yt-dlp --no-warnings --no-check-certificates --extractor-args "youtube:player_client=mweb" -g -f "bv*[height<=720][ext=mp4]/bv*[height<=720]/b[height<=720]/b" "${youtubeUrl}"`,
       { timeout: 30000, encoding: 'utf8' }
     ).trim();
     return url.split('\n')[0]; // Take first URL (video) if multiple returned
@@ -1616,7 +1616,7 @@ app.post('/analyze-youtube-native', async (req, res) => {
     const videoPath = path.join(jobDir, 'video.mp4');
 
     execSync(
-      `yt-dlp -f "bestvideo[height<=720]+bestaudio/best[height<=720]/best" --merge-output-format mp4 --no-check-certificates --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" --extractor-args "youtube:player_client=web" --extractor-retries 5 --retries 3 -o "${videoPath}" "${youtubeUrl}"`,
+      `yt-dlp -f "bestvideo[height<=720]+bestaudio/best[height<=720]/best" --merge-output-format mp4 --no-check-certificates --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" --extractor-args "youtube:player_client=mweb" --extractor-retries 5 --retries 3 -o "${videoPath}" "${youtubeUrl}"`,
       { timeout: 300000 }
     );
 
@@ -2948,7 +2948,7 @@ app.post('/whisper-transcribe-youtube', async (req, res) => {
     const tempFile = path.join(jobDir, 'subs');
     try {
       execSync(
-        `yt-dlp --skip-download --write-auto-subs --write-subs --sub-format "vtt/srt/best" --sub-langs "en.*,sv.*,de.*,fr.*,es.*" -o "${tempFile}" "${youtubeUrl}"`,
+        `yt-dlp --skip-download --write-auto-subs --write-subs --sub-format "vtt/srt/best" --sub-langs "en.*,sv.*,de.*,fr.*,es.*" --no-check-certificates --extractor-args "youtube:player_client=mweb" -o "${tempFile}" "${youtubeUrl}"`,
         { timeout: 30000, stdio: 'pipe' }
       );
     } catch (e) {
@@ -2980,7 +2980,7 @@ app.post('/whisper-transcribe-youtube', async (req, res) => {
 
     try {
       execSync(
-        `yt-dlp -x --audio-format mp3 --audio-quality 5 --no-check-certificates --extractor-args "youtube:player_client=web" -o "${audioTemplate}" "${youtubeUrl}"`,
+        `yt-dlp -x --audio-format mp3 --audio-quality 5 --no-check-certificates --extractor-args "youtube:player_client=mweb" -o "${audioTemplate}" "${youtubeUrl}"`,
         { timeout: 120000 }
       );
     } catch (dlErr) {

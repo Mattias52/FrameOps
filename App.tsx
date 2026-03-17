@@ -251,6 +251,12 @@ const App: React.FC = () => {
               }}
               onScreenMode={() => {
                 setStartWithScreenMode(true);
+                setStartWithPhotosMode(false);
+                setCurrentView(AppView.LIVE_GENERATOR);
+              }}
+              onPhotosMode={() => {
+                setStartWithPhotosMode(true);
+                setStartWithScreenMode(false);
                 setCurrentView(AppView.LIVE_GENERATOR);
               }}
               onNavigateToLibrary={() => setCurrentView(AppView.LIBRARY)}

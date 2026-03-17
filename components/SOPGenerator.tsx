@@ -10,6 +10,7 @@ interface SOPGeneratorProps {
   onComplete: (sop: SOP) => void;
   onLiveMode?: () => void;
   onScreenMode?: () => void;
+  onPhotosMode?: () => void;
   onNavigateToLibrary?: () => void;
   onOpenSOP?: (sopId: string) => void;
   freeSOPsRemaining?: number;
@@ -21,6 +22,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
   onComplete,
   onLiveMode,
   onScreenMode,
+  onPhotosMode,
   onNavigateToLibrary,
   onOpenSOP,
   freeSOPsRemaining = 3,
@@ -426,7 +428,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
           )}
 
           {/* Source Type Selection */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
             {/* Live Recording Card */}
             <button
               type="button"
@@ -482,6 +484,19 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
               </div>
               <p className={`text-sm font-bold ${sourceType === 'upload' ? 'text-white' : 'text-slate-900'}`}>{t('generator.upload')}</p>
               <p className={`text-[10px] mt-0.5 ${sourceType === 'upload' ? 'text-indigo-200' : 'text-slate-400'}`}>{t('generator.uploadFormats')}</p>
+            </button>
+
+            {/* Upload Photos Card */}
+            <button
+              type="button"
+              onClick={() => onPhotosMode?.()}
+              className="group relative rounded-2xl p-4 text-center transition-all bg-slate-50 hover:bg-slate-100 border-2 border-transparent hover:border-amber-200"
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2 transition-all bg-slate-200 group-hover:bg-amber-100">
+                <i className="fas fa-images text-base text-slate-500 group-hover:text-amber-600"></i>
+              </div>
+              <p className="text-sm font-bold text-slate-900">{t('generator.photos')}</p>
+              <p className="text-[10px] mt-0.5 text-slate-400">{t('generator.photosDesc')}</p>
             </button>
 
             {/* YouTube Card */}
