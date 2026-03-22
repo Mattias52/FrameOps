@@ -1,6 +1,7 @@
 # FrameOps - www.frameops.ai
 User-agent: *
 Allow: /
+Allow: /sop-generator/
 Disallow: /api/
 Disallow: /dashboard
 Disallow: /generator

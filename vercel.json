@@ -19,6 +19,28 @@
       ]
     }
   ],
+  "redirects": [
+    {
+      "source": "/manufacturing",
+      "destination": "/sop-generator/manufacturing",
+      "statusCode": 301
+    },
+    {
+      "source": "/healthcare",
+      "destination": "/sop-generator/healthcare",
+      "statusCode": 301
+    },
+    {
+      "source": "/training",
+      "destination": "/sop-generator/onboarding",
+      "statusCode": 301
+    },
+    {
+      "source": "/creators",
+      "destination": "/sop-generator/tutorial-creator",
+      "statusCode": 301
+    }
+  ],
   "rewrites": [
     {
       "source": "/api-youtube/:path*",
