@@ -48,12 +48,20 @@ function buildFaqSchema(page: SeoPage): string {
 }
 
 function buildHowItWorksHtml(steps: string[]): string {
-  const items = steps.map((s) => `<li>${s}</li>`).join('\n        ');
-  return `<ol>\n        ${items}\n      </ol>`;
+  const items = steps.map((s, i) => `
+          <li style="display:flex;gap:12px;align-items:flex-start;">
+            <span style="flex-shrink:0;width:32px;height:32px;background:#4f46e5;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">${i + 1}</span>
+            <span style="padding-top:4px;">${s}</span>
+          </li>`).join('');
+  return `<ol style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:16px;">${items}\n      </ol>`;
 }
 
 function buildFaqHtml(faq: SeoPage['faq']): string {
-  return faq.map((f) => `<h3>${f.question}</h3>\n      <p>${f.answer}</p>`).join('\n      ');
+  return faq.map((f) => `
+        <details style="border:1px solid #e2e8f0;border-radius:12px;padding:16px;background:#fff;">
+          <summary style="font-weight:600;font-size:16px;color:#1e293b;cursor:pointer;">${f.question}</summary>
+          <p style="margin:12px 0 0;color:#475569;line-height:1.6;">${f.answer}</p>
+        </details>`).join('\n');
 }
 
 function injectSeo(html: string, page: SeoPage, host: string): string {
@@ -87,15 +95,30 @@ function injectSeo(html: string, page: SeoPage, host: string): string {
     <meta name="twitter:description" content="${page.description}">
     <meta name="twitter:image" content="${baseUrl}/og-image.png">`;
 
-  // Hidden SEO content for crawlers
+  // Visible SEO content — rendered above React app for crawlers and users
+  const homeLabel = isManualen(host) ? 'Hem' : 'Home';
+  const ctaLabel = isManualen(host) ? 'Prova gratis' : 'Try It Free';
+  const ctaUrl = baseUrl + '/';
+
   const seoContent = `
-    <main style="position:absolute;left:-9999px;" aria-hidden="false">
-      <h1>${page.h1}</h1>
-      <p>${page.intro}</p>
-      <h2>${howItWorksHeading}</h2>
-      ${buildHowItWorksHtml(page.howItWorks)}
-      <h2>${faqHeading}</h2>
-      ${buildFaqHtml(page.faq)}
+    <main id="seo-content" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:800px;margin:0 auto;padding:48px 24px 32px;">
+      <nav style="font-size:14px;color:#64748b;margin-bottom:24px;">
+        <a href="${ctaUrl}" style="color:#4f46e5;text-decoration:none;">${homeLabel}</a>
+        <span style="margin:0 8px;">/</span>
+        <span>${page.h1}</span>
+      </nav>
+      <h1 style="font-size:36px;font-weight:800;color:#0f172a;margin:0 0 16px;line-height:1.2;">${page.h1}</h1>
+      <p style="font-size:18px;color:#475569;line-height:1.7;margin:0 0 32px;">${page.intro}</p>
+      <a href="${ctaUrl}" style="display:inline-block;padding:14px 32px;background:#4f46e5;color:#fff;border-radius:12px;font-weight:700;font-size:16px;text-decoration:none;margin-bottom:40px;">${ctaLabel} &rarr;</a>
+      <h2 style="font-size:24px;font-weight:700;color:#0f172a;margin:0 0 20px;">${howItWorksHeading}</h2>
+      <div style="background:#f8fafc;border-radius:16px;padding:24px;margin-bottom:40px;">
+        ${buildHowItWorksHtml(page.howItWorks)}
+      </div>
+      <h2 style="font-size:24px;font-weight:700;color:#0f172a;margin:0 0 20px;">${faqHeading}</h2>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:40px;">
+        ${buildFaqHtml(page.faq)}
+      </div>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 24px;">
     </main>`;
 
   // FAQ JSON-LD schema

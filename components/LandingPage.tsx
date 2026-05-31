@@ -85,7 +85,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
     },
     {
       name: t('landing.proPriceName'),
-      price: '19',
+      price: '9.99',
       period: t('landing.perMonth'),
       description: t('landing.proPriceDesc'),
       features: [
@@ -352,6 +352,41 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onGetStarted }) =
         </div>
       </section>
 
+
+      {/* Industries Section — internal links to SEO pages */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">{t('landing.industriesTitle')}</h2>
+            <p className="text-lg text-slate-600 max-w-xl mx-auto">{t('landing.industriesSub')}</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[
+              { slug: 'manufacturing', icon: 'fa-industry', label: t('landing.manufacturing') },
+              { slug: 'healthcare', icon: 'fa-hospital', label: t('landing.healthcare') },
+              { slug: 'food-safety', icon: 'fa-utensils', label: t('landing.foodService') },
+              { slug: 'construction', icon: 'fa-hard-hat', label: 'Construction' },
+              { slug: 'automotive', icon: 'fa-car', label: 'Automotive' },
+              { slug: 'warehouse', icon: 'fa-warehouse', label: 'Warehouse' },
+              { slug: 'it-operations', icon: 'fa-server', label: 'IT Operations' },
+              { slug: 'onboarding', icon: 'fa-graduation-cap', label: t('landing.trainingHr') },
+              { slug: 'video-to-sop', icon: 'fa-video', label: 'Video to SOP' },
+              { slug: 'youtube-to-guide', icon: 'fa-play-circle', label: 'YouTube to Guide' },
+            ].map((item) => (
+              <a
+                key={item.slug}
+                href={`/sop-generator/${item.slug}`}
+                className="flex flex-col items-center gap-3 p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group"
+              >
+                <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                  <i className={`fas ${item.icon} text-xl text-indigo-600`}></i>
+                </div>
+                <span className="text-sm font-semibold text-slate-700 text-center">{item.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Pricing Section */}
       <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 scroll-mt-24">
