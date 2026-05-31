@@ -17,6 +17,7 @@ const SubscriptionPlans = lazy(() => import('./components/SubscriptionPlans'));
 const CreatorLandingPage = lazy(() => import('./components/CreatorLandingPage'));
 const IndustryPage = lazy(() => import('./components/IndustryPage'));
 const APIKeysPage = lazy(() => import('./components/APIKeysPage'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
 const TermsPage = lazy(() => import('./components/TermsPage'));
 import { fetchSOPsList, fetchSOPSteps, saveSOP, isSupabaseConfigured } from './services/supabaseService';
@@ -336,6 +337,8 @@ const App: React.FC = () => {
         return <SubscriptionPlans />;
       case AppView.API_KEYS:
         return <APIKeysPage />;
+      case AppView.ADMIN:
+        return <AdminDashboard />;
       default:
         return <Dashboard sops={sops} onNavigate={setCurrentView} />;
     }

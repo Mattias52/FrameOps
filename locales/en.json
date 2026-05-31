@@ -235,7 +235,7 @@
     "deleteSop": "Delete SOP",
     "moreSteps": "+{{count}} more steps",
     "upgradeUnlock": "Upgrade to Pro to unlock all steps, PDF export, and editing.",
-    "startingAt": "Starting at $19/month",
+    "startingAt": "Starting at $9.99/month",
     "procedureLibrary": "Procedure Library",
     "proceduresFiltered": "{{shown}} of {{total}} procedures",
     "proceduresInLibrary": "{{count}} procedures in your library",
@@ -439,6 +439,22 @@
     "promoActivated": "{{name}} activated! You have {{type}} access for {{days}} days.",
     "loading": "Loading..."
   },
+  "admin": {
+    "title": "Admin",
+    "customers": "Customers",
+    "totalCustomerSops": "Customer SOPs",
+    "latestSop": "Latest SOP",
+    "owner": "Owner",
+    "steps": "Steps",
+    "source": "Source",
+    "created": "Created",
+    "noSops": "No customer SOPs found",
+    "loading": "Loading customer SOPs...",
+    "loadMore": "Load More",
+    "viewSteps": "View Steps",
+    "hideSteps": "Hide Steps",
+    "sopsByCustomers": "SOPs by customers (excluding you)"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Something went wrong",
@@ -533,7 +549,9 @@
     "foodServiceExample": "Health code compliance, recipes, cleaning procedures",
     "trainingHr": "Training & HR",
     "trainingHrExample": "Onboarding, safety training, compliance documentation",
-    "perMonth": "/month"
+    "perMonth": "/month",
+    "industriesTitle": "Create SOPs for Any Industry",
+    "industriesSub": "Professional standard operating procedures for every sector"
   },
   "creator": {
     "forCreators": "For Creators",

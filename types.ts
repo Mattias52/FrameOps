@@ -11,6 +11,8 @@ export enum AppView {
   API_KEYS = 'api_keys',
   PRIVACY = 'privacy',
   TERMS = 'terms',
+  // Admin
+  ADMIN = 'admin',
   // SEO industry pages
   MANUFACTURING = 'manufacturing',
   HEALTHCARE = 'healthcare',

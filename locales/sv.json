@@ -235,7 +235,7 @@
     "deleteSop": "Radera manual",
     "moreSteps": "+{{count}} fler steg",
     "upgradeUnlock": "Uppgradera till Pro för alla steg, PDF-export och redigering.",
-    "startingAt": "Från 190 kr/mån",
+    "startingAt": "Från 99 kr/mån",
     "procedureLibrary": "Manualbibliotek",
     "proceduresFiltered": "{{shown}} av {{total}} manualer",
     "proceduresInLibrary": "{{count}} manualer i ditt bibliotek",
@@ -439,6 +439,22 @@
     "promoActivated": "{{name}} aktiverad! Du har {{type}}-tillgång i {{days}} dagar.",
     "loading": "Laddar..."
   },
+  "admin": {
+    "title": "Admin",
+    "customers": "Kunder",
+    "totalCustomerSops": "Kund-SOPs",
+    "latestSop": "Senaste SOP",
+    "owner": "Ägare",
+    "steps": "Steg",
+    "source": "Källa",
+    "created": "Skapad",
+    "noSops": "Inga kund-SOPs hittades",
+    "loading": "Laddar kund-SOPs...",
+    "loadMore": "Ladda fler",
+    "viewSteps": "Visa steg",
+    "hideSteps": "Dölj steg",
+    "sopsByCustomers": "SOPs av kunder (exklusive dig)"
+  },
   "common": {
     "loading": "Laddar...",
     "error": "Något gick fel",
@@ -533,7 +549,9 @@
     "foodServiceExample": "Livsmedelshygien, recept, rengöringsprocedurer",
     "trainingHr": "Utbildning & HR",
     "trainingHrExample": "Onboarding, säkerhetsutbildning, efterlevnadsdokumentation",
-    "perMonth": "/mån"
+    "perMonth": "/mån",
+    "industriesTitle": "Skapa manualer för alla branscher",
+    "industriesSub": "Professionella arbetsinstruktioner för varje sektor"
   },
   "creator": {
     "forCreators": "För kreatörer",

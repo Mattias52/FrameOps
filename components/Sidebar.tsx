@@ -2,6 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppView } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+
+const ADMIN_EMAILS = ['fabbex5@gmail.com'];
 
 interface SidebarProps {
   currentView: AppView;
@@ -12,6 +15,8 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, onToggle }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email);
   const isManualen = typeof window !== 'undefined' && window.location.hostname.includes('manualen.nu');
   const brandLogo = isManualen ? '/manualen/logo.png' : '/logo.png';
   const brandName = isManualen ? 'Manualen' : 'FrameOps';
@@ -31,6 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, on
     { id: AppView.LIBRARY, label: t('sidebar.sopLibrary'), icon: 'fa-book' },
     { id: AppView.API_KEYS, label: t('sidebar.apiAccess'), icon: 'fa-code' },
     { id: AppView.SUBSCRIPTION, label: t('sidebar.subscription'), icon: 'fa-credit-card' },
+    ...(isAdmin ? [{ id: AppView.ADMIN, label: t('admin.title'), icon: 'fa-user-shield' }] : []),
   ];
 
   const handleNavClick = (view: AppView) => {

@@ -371,6 +371,75 @@ export const fetchSOPsList = async (limit: number = 20, offset: number = 0): Pro
   }
 };
 
+// Admin: fetch ALL SOPs except the admin's own (for admin dashboard)
+export interface AdminSOP extends SOP {
+  ownerEmail?: string;
+}
+
+export const fetchAdminSOPsList = async (
+  adminUserId: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<{ sops: AdminSOP[]; total: number }> => {
+  if (!isSupabaseConfigured() || !supabase) return { sops: [], total: 0 };
+
+  try {
+    // Count all SOPs except admin's
+    const { count } = await supabase
+      .from('sops')
+      .select('*', { count: 'exact', head: true })
+      .not('user_id', 'is', null)
+      .neq('user_id', adminUserId);
+
+    // Fetch SOPs
+    const { data: sops, error } = await supabase
+      .from('sops')
+      .select('*')
+      .not('user_id', 'is', null)
+      .neq('user_id', adminUserId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error('Error fetching admin SOPs:', error);
+      return { sops: [], total: 0 };
+    }
+
+    if (!sops || sops.length === 0) return { sops: [], total: count || 0 };
+
+    // Get unique user IDs to fetch emails
+    const userIds = [...new Set(sops.map(s => s.user_id).filter(Boolean))];
+
+    // Fetch user emails via auth.users (requires service role, but RLS is open)
+    // We'll use a workaround: store email lookup from a simple RPC or just show user_id
+    // Since RLS on auth.users is restricted, we'll query user_subscriptions which has no email
+    // Best approach: create a simple view or just show truncated user_id
+    // For now, we'll try to get emails from the profiles if available
+    let emailMap: Record<string, string> = {};
+    try {
+      // Try fetching from auth.users via admin-accessible view
+      const { data: users } = await supabase.rpc('get_user_emails', { user_ids: userIds });
+      if (users) {
+        for (const u of users) {
+          emailMap[u.id] = u.email;
+        }
+      }
+    } catch {
+      // RPC doesn't exist yet — fall back to showing user_id prefix
+    }
+
+    const sopList: AdminSOP[] = sops.map(sop => ({
+      ...dbToSOP(sop, []),
+      ownerEmail: emailMap[sop.user_id] || sop.user_id?.substring(0, 8) + '...',
+    }));
+
+    return { sops: sopList, total: count || 0 };
+  } catch (err) {
+    console.error('Error fetching admin SOPs:', err);
+    return { sops: [], total: 0 };
+  }
+};
+
 // Fetch steps for a specific SOP (on demand)
 export const fetchSOPSteps = async (sopId: string): Promise<SOPStep[]> => {
   if (!isSupabaseConfigured() || !supabase) return [];
