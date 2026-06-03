@@ -3720,8 +3720,9 @@ app.post('/generate-sop-video', async (req, res) => {
   try {
     const clipFiles = [];
 
-    // --- Generate intro card (4 seconds, no audio) ---
+    // --- Generate intro card using first step image as blurred background ---
     const introPath = path.join(jobDir, 'intro.mp4');
+    const introBgPath = path.join(jobDir, 'intro_bg.png');
 
     // Determine font path (Docker has dejavu, local may not)
     const fontPath = fs.existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
@@ -3731,33 +3732,79 @@ app.post('/generate-sop-video', async (req, res) => {
     const fontOptRegular = fs.existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
       ? `fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:` : '';
 
-    // Word-wrap title and description for the intro card
-    const titleLines = wrapText(sop.title || 'SOP Video', 30);
-    const descLines = wrapText((sop.description || '').substring(0, 200), 50);
+    // Download first step image for blurred intro background
+    const firstImg = sop.steps[0]?.image_url || sop.steps[0]?.thumbnail;
+    let hasIntroBg = false;
+    if (firstImg) {
+      try {
+        await downloadImage(firstImg, introBgPath);
+        hasIntroBg = true;
+      } catch (e) {
+        console.log(`[SOP-VIDEO] Could not download intro bg, using solid color`);
+      }
+    }
 
-    // Build multi-line drawtext filters for title
-    const titleStartY = Math.max(300, 540 - (titleLines.length * 35) - (descLines.length * 18));
+    // Clean text: replace non-ASCII chars that fonts can't render
+    function cleanForFont(text) {
+      return text
+        .replace(/[—–]/g, '-')       // em/en dash to hyphen
+        .replace(/[""]/g, '"')        // smart quotes
+        .replace(/['']/g, "'")        // smart apostrophes
+        .replace(/…/g, '...')         // ellipsis
+        .replace(/[^\x20-\x7E\xC0-\xFF]/g, ' ')  // remove other non-latin chars
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+    }
+
+    // Word-wrap title and description
+    const titleLines = wrapText(cleanForFont(sop.title || 'SOP Video'), 28);
+    const descLines = wrapText(cleanForFont((sop.description || '').substring(0, 200)), 50);
+
+    // Build multi-line drawtext filters
+    const totalTitleH = titleLines.length * 68;
+    const totalDescH = descLines.length * 38;
+    const totalH = totalTitleH + 40 + totalDescH;
+    const titleStartY = Math.round((1080 - totalH) / 2);
+
     const titleFilters = titleLines.map((line, idx) =>
-      `drawtext=${fontOpt}text='${escapeDrawtext(line)}':fontsize=52:fontcolor=white:x=(w-tw)/2:y=${titleStartY + idx * 64}`
+      `drawtext=${fontOpt}text='${escapeDrawtext(line)}':fontsize=56:fontcolor=white:x=(w-tw)/2:y=${titleStartY + idx * 68}:shadowcolor=black@0.6:shadowx=3:shadowy=3`
     );
-    // Build multi-line drawtext filters for description
-    const descStartY = titleStartY + titleLines.length * 64 + 30;
+    const descStartY = titleStartY + totalTitleH + 40;
     const descFilters = descLines.map((line, idx) =>
-      `drawtext=${fontOptRegular}text='${escapeDrawtext(line)}':fontsize=26:fontcolor=#94a3b8:x=(w-tw)/2:y=${descStartY + idx * 36}`
+      `drawtext=${fontOptRegular}text='${escapeDrawtext(line)}':fontsize=26:fontcolor=#e2e8f0:x=(w-tw)/2:y=${descStartY + idx * 38}:shadowcolor=black@0.6:shadowx=2:shadowy=2`
     );
 
-    const introFilter = [
-      `color=c=#0f172a:s=1920x1080:d=4`,
-      ...titleFilters,
-      ...descFilters,
-    ].join(',');
+    if (hasIntroBg) {
+      // Use first step image: scale, blur heavily, darken, then overlay text
+      const vf = [
+        `scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos`,
+        `crop=1920:1080`,
+        `boxblur=30:5`,
+        `colorbalance=rs=-0.1:gs=-0.1:bs=-0.05`,
+        `eq=brightness=-0.4:saturation=0.5`,
+        ...titleFilters,
+        ...descFilters,
+      ].join(',');
 
-    execSync(
-      `${FFMPEG_BIN} -f lavfi -i "${introFilter}" -f lavfi -i anullsrc=r=24000:cl=mono -r 30 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 128k -shortest -movflags +faststart "${introPath}" -y`,
-      { timeout: 30000, stdio: 'pipe' }
-    );
+      execSync(
+        `${FFMPEG_BIN} -loop 1 -i "${introBgPath}" -f lavfi -i anullsrc=r=24000:cl=mono -vf "${vf}" -t 4 -r 30 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 128k -shortest -movflags +faststart "${introPath}" -y`,
+        { timeout: 30000, stdio: 'pipe' }
+      );
+    } else {
+      // Fallback: gradient-like solid background
+      const introFilter = [
+        `color=c=#0f172a:s=1920x1080:d=4`,
+        ...titleFilters,
+        ...descFilters,
+      ].join(',');
+
+      execSync(
+        `${FFMPEG_BIN} -f lavfi -i "${introFilter}" -f lavfi -i anullsrc=r=24000:cl=mono -r 30 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 128k -shortest -movflags +faststart "${introPath}" -y`,
+        { timeout: 30000, stdio: 'pipe' }
+      );
+    }
     clipFiles.push(introPath);
-    console.log(`[SOP-VIDEO] Intro card created`);
+    console.log(`[SOP-VIDEO] Intro card created (blurred bg: ${hasIntroBg})`);
 
     // --- Process each step ---
     for (let i = 0; i < sop.steps.length; i++) {
