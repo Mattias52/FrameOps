@@ -3671,6 +3671,23 @@ function escapeDrawtext(text) {
   return text.replace(/\\/g, '\\\\').replace(/'/g, "'\\''").replace(/:/g, '\\:').replace(/%/g, '%%');
 }
 
+// Word-wrap text for FFmpeg drawtext (no auto-wrap support)
+function wrapText(text, maxChars = 35) {
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    if (line.length + word.length + 1 > maxChars && line.length > 0) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = line ? line + ' ' + word : word;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 async function downloadImage(urlOrBase64, outputPath) {
   if (urlOrBase64.startsWith('data:')) {
     const base64Data = urlOrBase64.split(',')[1];
@@ -3703,9 +3720,7 @@ app.post('/generate-sop-video', async (req, res) => {
   try {
     const clipFiles = [];
 
-    // --- Generate intro card (5 seconds, no audio) ---
-    const introText = escapeDrawtext(sop.title || 'SOP Video');
-    const introDesc = escapeDrawtext((sop.description || '').substring(0, 120));
+    // --- Generate intro card (4 seconds, no audio) ---
     const introPath = path.join(jobDir, 'intro.mp4');
 
     // Determine font path (Docker has dejavu, local may not)
@@ -3716,10 +3731,25 @@ app.post('/generate-sop-video', async (req, res) => {
     const fontOptRegular = fs.existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
       ? `fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:` : '';
 
+    // Word-wrap title and description for the intro card
+    const titleLines = wrapText(sop.title || 'SOP Video', 30);
+    const descLines = wrapText((sop.description || '').substring(0, 200), 50);
+
+    // Build multi-line drawtext filters for title
+    const titleStartY = Math.max(300, 540 - (titleLines.length * 35) - (descLines.length * 18));
+    const titleFilters = titleLines.map((line, idx) =>
+      `drawtext=${fontOpt}text='${escapeDrawtext(line)}':fontsize=52:fontcolor=white:x=(w-tw)/2:y=${titleStartY + idx * 64}`
+    );
+    // Build multi-line drawtext filters for description
+    const descStartY = titleStartY + titleLines.length * 64 + 30;
+    const descFilters = descLines.map((line, idx) =>
+      `drawtext=${fontOptRegular}text='${escapeDrawtext(line)}':fontsize=26:fontcolor=#94a3b8:x=(w-tw)/2:y=${descStartY + idx * 36}`
+    );
+
     const introFilter = [
-      `color=c=#1e293b:s=1920x1080:d=5`,
-      `drawtext=${fontOpt}text='${introText}':fontsize=56:fontcolor=white:x=(w-tw)/2:y=(h-th)/2-40`,
-      `drawtext=${fontOptRegular}text='${introDesc}':fontsize=28:fontcolor=#94a3b8:x=(w-tw)/2:y=(h-th)/2+40`,
+      `color=c=#0f172a:s=1920x1080:d=4`,
+      ...titleFilters,
+      ...descFilters,
     ].join(',');
 
     execSync(
@@ -3751,12 +3781,16 @@ app.post('/generate-sop-video', async (req, res) => {
         );
       }
 
-      // 2. Build narration text (no "Step N:" prefix for presentations)
+      // 2. Build narration text — strip ALL step numbering patterns
       let narration = `${step.title}. ${step.description || ''}`;
-      // Strip any leftover step numbering patterns (English + Swedish)
-      narration = narration.replace(/\b(Step|Steg)\s+\d+\s*[:\-\.\s]*\s*/gi, '');
-      // Also strip leading numbered patterns like "1. " or "1: " or "1 - "
-      narration = narration.replace(/^\d+\s*[:\-\.\)]\s*/g, '');
+      // Strip "Step N", "Steg N" with any separator (colon, dash, dot, space)
+      narration = narration.replace(/\b(Step|Steg)\s*\d+\s*[:\-\.\s]*/gi, '');
+      // Strip leading numbered patterns like "1. ", "1: ", "1) ", "1 - " at start of string or after period
+      narration = narration.replace(/(^|\.\s*)\d+\s*[:\-\.\)]\s*/g, '$1');
+      // Strip standalone numbers at sentence start like "1 Do this"
+      narration = narration.replace(/(^|\.\s*)\d+\s+(?=[A-ZÅÄÖ])/g, '$1');
+      // Clean up double spaces and leading dots/spaces
+      narration = narration.replace(/^\s*[\.:\-]\s*/, '').replace(/\s{2,}/g, ' ').trim();
 
       // 3. Generate TTS via Gemini — speak slowly and clearly
       const ttsResponse = await getGenAI().models.generateContent({
@@ -3817,8 +3851,9 @@ app.post('/generate-sop-video', async (req, res) => {
       }
       console.log(`[SOP-VIDEO] Step ${stepNum} audio duration: ${audioDuration.toFixed(1)}s`);
 
-      // 5. FFmpeg composite: image + audio + text overlay (title only, no "Step N")
-      const stepTitle = escapeDrawtext(step.title || '');
+      // 5. FFmpeg composite: image + audio + text overlay (strip step numbers from title)
+      let cleanTitle = (step.title || '').replace(/\b(Step|Steg)\s*\d+\s*[:\-\.\s]*/gi, '').replace(/^\d+\s*[:\-\.\)]\s*/, '').trim();
+      const stepTitle = escapeDrawtext(cleanTitle);
 
       let vf = `scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black`;
       // Sharpen image: luma amount 1.0, luma size 5x5 (enhances text and UI details)
@@ -3839,8 +3874,9 @@ app.post('/generate-sop-video', async (req, res) => {
     fs.writeFileSync(concatListPath, concatContent);
 
     const finalPath = path.join(jobDir, 'final.mp4');
+    // Use -c copy to avoid re-encoding drift (all clips have identical codec settings)
     execSync(
-      `${FFMPEG_BIN} -f concat -safe 0 -i "${concatListPath}" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 128k -async 1 -r 30 -movflags +faststart "${finalPath}" -y`,
+      `${FFMPEG_BIN} -f concat -safe 0 -i "${concatListPath}" -c copy -movflags +faststart "${finalPath}" -y`,
       { timeout: 180000, stdio: 'pipe' }
     );
 
