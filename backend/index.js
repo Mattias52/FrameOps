@@ -3760,7 +3760,7 @@ app.post('/generate-sop-video', async (req, res) => {
 
       // 3. Generate TTS via Gemini — speak slowly and clearly
       const ttsResponse = await getGenAI().models.generateContent({
-        model: 'gemini-2.5-flash-preview-tts',
+        model: 'gemini-2.5-flash-tts',
         contents: [{ parts: [{ text: `Read this slowly, clearly, and at a calm pace with natural pauses between sentences: ${narration}` }] }],
         config: {
           responseModalities: ['AUDIO'],
@@ -3775,7 +3775,7 @@ app.post('/generate-sop-video', async (req, res) => {
       if (!ttsResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data) {
         console.log(`[SOP-VIDEO] Step ${stepNum} TTS returned empty, retrying once...`);
         const retryResponse = await getGenAI().models.generateContent({
-          model: 'gemini-2.5-flash-preview-tts',
+          model: 'gemini-2.5-flash-tts',
           contents: [{ parts: [{ text: `Read this slowly and clearly: ${step.title}` }] }],
           config: {
             responseModalities: ['AUDIO'],
