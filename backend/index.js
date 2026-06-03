@@ -3772,10 +3772,36 @@ app.post('/generate-sop-video', async (req, res) => {
         },
       });
 
-      const audioData = ttsResponse.candidates[0].content.parts[0].inlineData.data;
-      const pcmBuffer = Buffer.from(audioData, 'base64');
-      writePcmAsWav(pcmBuffer, wavPath);
-      console.log(`[SOP-VIDEO] Step ${stepNum} TTS done (${pcmBuffer.length} bytes PCM)`);
+      if (!ttsResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data) {
+        console.log(`[SOP-VIDEO] Step ${stepNum} TTS returned empty, retrying once...`);
+        const retryResponse = await getGenAI().models.generateContent({
+          model: 'gemini-2.5-flash-preview-tts',
+          contents: [{ parts: [{ text: `Read this slowly and clearly: ${step.title}` }] }],
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: voice },
+              },
+            },
+          },
+        });
+        if (!retryResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data) {
+          // Generate silent audio as fallback
+          console.log(`[SOP-VIDEO] Step ${stepNum} TTS retry also empty, using silence`);
+          execSync(`${FFMPEG_BIN} -f lavfi -i "anullsrc=r=24000:cl=mono" -t 3 -c:a pcm_s16le "${wavPath}" -y`, { timeout: 10000, stdio: 'pipe' });
+        } else {
+          const retryAudio = retryResponse.candidates[0].content.parts[0].inlineData.data;
+          const retryPcm = Buffer.from(retryAudio, 'base64');
+          writePcmAsWav(retryPcm, wavPath);
+          console.log(`[SOP-VIDEO] Step ${stepNum} TTS retry done (${retryPcm.length} bytes PCM)`);
+        }
+      } else {
+        const audioData = ttsResponse.candidates[0].content.parts[0].inlineData.data;
+        const pcmBuffer = Buffer.from(audioData, 'base64');
+        writePcmAsWav(pcmBuffer, wavPath);
+        console.log(`[SOP-VIDEO] Step ${stepNum} TTS done (${pcmBuffer.length} bytes PCM)`);
+      }
 
       // 4. Get audio duration
       let audioDuration;
