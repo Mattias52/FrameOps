@@ -314,7 +314,7 @@ app.post('/get-transcript', async (req, res) => {
 
     try {
       const response = await getGenAI().models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         contents: {
           parts: [
             {
@@ -1441,7 +1441,7 @@ CRITICAL REQUIREMENTS:
       console.log(`[${jobId}] Segment ${segIndex + 1}/${totalSegments} (${timeRange}): ${segFrames.length} frames, ${parts.length} parts`);
 
       const response = await genai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         contents: { parts },
         config: {
           temperature: 0,
@@ -1834,7 +1834,7 @@ CRITICAL REQUIREMENTS:
     console.log(`[${jobId}] Sending to Gemini...`);
 
     const response = await genai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: { parts },
       config: {
         temperature: 0,
@@ -1968,7 +1968,7 @@ Respond in JSON format:
     const imageData = frame.includes(',') ? frame.split(',')[1] : frame;
 
     const response = await genai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       contents: [{
         parts: [
           { inlineData: { mimeType: 'image/jpeg', data: imageData } },
@@ -2052,7 +2052,7 @@ Viktigt:
 - Filmningstips ska vara praktiska och korta`;
 
     const response = await genai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.7,
@@ -2123,7 +2123,7 @@ Eller: "Försök zooma in lite mer på detaljerna."`;
     const imageData = frame.includes(',') ? frame.split(',')[1] : frame;
 
     const response = await genai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       contents: [{
         parts: [
           { inlineData: { mimeType: 'image/jpeg', data: imageData } },
@@ -2190,7 +2190,7 @@ Viktigt:
 - Korta och praktiska`;
 
     const response = await genai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.7,
@@ -2274,7 +2274,7 @@ Svara i JSON-format:
 Svara på svenska. Max 3 förslag. Om det ser bra ut: {"feedback": []}`;
 
     const response = await genai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.5,
@@ -2398,7 +2398,7 @@ Respond briefly (max 2 sentences). Be helpful but realistic about your capabilit
     }
 
     const response = await genai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.6,
@@ -2677,7 +2677,7 @@ app.post('/analyze-sop', async (req, res) => {
     console.log(`[${jobId}] Calling Gemini 2.0 Flash...`);
 
     const response = await getGenAI().models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: {
         parts: [
           ...validImageParts,
@@ -3103,7 +3103,7 @@ app.post('/transcribe-video-audio', async (req, res) => {
 
     // Transcribe with Gemini
     const response = await getGenAI().models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: {
         parts: [
           {
@@ -3162,7 +3162,7 @@ app.post('/transcribe-audio', async (req, res) => {
 
   try {
     const response = await getGenAI().models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: {
         parts: [
           {
@@ -3268,7 +3268,7 @@ app.locals.analyzeFrames = async ({ frames, title, additionalContext }) => {
   `;
 
   const response = await genai.models.generateContent({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     contents: {
       parts: [...validImageParts, { text: prompt }]
     },
@@ -3323,7 +3323,7 @@ REGLER:
 Svara ENDAST med JSON:`;
 
     const response = await genai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: { parts: [{ text: prompt }] },
       config: {
         temperature: 0.3,
@@ -3428,7 +3428,7 @@ Max 2 punkter per kategori. Svara på SVENSKA.
     console.log(`[REV-${jobId}] Sending ${steps.length} steps with images to Gemini`);
 
     const response = await genai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: { parts },
       config: {
         temperature: 0.2,
