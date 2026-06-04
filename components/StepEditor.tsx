@@ -170,9 +170,20 @@ const StepEditor: React.FC<StepEditorProps> = ({
             <i className="fas fa-plus text-sm"></i>
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); if (confirm(t('stepEditor.confirmDelete'))) onDelete(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              const btn = e.currentTarget;
+              if (btn.dataset.confirmDelete === 'true') {
+                onDelete();
+                btn.dataset.confirmDelete = '';
+              } else {
+                btn.dataset.confirmDelete = 'true';
+                btn.classList.add('!text-rose-600', '!bg-rose-50');
+                setTimeout(() => { btn.dataset.confirmDelete = ''; btn.classList.remove('!text-rose-600', '!bg-rose-50'); }, 3000);
+              }
+            }}
             className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-            title="Delete step"
+            title="Click twice to delete step"
           >
             <i className="fas fa-trash text-sm"></i>
           </button>

@@ -3899,7 +3899,9 @@ app.post('/generate-sop-video', async (req, res) => {
       }
       // Round up to nearest frame boundary (30fps) to avoid partial-frame drift
       audioDuration = Math.ceil(audioDuration * 30) / 30;
-      console.log(`[SOP-VIDEO] Step ${stepNum} audio duration: ${audioDuration.toFixed(3)}s`);
+      // Add 1s pause after narration so the image lingers before next step
+      const clipDuration = audioDuration + 1.0;
+      console.log(`[SOP-VIDEO] Step ${stepNum} audio duration: ${audioDuration.toFixed(3)}s (clip: ${clipDuration.toFixed(3)}s)`);
 
       // 5. FFmpeg composite: image + audio + text overlay (strip step numbers from title)
       let cleanTitle = (step.title || '').replace(/\b(Step|Steg)\s*\d+\s*[:\-\.\s]*/gi, '').replace(/^\d+\s*[:\-\.\)]\s*/, '').trim();
@@ -3910,9 +3912,9 @@ app.post('/generate-sop-video', async (req, res) => {
       vf += `,unsharp=5:5:1.0:5:5:0.5`;
       vf += `,drawtext=${fontOpt}text='${stepTitle}':fontsize=42:fontcolor=white:x=60:y=40:shadowcolor=black@0.8:shadowx=2:shadowy=2`;
 
-      // Use explicit -t duration instead of -shortest to prevent per-clip timing drift
+      // Use clipDuration (audio + 1s pause) so image lingers before next step
       execSync(
-        `${FFMPEG_BIN} -loop 1 -i "${imgPath}" -i "${wavPath}" -vf "${vf}" -t ${audioDuration.toFixed(3)} -r 30 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart "${clipPath}" -y`,
+        `${FFMPEG_BIN} -loop 1 -i "${imgPath}" -i "${wavPath}" -vf "${vf}" -t ${clipDuration.toFixed(3)} -r 30 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart "${clipPath}" -y`,
         { timeout: 90000, stdio: 'pipe' }
       );
       clipFiles.push(clipPath);
