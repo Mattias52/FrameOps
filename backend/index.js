@@ -3884,7 +3884,7 @@ app.post('/generate-sop-video', async (req, res) => {
         console.log(`[SOP-VIDEO] Step ${stepNum} TTS done (${pcmBuffer.length} bytes PCM)`);
       }
 
-      // 4. Get audio duration
+      // 4. Get audio duration BEFORE creating clip (needed for exact -t)
       let audioDuration;
       try {
         const probeResult = execSync(
@@ -3893,22 +3893,26 @@ app.post('/generate-sop-video', async (req, res) => {
         ).trim();
         audioDuration = parseFloat(probeResult);
       } catch (e) {
-        // Fallback: calculate from PCM size (24kHz, 16-bit, mono = 48000 bytes/sec)
-        audioDuration = pcmBuffer.length / 48000;
+        // Fallback: calculate from WAV file size (24kHz, 16-bit, mono = 48000 bytes/sec)
+        const wavSize = fs.statSync(wavPath).size - 44; // subtract WAV header
+        audioDuration = wavSize / 48000;
       }
-      console.log(`[SOP-VIDEO] Step ${stepNum} audio duration: ${audioDuration.toFixed(1)}s`);
+      // Round up to nearest frame boundary (30fps) to avoid partial-frame drift
+      audioDuration = Math.ceil(audioDuration * 30) / 30;
+      console.log(`[SOP-VIDEO] Step ${stepNum} audio duration: ${audioDuration.toFixed(3)}s`);
 
       // 5. FFmpeg composite: image + audio + text overlay (strip step numbers from title)
       let cleanTitle = (step.title || '').replace(/\b(Step|Steg)\s*\d+\s*[:\-\.\s]*/gi, '').replace(/^\d+\s*[:\-\.\)]\s*/, '').trim();
-      const stepTitle = escapeDrawtext(cleanTitle);
+      const stepTitle = escapeDrawtext(cleanForFont(cleanTitle));
 
       let vf = `scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black`;
       // Sharpen image: luma amount 1.0, luma size 5x5 (enhances text and UI details)
       vf += `,unsharp=5:5:1.0:5:5:0.5`;
       vf += `,drawtext=${fontOpt}text='${stepTitle}':fontsize=42:fontcolor=white:x=60:y=40:shadowcolor=black@0.8:shadowx=2:shadowy=2`;
 
+      // Use explicit -t duration instead of -shortest to prevent per-clip timing drift
       execSync(
-        `${FFMPEG_BIN} -loop 1 -i "${imgPath}" -i "${wavPath}" -vf "${vf}" -r 30 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 128k -shortest -movflags +faststart "${clipPath}" -y`,
+        `${FFMPEG_BIN} -loop 1 -i "${imgPath}" -i "${wavPath}" -vf "${vf}" -t ${audioDuration.toFixed(3)} -r 30 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart "${clipPath}" -y`,
         { timeout: 90000, stdio: 'pipe' }
       );
       clipFiles.push(clipPath);
