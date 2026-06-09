@@ -602,6 +602,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
                     />
                     <i className="fab fa-youtube absolute left-4 top-1/2 -translate-y-1/2 text-rose-500 text-xl"></i>
                   </div>
+                  <p className="text-xs text-slate-400 -mt-2">{t('generator.youtubeNote')}</p>
                   {ytMetadata && ytId && (
                     <div className="flex items-center gap-4 p-4 bg-slate-900 rounded-xl text-white">
                       <img

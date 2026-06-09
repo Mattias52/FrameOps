@@ -124,6 +124,7 @@
     "clickToSelect": "or click to select file",
     "clickToChange": "Click to change file",
     "pasteYoutubeLink": "Paste YouTube link here...",
+    "youtubeNote": "YouTube sometimes blocks downloads. If it fails, try uploading the video directly instead.",
     "readyToAnalyze": "Ready to analyze",
     "proceduralInfo": "Procedural Info",
     "procedureTitle": "Procedure Title",
